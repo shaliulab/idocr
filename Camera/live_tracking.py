@@ -68,10 +68,13 @@ max_object_area = 200
 min_object_area = 15
 min_object_length = 15
 min_obj_arena_dist = 5
-duration = 1200
+
+duration = 10
+
 missing_fly = 0
 
 accuImage = np.zeros((int(cap.get(4)), int(cap.get(3)), N), np.uint8)
+cam_fps = cap.get(cv2.CAP_PROP_FPS)
 
 while True:
     # Read one frame
@@ -81,7 +84,7 @@ while True:
     
     print(time_position)
     ret, img = cap.read()
-    cam_fps = cap.get(cv2.CAP_PROP_FPS)
+    
     # cam_fps = fps
     time_position = frame_counter/cam_fps
 
@@ -164,21 +167,28 @@ while True:
         cv2.imshow('image', img)
         # time.sleep(1)
 
-        if cv2.waitKey(1) & 0xFF in [27, ord('q')] or time_position > duration:
+        if cv2.waitKey(1) & 0xFF in [27, ord('q')] :
+            input_save = input("Do you want to save the file? (yes/no) ")
+            if input_save in ['Y', 'Yes', 'YES', 'OK', 'yes']:
+                input_save1 = input("Do you want to add file name to the default one? (yes/no) ")
+                if input_save1 in ['Y', 'Yes', 'YES', 'OK', 'yes']:
+                    input_save_name = input("Please write your own filename: ")
+                    filename = "{}_{}.txt".format(input_save_name, Date_time)
+                    with open(filename, 'w') as f:
+                        for rowrecord in record_to_save:
+                            f.write(rowrecord)
+            break
+        elif time_position > duration:
+            filename = "{}.txt".format(Date_time)
+            with open(filename, 'w') as f:
+                for rowrecord in record_to_save:
+                    f.write(rowrecord)
             break
     else:
         break
 print("Number of frames that fly is not detected in is {}".format(missing_fly))
 print("FPS is {}".format(cap.get(5)))
-input_save = input("Do you want to save the file? (yes/no) ")
-if input_save in ['Y', 'Yes', 'YES', 'OK', 'yes']:
-    input_save1 = input("Do you want to add file name to the default one? (yes/no) ")
-    if input_save1 in ['Y', 'Yes', 'YES', 'OK', 'yes']:
-        input_save_name = input("Please write your own filename: ")
-        filename = "{}_{}.txt".format(input_save_name, Date_time)
-        with open(filename, 'w') as f:
-            for rowrecord in record_to_save:
-                f.write(rowrecord)
+
             
 cap.release()
 cv2.destroyAllWindows
