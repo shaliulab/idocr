@@ -22,15 +22,15 @@ if not args.get("video", False):
     VIDEO_RGB = cap.get(16)
 
     if VIDEO_WIDTH != 1280.0:
-	    cap.set(3, 1280.0)
+        cap.set(3, 1280.0)
     if VIDEO_HEIGHT != 1024.0:
-	    cap.set(4, 1024.0)
+        cap.set(4, 1024.0)
     cap.set(5, fps)
     time.sleep(1)
     print('VIDEO resolution is %d by %d !' % (cap.get(3), cap.get(4)))
     
 
-	
+    
 
 # otherwise, grab a reference to the video file
 else:
@@ -93,7 +93,7 @@ while True:
         
         cv2.putText(img,'Frame: '+str(frame_counter), (25,25),  cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
         cv2.putText(img,'Time: '+str(time_position), (1000,25),  cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
-		
+        
         id_arena = 0
         
         if frame_counter < N:
@@ -170,15 +170,15 @@ while True:
         break
 print("Number of frames that fly is not detected in is {}".format(missing_fly))
 print("FPS is {}".format(cap.get(5)))
-input_save = input("Do you want to save the file?  ")
+input_save = input("Do you want to save the file? (yes/no) ")
 if input_save in ['Y', 'Yes', 'YES', 'OK', 'yes']:
-	input_save1 = input("Do you want to add file name to the default one?  ")
-	if input_save1 in ['Y', 'Yes', 'YES', 'OK', 'yes']:
-	    input_save_name = input("Please write your own filename: ")
+    input_save1 = input("Do you want to add file name to the default one? (yes/no) ")
+    if input_save1 in ['Y', 'Yes', 'YES', 'OK', 'yes']:
+        input_save_name = input("Please write your own filename: ")
         filename = "{}_{}.txt".format(input_save_name, Date_time)
         with open(filename, 'w') as f:
             for rowrecord in record_to_save:
                 f.write(rowrecord)
-			
+            
 cap.release()
 cv2.destroyAllWindows
