@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import time
 import argparse
 import datetime
@@ -58,7 +58,7 @@ first_frames = []
 record_to_save_header = ['Operator', 'Date_Time', 'Experiment', '', 'Arena', 'Object', 'frame', 'time_point', 'CoordinateX', 'CoordinateY', 'RelativePosX', 'RelativePosY']
 Operator = args["author"]
 now = datetime.datetime.now()
-Date_time = now.isoformat()
+Date_time = now.strftime("%Y_%m_%dT%H_%M_%S")
 
 record_to_save =["Frame\tTimePos\tArena\tFlyNo\tFlyPosX\tFlyPosY\tArenaCenterX\tArenaCenterY\tRelativePosX\tRelativePosY\n"]
 
@@ -70,9 +70,12 @@ min_object_length = 15
 min_obj_arena_dist = 5
 duration = 1200
 missing_fly = 0
+
+accuImage = np.zeros((int(cap.get(4)), int(cap.get(3)), N), np.uint8)
+
 while True:
     # Read one frame
-    frameNo = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
+    #frameNo = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
     time_position = int(cap.get(cv2.CAP_PROP_POS_MSEC))/1000
     frame_counter +=1
     
@@ -86,20 +89,21 @@ while True:
     if ret == True:
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         image_range = cv2.inRange(gray, RangeLow, RangeUp)
-        first_frames.append(gray)
-        accuImage = np.zeros((gray.shape[0], gray.shape[1],N), np.uint8)
+        #first_frames.append(gray)
+        
         cv2.putText(img,'Frame: '+str(frame_counter), (25,25),  cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
+        cv2.putText(img,'Time: '+str(time_position), (1000,25),  cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
+		
         id_arena = 0
         
         if frame_counter < N:
-            accuImage[:,:,frameNo] = gray
+            accuImage[:,:,frame_counter] = gray
             avgImage = np.average(accuImage, 2).astype('uint8')
 
             image_blur = cv2.GaussianBlur(avgImage, (kernel_factor, kernel_factor), 0)
             _, image1 = cv2.threshold(image_blur, RangeLow1, RangeUp1, cv2.THRESH_BINARY+cv2.THRESH_OTSU) 
             image1_opening = cv2.morphologyEx(image1, cv2.MORPH_OPEN, kernel)
             (_,contours0,_) = cv2.findContours(image1_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
         img3 = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, 10)
         img3_opening = cv2.morphologyEx(img3, cv2.MORPH_OPEN, kernel)
         (im1, contours1, hierarchy1) = cv2.findContours(img3_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -152,6 +156,7 @@ while True:
                     record_to_save.append(record)
                     # cv2.drawContours(img, [cnt1], -1, [0,255,0], 1)
                     cv2.rectangle(img, (x,y), (x+w, y+h), (255,0,0),2)
+                    print("Frame count is {}".format(frame_counter))
 
                 
                 
@@ -161,12 +166,12 @@ while True:
 
         if cv2.waitKey(1) & 0xFF in [27, ord('q')] or time_position > duration:
             break
-    else:
-        break
+    #else:
+     #   break
 print("Number of frames that fly is not detected in is {}".format(missing_fly))
 print("FPS is {}".format(cap.get(5)))
-
-with open('test.txt', 'w') as f:
+filename = "{}.txt".format(Date_time)
+with open(filename, 'w') as f:
     for rowrecord in record_to_save:
         f.write(rowrecord)
 
