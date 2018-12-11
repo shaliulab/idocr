@@ -9,11 +9,11 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video", type = str, help="location to the video file")
 ap.add_argument("-a", "--author", type = str, help="Add name of the operator")
 args = vars(ap.parse_args())
-
+fps = 25
 if not args.get("video", False):
     print("[INFO] starting video stream...")
     cap = cv2.VideoCapture(0)
-    time.sleep(0.5)
+    time.sleep(0.1)
     VIDEO_POS = cap.get(0)
     VIDEO_FRAME = cap.get(1)
     VIDEO_WIDTH = cap.get(3)
@@ -25,8 +25,10 @@ if not args.get("video", False):
 	    cap.set(3, 1280.0)
     if VIDEO_HEIGHT != 1024.0:
 	    cap.set(4, 1024.0)
-    time.sleep(0.5)
+    cap.set(5, fps)
+    time.sleep(1)
     print('VIDEO resolution is %d by %d !' % (cap.get(3), cap.get(4)))
+    
 
 	
 
@@ -44,7 +46,7 @@ else:
 # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1024.0)
 
 # time.sleep(1)
-cam_fps = cap.get(cv2.CAP_PROP_FPS)
+cam_fps = cap.get(5)
 RangeLow = 50
 RangeUp = 90    
 RangeLow1 = 0
@@ -58,13 +60,15 @@ Operator = args["author"]
 now = datetime.datetime.now()
 Date_time = now.isoformat()
 
+record_to_save =["Frame\tTimePos\tArena\tFlyNo\tFlyPosX\tFlyPosY\tArenaCenterX\tArenaCenterY\tRelativePosX\tRelativePosY\n"]
+
 frame_counter = 0
 min_arena_area = 1000
 max_object_area = 200
 min_object_area = 15
 min_object_length = 15
 min_obj_arena_dist = 5
-duration = 300
+duration = 1200
 missing_fly = 0
 while True:
     # Read one frame
@@ -75,7 +79,7 @@ while True:
     print(time_position)
     ret, img = cap.read()
     cam_fps = cap.get(cv2.CAP_PROP_FPS)
-    cam_fps = 30
+    # cam_fps = fps
     time_position = frame_counter/cam_fps
 
 
@@ -144,9 +148,12 @@ while True:
                     elif id_object == 0:
                         missing_fly+=1
                         
-                            
+                    record = str(frame_counter) +"\t"+ str(time_position) +"\t"+ str(id_arena) +"\t"+ str(id_object) +"\t"+ str(cx1) +"\t"+ str(cy1) +"\t"+ str(CX1) +"\t" + str(CY1) +"\t"+ str(cx1-CX1) +"\t"+ str(cy1-CY1)+"\n"
+                    record_to_save.append(record)
                     # cv2.drawContours(img, [cnt1], -1, [0,255,0], 1)
                     cv2.rectangle(img, (x,y), (x+w, y+h), (255,0,0),2)
+
+                
                 
         
         cv2.imshow('image', img)
@@ -157,5 +164,13 @@ while True:
     else:
         break
 print("Number of frames that fly is not detected in is {}".format(missing_fly))
+print("FPS is {}".format(cap.get(5)))
+
+with open('test.txt', 'w') as f:
+    for rowrecord in record_to_save:
+        f.write(rowrecord)
+
+
+
 cap.release()
 cv2.destroyAllWindows
