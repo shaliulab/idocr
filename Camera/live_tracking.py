@@ -166,16 +166,19 @@ while True:
 
         if cv2.waitKey(1) & 0xFF in [27, ord('q')] or time_position > duration:
             break
-    #else:
-     #   break
+    else:
+        break
 print("Number of frames that fly is not detected in is {}".format(missing_fly))
 print("FPS is {}".format(cap.get(5)))
-filename = "{}.txt".format(Date_time)
-with open(filename, 'w') as f:
-    for rowrecord in record_to_save:
-        f.write(rowrecord)
-
-
-
+input_save = input("Do you want to save the file?  ")
+if input_save in ['Y', 'Yes', 'YES', 'OK', 'yes']:
+	input_save1 = input("Do you want to add file name to the default one?  ")
+	if input_save1 in ['Y', 'Yes', 'YES', 'OK', 'yes']:
+	    input_save_name = input("Please write your own filename: ")
+        filename = "{}_{}.txt".format(input_save_name, Date_time)
+        with open(filename, 'w') as f:
+            for rowrecord in record_to_save:
+                f.write(rowrecord)
+			
 cap.release()
 cv2.destroyAllWindows
