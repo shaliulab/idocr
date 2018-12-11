@@ -3,9 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import argparse
+import datetime
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video", type = str, help="location to the video file")
+ap.add_argument("-a", "--author", type = str, help="Add name of the operator")
 args = vars(ap.parse_args())
 
 if not args.get("video", False):
@@ -24,7 +26,7 @@ if not args.get("video", False):
     if VIDEO_HEIGHT != 1024.0:
 	    cap.set(4, 1024.0)
     time.sleep(0.5)
-    print('VIDEO resolution is %d by %d !' % (cap.get(3), vcap.get(4)))
+    print('VIDEO resolution is %d by %d !' % (cap.get(3), cap.get(4)))
 
 	
 
@@ -51,12 +53,16 @@ kernel_factor = 5
 kernel = np.ones((kernel_factor,kernel_factor), np.uint8)
 N =5
 first_frames = []
+record_to_save_header = ['Operator', 'Date_Time', 'Experiment', '', 'Arena', 'Object', 'frame', 'time_point', 'CoordinateX', 'CoordinateY', 'RelativePosX', 'RelativePosY']
+Operator = args["author"]
+now = datetime.datetime.now()
+Date_time = now.isoformat()
 
 frame_counter = 0
 min_arena_area = 1000
 max_object_area = 200
 min_object_area = 15
-min_object_length = 10
+min_object_length = 15
 min_obj_arena_dist = 5
 duration = 300
 missing_fly = 0
@@ -65,11 +71,12 @@ while True:
     frameNo = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
     time_position = int(cap.get(cv2.CAP_PROP_POS_MSEC))/1000
     frame_counter +=1
-    time_position = frame_counter/cam_fps
+    
     print(time_position)
     ret, img = cap.read()
-    
-
+    cam_fps = cap.get(cv2.CAP_PROP_FPS)
+    cam_fps = 30
+    time_position = frame_counter/cam_fps
 
 
     if ret == True:
@@ -121,24 +128,25 @@ while True:
 
                 cnt1 = c1
                 (x, y, w, h) = cv2.boundingRect(c1)
-                # if np.sqrt(w**2+h**2) > min_object_length:
 
-                M1 = cv2.moments(cnt1)
-                if M1['m00'] != 0 and M1['m10']:
-                    cx1 = int(M1['m10']/M1['m00'])
-                    cy1 = int(M1['m01']/M1['m00'])
-                if cv2.pointPolygonTest(c, (cx1,cy1), True) < min_obj_arena_dist:
-                    continue
-                id_object += 1
-                print('Find contour'+str(id_object))
-                if id_object > 1:
-                    cv2.putText(img, 'Error: more than one object found per arena', (25,40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
-                elif id_object == 0:
-                    missing_fly+=1
-                    
+                if np.sqrt(w**2+h**2) > min_object_length and gray[x,y] < 80:
+
+                    M1 = cv2.moments(cnt1)
+                    if M1['m00'] != 0 and M1['m10']:
+                        cx1 = int(M1['m10']/M1['m00'])
+                        cy1 = int(M1['m01']/M1['m00'])
+                    if cv2.pointPolygonTest(c, (cx1,cy1), True) < min_obj_arena_dist:
+                        continue
+                    id_object += 1
+                    print('Find contour'+str(id_object))
+                    if id_object > 1:
+                        cv2.putText(img, 'Error: more than one object found per arena', (25,40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
+                    elif id_object == 0:
+                        missing_fly+=1
                         
-                # cv2.drawContours(img, [cnt1], -1, [0,255,0], 1)
-                cv2.rectangle(img, (x,y), (x+w, y+h), (255,0,0),2)
+                            
+                    # cv2.drawContours(img, [cnt1], -1, [0,255,0], 1)
+                    cv2.rectangle(img, (x,y), (x+w, y+h), (255,0,0),2)
                 
         
         cv2.imshow('image', img)
