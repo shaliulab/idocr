@@ -25,8 +25,14 @@ while True:
     # Read one frame
     frameNo = int(cap.get(1))
     ret, img = cap.read()
+    
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     accuImage = np.zeros((gray.shape[0], gray.shape[1],N), np.uint8)
+
+    first_frames.append(gray)
+    id_arena = 0
+    id_object = 0
+    
 
     if frameNo < N:
         # first_frames.append(img)
@@ -87,6 +93,7 @@ while True:
             if cv2.pointPolygonTest(cnt, (cx1,cy1), True) < 5:
                 continue
             
+            coordinates = [[]]
             
             cv2.drawContours(img, [cnt1], -1, [0,255,0], 1)
             cv2.rectangle(img, (x,y), (x+w, y+h), (255,0,0),2)
