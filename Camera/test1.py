@@ -40,7 +40,7 @@ img1_opening = cv2.morphologyEx(img1, cv2.MORPH_OPEN, kernel)
 (im1, contours1, hierarchy1) = cv2.findContours(img3_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
 
-i = 0
+i = 0 
 for c in contours:
     if cv2.contourArea(c) <150:
         continue
@@ -80,6 +80,34 @@ for i in range(6):
 
 
 plt.show()
+
+cap = cv2.VideoCapture(0)
+import datetime
+now = datetime.datetime.now()
+while True:
+    ret, frame = cap.read()
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    ret1, thresh = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY)
+    # im2, contours2, hierarchy2 = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    # cap_pos_time = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    cap_pos_time = str(datetime.datetime.now()-now)+' seconds'
+    cap_pos_frame = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    cam_fps = int(cap.get(cv2.CAP_PROP_FPS))
+    cv2.putText(frame, str(cap_pos_time), (25,25), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,0), 2)
+    cv2.putText(frame, str(cap_pos_frame), (25,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,255),2)
+    cv2.putText(frame, str(cam_fps), (25,75), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,255),2)
+    # for i in contours2 :
+    #     if cv2.contourArea(i)>1000:
+    #         cnt2 = i
+    #         hull = cv2.convexHull(cnt2)
+    #         cv2.drawContours(frame, [hull], -1, (255,0,0), 1)
+    cv2.imshow('test', frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+
+cap.release()
+cv2.destroyAllWindows()
 
 
 if cv2.waitKey(1) & 0xFF in [27, ord('q')]:

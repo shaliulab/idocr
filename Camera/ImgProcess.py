@@ -18,6 +18,9 @@ import scipy
 # # Read one frame
 # ret, img = cap.read()
 # Change to gray scale
+cap = cv2.VideoCapture('outpy04.avi')
+_, img = cap.read()
+
 img = cv2.imread('test01.jpg')
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 # Blur gray image based on (5,5) kernel
@@ -60,7 +63,7 @@ gray1 = cv2.bitwise_and(gray, gray, mask=thresh1)
 gray2 = cv2.inRange(gray1, RangeLow, RangeUp)
 RangedImg1 = cv2.cvtColor(RangedImg, cv2.COLOR_GRAY2BGR)
 fgbg = cv2.createBackgroundSubtractorMOG2()
-fgmask = fgbg.apply(img)
+fgmask = fgbg.apply(gray2)
 fgmask = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3)))
 
 
@@ -97,7 +100,7 @@ for c1 in contours1:
 plt.subplot(2, 2, 1), plt.imshow(img, 'gray')
 plt.title('Original')
 plt.xticks([]), plt.yticks([])
-plt.subplot(2, 2, 2), plt.imshow(img_with_keypoints, 'gray')
+plt.subplot(2, 2, 2), plt.imshow(fgmask, 'gray')
 plt.title('Gray')
 plt.xticks([]), plt.yticks([])
 plt.subplot(2 , 2, 3), plt.imshow(thresh1, 'gray')
