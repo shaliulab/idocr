@@ -4,11 +4,11 @@ import numpy as np
 import time
 import argparse
 import datetime
-import pyfirmata
+from pyfirmata import Arduino, util
 
 
 # Setup video recording parameters
-duration =1200
+# duration =1200
 fps = 2
 
 
@@ -49,10 +49,22 @@ TIME_EVENT_5_DURATION = 1
 TIME_EVENT_6 = 18
 TIME_EVENT_6_DURATION = 2
 
-def CameraCalculateArena(img):
-    img = c
+duration = TIME_EVENT_6 + TIME_EVENT_6_DURATION
+
+# Initial setups, start main_valve, vacuum, IR LED, and shake of vibrator.
+ARDUINO_COM = '/dev/ttyACM0'
+board = Arduino(ARDUINO_COM)
+board.digital[PIN_IRLED].write(1)
+board.digital[PIN_MAIN_VALVE].write(1)
+board.digital[PIN_VACUUM].write(1)
+for i in range(0,10):
+    board.digital[PIN_VIBRATOR].write(1)
+    time.sleep(0.1)
+    board.digital[PIN_VIBRATOR].write(0)
+    time.sleep(0.1)
 
 
+# Arguments to follow the command, adding video, etc options
 ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video", type = str, help="location to the video file")
 ap.add_argument("-a", "--author", type = str, help="Add name of the operator")
@@ -98,7 +110,7 @@ kernel = np.ones((kernel_factor,kernel_factor), np.uint8)
 
 # dst = cv2.warpAffine(img,M,(VIDEO_WIDTH,VIDEO_HEIGHT))
 
-N =5
+N =10
 first_frames = []
 record_to_save_header = ['Operator', 'Date_Time', 'Experiment', '', 'Arena', 'Object', 'frame', 'time_point', 'CoordinateX', 'CoordinateY', 'RelativePosX', 'RelativePosY']
 Operator = args["author"]
@@ -111,7 +123,7 @@ frame_counter = 0
 min_arena_area = 1000
 max_object_area = 200
 min_object_area = 15
-min_object_length = 15
+min_object_length = 10
 min_obj_arena_dist = 5
 
 
@@ -239,7 +251,7 @@ if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:
                         break
                 else:
                     break
-            elif time_position > duration:
+            elif time_position > duration*60:
                 filename = "{}.txt".format(Date_time)
                 with open(filename, 'w') as f:
                     for rowrecord in record_to_save:
