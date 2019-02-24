@@ -54,7 +54,7 @@ board.digital[PIN_IRLED].write(1)
 board.digital[PIN_MAIN_VALVE].write(1)
 board.digital[PIN_VACUUM].write(1)
 # Turn on vibrator to vibrate
-for i in range(0,VIBRATE_REPEAT+1):
+for i in range(0,VIBRATE_REPEAT):
     board.digital[PIN_VIBRATOR].write(1)
     time.sleep(VIBRATE_DURATION)
     board.digital[PIN_VIBRATOR].write(0)
@@ -271,6 +271,9 @@ if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:
     print("Number of frames that fly is not detected in is {}".format(missing_fly))
     print("FPS is {}".format(cap.get(5)))
 
-            
+# Turn off IR LED, MAIN VALVE and VACUUM 
+board.digital[PIN_IRLED].write(0)
+board.digital[PIN_MAIN_VALVE].write(0)
+board.digital[PIN_VACUUM].write(0)
 cap.release()
 cv2.destroyAllWindows
