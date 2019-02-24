@@ -10,8 +10,9 @@ from pyfirmata import Arduino, util
 # Setup video recording parameters
 # duration =1200
 fps = 2
-
-
+ROTATE_DEG = 180
+VIBRATE_REPEAT = 10
+VIBRATE_DURATION = 0.1 # second
 # Setup PIN numbers
 # Main Pins
 PIN_VACUUM = 1
@@ -31,37 +32,33 @@ PIN_RIGHT_LED_R = 12
 
 # Setup Time events in min
 
-TIME_EVENT_1 = 1
-TIME_EVENT_1_DURATION = 2
+EVENT_TIME = [1, 5, 7, 10, 12, 18]
+EVENT_DURA = [2, 1, 1,  1,  1,  2]
+EVENT_PINS = [[PIN_LEFT_ORDOR_1, PIN_RIGHT_ORDOR_2],
+              [PIN_LEFT_ORDOR_1, PIN_RIGHT_ORDOR_1, PIN_LEFT_ESHOCK, PIN_RIGHT_ESHOCK],
+              [PIN_LEFT_ORDOR_2, PIN_RIGHT_ORDOR_2],
+              [PIN_LEFT_ORDOR_1, PIN_RIGHT_ORDOR_1, PIN_LEFT_ESHOCK, PIN_RIGHT_ESHOCK],
+              [PIN_LEFT_ORDOR_2, PIN_RIGHT_ORDOR_2],
+              [PIN_LEFT_ORDOR_2, PIN_RIGHT_ORDOR_1]
+                ]
 
-TIME_EVENT_2 = 5
-TIME_EVENT_2_DURATION = 1
+EVENT_TIME_ON = EVENT_TIME * 60 * fps
+EVENT_TIME_OFF = (EVENT_TIME + EVENT_DURA) * 60 * fps
 
-TIME_EVENT_3 = 7
-TIME_EVENT_3_DURATION = 1
-
-TIME_EVENT_4 = 10
-TIME_EVENT_4_DURATION = 1
-
-TIME_EVENT_5 = 12
-TIME_EVENT_5_DURATION = 1
-
-TIME_EVENT_6 = 18
-TIME_EVENT_6_DURATION = 2
-
-duration = TIME_EVENT_6 + TIME_EVENT_6_DURATION
 
 # Initial setups, start main_valve, vacuum, IR LED, and shake of vibrator.
 ARDUINO_COM = '/dev/ttyACM0'
 board = Arduino(ARDUINO_COM)
+# Turn on IR LED, MAIN VALVE and VACUUM 
 board.digital[PIN_IRLED].write(1)
 board.digital[PIN_MAIN_VALVE].write(1)
 board.digital[PIN_VACUUM].write(1)
-for i in range(0,10):
+# Turn on vibrator to vibrate
+for i in range(0,VIBRATE_REPEAT+1):
     board.digital[PIN_VIBRATOR].write(1)
-    time.sleep(0.1)
+    time.sleep(VIBRATE_DURATION)
     board.digital[PIN_VIBRATOR].write(0)
-    time.sleep(0.1)
+    time.sleep(VIBRATE_DURATION)
 
 
 # Arguments to follow the command, adding video, etc options
@@ -130,26 +127,36 @@ min_obj_arena_dist = 5
 missing_fly = 0
 
 accuImage = np.zeros((int(cap.get(4)), int(cap.get(3)), N), np.uint8)
-cam_fps = cap.get(cv2.CAP_PROP_FPS)
+# cam_fps = cap.get(cv2.CAP_PROP_FPS)
 
 input_totaltime = input("Do you want to start tracking now? (y/n)")
 
 if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:
-    while True:
+    while 1:
         # Read one frame
         #frameNo = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
-        time_position = int(cap.get(cv2.CAP_PROP_POS_MSEC))/1000
+
+        # time_position = int(cap.get(cv2.CAP_PROP_POS_MSEC))/1000
         frame_counter +=1
-        
+        cam_fps = fps
+        time_position = frame_counter/cam_fps
+        time_position_int = round(time_position * fps)
         print(time_position)
+        
+        if time_position_int in EVENT_TIME_ON:
+            for pins in EVENT_PINS[EVENT_TIME_ON.index(time_position_int)]:
+                board.digital[pins].write(1)
+        elif time_position_int in EVENT_TIME_OFF:
+            for pins in EVENT_PINS[EVENT_TIME_ON.index(time_position_int)]:
+                board.digital[pins].write(0)
+
+        # Rotate the image by certan angles, 0, 90, 180, 270, etc.
         ret, img_180 = cap.read()
+        
         rows, cols = img_180.shape[:2]
-        M = cv2.getRotationMatrix2D((cols/2,rows/2),180,1)
+        M = cv2.getRotationMatrix2D((cols/2,rows/2),ROTATE_DEG,1)
         img = cv2.warpAffine(img_180,M,(cols,rows))
         
-        # cam_fps = fps
-        time_position = frame_counter/cam_fps
-
 
         if ret == True:
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -170,7 +177,9 @@ if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:
 
                 image_blur = cv2.GaussianBlur(avgImage, (kernel_factor, kernel_factor), 0)
                 _, image1 = cv2.threshold(image_blur, RangeLow1, RangeUp1, cv2.THRESH_BINARY+cv2.THRESH_OTSU) 
-                image1_opening = cv2.morphologyEx(image1, cv2.MORPH_OPEN, kernel)
+
+                image1_opening = cv2.morphologyEx(image1, cv2.MORPH_OPEN, kernel, interations = 2)
+
                 (_,contours0,_) = cv2.findContours(image1_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             img3 = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, 10)
             img3_opening = cv2.morphologyEx(img3, cv2.MORPH_OPEN, kernel)
