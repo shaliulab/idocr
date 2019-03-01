@@ -189,7 +189,7 @@ class LearningMemoryDevice():
 
         # this is true for pins of type: CI, SI (intermitent)
         if n_iters != n_iters and on == on:
-            n_iters = total_time // (on + off) # check if total time is accessible
+            n_iters = min(end, total_time) // (on + off) # check if total time is accessible
             
         
         # halt all threads until program_start + sync_time is reached
