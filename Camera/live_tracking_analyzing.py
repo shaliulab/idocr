@@ -6,7 +6,7 @@ import time
 
 class Tracker():
 
-    def __init__(self, author, rotation=180, duration=1200, tf=60, video=None):
+    def __init__(self, author, path_to_video=None):
         """
         Setup video recording parameters.
 
@@ -16,13 +16,10 @@ class Tracker():
         duration: in seconds
         """
 
-        self.rotation = rotation
-        self.duration = duration
-        self.tf = tf
 
         # maybe it should be possible to change these params at initialization
-        self.RangeLow = 50
-        self.RangeUp = 90    
+        self.rotation = 180
+        self.duration = 1200 
         self.RangeLow1 = 0
         self.RangeUp1 = 255  
         kernel_factor = 5
@@ -46,11 +43,11 @@ class Tracker():
         self.Date_time = now.strftime("%Y_%m_%dT%H_%M_%S")
         
         self.record_to_save = ["Frame\tTimePos\tArena\tFlyNo\tFlyPosX\tFlyPosY\tArenaCenterX\tArenaCenterY\tRelativePosX\tRelativePosY\n"]
-        # cam_fps = cap.get(cv2.CAP_PROP_FPS)
-
-        if video is None:
+        
+        if path_to_video is None:
             print("[INFO] starting video stream...")
             cap = cv2.VideoCapture(0)
+            fps = cap.get(cv2.CAP_PROP_FPS)
             time.sleep(0.1)
             VIDEO_POS = cap.get(0)
             VIDEO_FRAME = cap.get(1)
@@ -63,18 +60,19 @@ class Tracker():
                 cap.set(3, 1280)
             if VIDEO_HEIGHT != 1024:
                 cap.set(4, 1024)
-            cap.set(5, fps)
+            cap.set(5, 2)
             time.sleep(0.1)
         
         
         # otherwise, grab a reference to the video file
         else:
-            cap = cv2.VideoCapture(video)
+            cap = cv2.VideoCapture(path_to_video)
 
         self.cap = cap
         self.cam_fps = cap.get(5)
         print(self.cam_fps)
         self.accuImage = np.zeros((int(cap.get(4)), int(cap.get(3)), self.N), np.uint8)
+        
 
 
     
@@ -111,7 +109,6 @@ class Tracker():
         
             if ret == True:
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                image_range = cv2.inRange(gray, self.RangeLow, self.RangeUp)
                 
                 cv2.putText(img,'Frame: '+str(frame_count), (25,25),  cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
                 cv2.putText(img,'Time: '+str(time_position), (1000,25),  cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
@@ -210,7 +207,7 @@ class Tracker():
                             break
                     else:
                         break
-                elif time_position > self.duration * self.tf:
+                elif time_position > self.duration:
                     filename = "{}.txt".format(self.Date_time)
                     with open(filename, 'w') as f:
                         for rowrecord in self.record_to_save:
