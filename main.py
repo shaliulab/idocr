@@ -9,8 +9,8 @@ import pandas as pd
 import glob
 import os
 import threading
-from Camera.live_tracking_analyzing import Tracker
-#from Camera.track_OOP import Tracker
+# from Camera.live_tracking_analyzing import Tracker
+from Camera.track_OOP import Tracker
 from Arduino.learning_memory import LearningMemoryDevice
 
 # Arguments to follow the command, adding video, etc options
@@ -21,9 +21,10 @@ ap.add_argument("-s", "--sequence", type = str,                  help="Absolute 
 ap.add_argument("-v", "--video",    type = str, default = None,  help="location to the video file")
 ap.add_argument("-l", "--log_dir",  type = str, default = ".",   help="Absolute path to directory where log files will be stored")
 ap.add_argument("-d", "--duration", type = str, default = 1200,  help="How long should it last?")
-ap.add_argument("-t", "--time",     type = str, default = "m",   help="Time unit to be used")
-ap.add_argument("-a", "--author",   type = str, default="Sayed", help="Add name of the operator")
-ap.add_argument("-i", "--interact", action = 'store_true', help="Shall I run Arduino?")
+ap.add_argument("-u", "--time",     type = str, default = "m",   help="Time unit to be used")
+ap.add_argument("-e", "--experimenter", type = str, default="Sayed", help="Add name of the experimenter/operator")
+ap.add_argument("-a", "--arduino", action = 'store_true',        help="Shall I run Arduino?")
+ap.add_argument("-t", "--track", action = 'store_true',          help="Shall I track flies?")
 args = vars(ap.parse_args())
 
 exit = threading.Event()
@@ -43,7 +44,7 @@ tf = np.where(tu == "m", 60, 1)
 
 # Setup Arduino controls
 ##########################
-if args["interact"]:
+if args["arduino"]:
     total_time = 30
     mapping=pd.read_csv(args["mappings"])
     program=pd.read_csv(args["sequence"], skip_blank_lines=True)
@@ -57,10 +58,10 @@ if args["interact"]:
 #print('FPS is: {}'.format(int(cap.get(5))))
 
 
-tracker = Tracker(author=args["author"], path_to_video=args["video"])
+tracker = Tracker(experimenter=args["experimenter"], path_to_video=args["video"])
 #input_totaltime = input("Do you want to start tracking now? (y/n)")
 #if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:
 
-if args["interact"]: device.run(total_time=total_time, daemons=daemons)
+if args["arduino"]: device.run(total_time=total_time, daemons=daemons)
 tracker.track()
-if args["interact"]: device.total_off()
+if args["arduino"]: device.total_off()
