@@ -1,0 +1,14 @@
+pin_id,pin_number,pin_group
+ONBOARD_LED,13,main
+MAIN_VALVE,11,main
+VACUUM,12,main
+IRLED,2,main
+VIBRATOR,50,main
+LEFT_ODOUR_1,7,left
+LEFT_ODOUR_2,9,left
+LEFT_ESHOCK,5,left
+LEFT_LED_R,3,left
+RIGHT_ODOUR_1,8,right
+RIGHT_ODOUR_2,10,right
+RIGHT_ESHOCK,6,right
+RIGHT_LED_R,4,right
