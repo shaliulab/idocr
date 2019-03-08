@@ -15,16 +15,20 @@ from Arduino.learning_memory import LearningMemoryDevice
 
 # Arguments to follow the command, adding video, etc options
 ap = argparse.ArgumentParser()
-ap.add_argument("-p", "--port",     type = str,                  help="Absolute path to the Arduino port. Usually '/dev/ttyACM0' in Linux and COM in Windows")
-ap.add_argument("-m", "--mappings", type = str,                  help="Absolute path to csv providing pin number-pin name mappings", )
-ap.add_argument("-s", "--sequence", type = str,                  help="Absolute path to csv providing the sequence of instructions to be sent to Arduino")
-ap.add_argument("-v", "--video",    type = str, default = None,  help="location to the video file")
-ap.add_argument("-l", "--log_dir",  type = str, default = ".",   help="Absolute path to directory where log files will be stored")
-ap.add_argument("-d", "--duration", type = str, default = 1200,  help="How long should it last?")
-ap.add_argument("-u", "--time",     type = str, default = "m",   help="Time unit to be used")
-ap.add_argument("-e", "--experimenter", type = str, default="Sayed", help="Add name of the experimenter/operator")
-ap.add_argument("-a", "--arduino", action = 'store_true',        help="Shall I run Arduino?")
-ap.add_argument("-t", "--track", action = 'store_true',          help="Shall I track flies?")
+ap.add_argument("-p", "--port",         type = str,                      help="Absolute path to the Arduino port. Usually '/dev/ttyACM0' in Linux and COM in Windows")
+ap.add_argument("-m", "--mappings",     type = str,                      help="Absolute path to csv providing pin number-pin name mappings", )
+ap.add_argument("-s", "--sequence",     type = str,                      help="Absolute path to csv providing the sequence of instructions to be sent to Arduino")
+ap.add_argument("-v", "--video",        type = str, default = None,      help="location to the video file")
+ap.add_argument("-l", "--log_dir",      type = str, default = ".",       help="Absolute path to directory where log files will be stored")
+ap.add_argument("-d", "--duration",     type = str, default = 1200,      help="How long should it last?")
+ap.add_argument("-u", "--time",         type = str, default = "m",       help="Time unit to be used")
+ap.add_argument("-e", "--experimenter", type = str, default="Sayed",     help="Add name of the experimenter/operator")
+ap.add_argument("-c", "--camera",       type = str, default = "pylon",   help="Type of camera. Default is pylon")
+ap.add_argument("-f", "--fps",          type = int, default = 2,         help="fps of recording. Valid only if video is not passed")
+## TODO
+## implement error raising if fps and video are passed
+ap.add_argument("-a", "--arduino",      action = 'store_true',           help="Shall I run Arduino?")
+ap.add_argument("-t", "--track",        action = 'store_true',           help="Shall I track flies?")
 args = vars(ap.parse_args())
 
 exit = threading.Event()
@@ -58,7 +62,7 @@ if args["arduino"]:
 #print('FPS is: {}'.format(int(cap.get(5))))
 
 
-tracker = Tracker(experimenter=args["experimenter"], path_to_video=args["video"])
+tracker = Tracker(camera = args["camera"], experimenter = args["experimenter"], video = args["video"])
 #input_totaltime = input("Do you want to start tracking now? (y/n)")
 #if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:
 
