@@ -60,7 +60,7 @@ if args["arduino"]:
 #print('FPS is: {}'.format(int(cap.get(5))))
 
 
-tracker = Tracker(camera = args["camera"], experimenter = args["experimenter"], video = args["video"])
+tracker = Tracker(camera = args["camera"], experimenter = args["experimenter"], video = args["video"], fps = args["fps"])
 #input_totaltime = input("Do you want to start tracking now? (y/n)")
 #if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:
 
