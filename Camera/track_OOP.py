@@ -214,7 +214,7 @@ class Tracker():
 
         stream = self.initialize_stream(camera, video)
 
-        if self.fps is not None:
+        if self.fps is not None and video is not None:
             # Set the FPS of the camera
             stream.set_fps(self.fps)
 
@@ -255,6 +255,7 @@ class Tracker():
         if camera == "pylon":
             class Stream():
                 def __init__(self):
+                    print("[INFO] Starting a pylon camera!")
 
                     # The exit code of the sample application.
                     exitCode = 0
@@ -288,7 +289,6 @@ class Tracker():
                     return height 
 
 
-
                 def get_time_position(self, frame_count):
                     t = frame_count / self.get_fps()
                     return t
@@ -317,11 +317,14 @@ class Tracker():
         else:
             class Stream():
                 def __init__(self):
+                    print("[INFO] Not a pylon camera!")
                     s = [0 if v is None else v for v in [video]][0]
                     self.camera = cv2.VideoCapture(s)
 
                 def get_fps(self):
                     fps = self.camera.get(5)
+                    if fps == 0:
+                        return 2
                     return fps
 
                 def get_time_position(self, frame_count):
@@ -338,6 +341,7 @@ class Tracker():
  
                 def set_fps(self, fps):
                     if self.get_fps() != fps:
+                        print("[INFO] Setting fps to {}".format(fps))
                         self.camera.set(5, fps)
  
              #   def set_width(self, width):
@@ -366,8 +370,7 @@ class Tracker():
         return img_rot
  
     
-    def annotate_frame(self, img, frame_count):
-        time_position = self.stream.get_time_position(frame_count)
+    def annotate_frame(self, img, frame_count, time_position):
 
         ## TODO Dont make coordinates of text hardcoded
         ###################################################
@@ -447,7 +450,7 @@ class Tracker():
                 gray = img.copy()
 
             # Annotate frame
-            img = self.annotate_frame(img, frame_count)
+            img = self.annotate_frame(img, frame_count, time_position)
             
             # Find arenas for the first N frames
             if frame_count < self.N:
