@@ -25,6 +25,9 @@ ap.add_argument("-u", "--time",     type = str, default = "m",   help="Time unit
 ap.add_argument("-e", "--experimenter", type = str, default="Sayed", help="Add name of the experimenter/operator")
 ap.add_argument("-a", "--arduino", action = 'store_true',        help="Shall I run Arduino?")
 ap.add_argument("-t", "--track", action = 'store_true',          help="Shall I track flies?")
+ap.add_argument("-c", "--camera", type = str, default = "opencv", help="Stream source")
+ap.add_argument("-f", "--fps", type = int, help="Frames per second in the opened stream. Default as stated in the __init__ method in Tracker, is set to 2")
+
 args = vars(ap.parse_args())
 
 exit = threading.Event()
@@ -58,10 +61,10 @@ if args["arduino"]:
 #print('FPS is: {}'.format(int(cap.get(5))))
 
 
-tracker = Tracker(experimenter=args["experimenter"], path_to_video=args["video"])
+tracker = Tracker(camera=args["camera"], experimenter=args["experimenter"], video=args["video"])
 #input_totaltime = input("Do you want to start tracking now? (y/n)")
 #if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:
 
 if args["arduino"]: device.run(total_time=total_time, daemons=daemons)
-tracker.track()
+if args["track"]: tracker.track()
 if args["arduino"]: device.total_off()
