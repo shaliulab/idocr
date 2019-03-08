@@ -18,14 +18,6 @@ import argparse
 import timeit
 import signal
 
-# Arguments to follow the command, adding video, etc options
-ap = argparse.ArgumentParser()
-ap.add_argument("-p", "--port",     type = str, help="Absolute path to the Arduino port. Usually '/dev/ttyACM0' in Linux and COM in Windows", default = "/dev/ttyACM0")
-ap.add_argument("-m", "--mappings", type = str, help="Absolute path to csv providing pin number-pin name mappings", default = "Arduino/pins_mapping_breadboard.csv")
-ap.add_argument("-s", "--sequence", type = str, help="Absolute path to csv providing the sequence of instructions to be sent to Arduino", default="Arduino/simplified_program2.csv")
-ap.add_argument("-l", "--log_dir",  type = str, help="Absolute path to directory where log files will be stored", default = "Arduino")
-args = vars(ap.parse_args())
-
 
 def check_do_run(d, max_sleep):
     stop = False 
@@ -53,7 +45,7 @@ class MyThread(threading.Thread):
 
 
 class LearningMemoryDevice():
-    def __init__(self, mapping, program, port, log_dir):
+    def __init__(self, mapping, program, port, log_dir, communicate=True):
         self.mapping = mapping
         self.program = program 
         self.port = port
@@ -63,9 +55,11 @@ class LearningMemoryDevice():
         self.pin_state = pin_state
 
         self.board = Arduino(port)
-        #filehandler = open(os.path.join(log_dir, "pin_state.obj"),"wb")
-        #pickle.dump(pin_state,filehandler)
-        #filehandler.close()    
+        filehandler = open(os.path.join(log_dir, "pin_state.obj"),"wb")
+        pickle.dump(pin_state,filehandler)
+        filehandler.close()    
+        self.exit = threading.Event()
+        self.communicate = communicate
 
         self.log_dir = log_dir
         log_files = glob.glob(os.path.join(self.log_dir, 'log*'))
@@ -115,12 +109,12 @@ class LearningMemoryDevice():
         
         
         ## Signal start
-        for i in range(2):
-            for pin_number in self.mapping.pin_number:
-                self.board.digital[pin_number].write(1)
-                time.sleep(0.05)
-                self.board.digital[pin_number].write(0)
-                time.sleep(0.05)
+#        for i in range(2):
+#            for pin_number in self.mapping.pin_number:
+#                self.board.digital[pin_number].write(1)
+#                time.sleep(0.05)
+#                self.board.digital[pin_number].write(0)
+#                time.sleep(0.05)
                 
         self.program_start = datetime.datetime.now()
 
@@ -136,12 +130,12 @@ class LearningMemoryDevice():
         self.daemons = daemons
         return daemons
 
-    def toggle_pin(self, pin_number, value, message=None, communicate=False):
+    def toggle_pin(self, pin_number, value, message=None):
         # global self.pin_state
 
         self.board.digital[pin_number].write(value)
 
-        if communicate:
+        if self.communicate:
             filehandler = open(os.path.join(self.log_dir, "pin_state.obj"),"rb")
             pin_state = pickle.load(filehandler)
             filehandler.close()
@@ -348,14 +342,21 @@ class LearningMemoryDevice():
     def thread_off(self):
         def quit(signo, _frame=None):
            self.total_off()
-           exit.set()
+           self.exit.set()
     
         return quit
     
 if __name__ == "__main__":
 
+    # Arguments to follow the command, adding video, etc options
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-p", "--port",     type = str, help="Absolute path to the Arduino port. Usually '/dev/ttyACM0' in Linux and COM in Windows", default = "/dev/ttyACM0")
+    ap.add_argument("-m", "--mappings", type = str, help="Absolute path to csv providing pin number-pin name mappings", default = "Arduino/pins_mapping_breadboard.csv")
+    ap.add_argument("-s", "--sequence", type = str, help="Absolute path to csv providing the sequence of instructions to be sent to Arduino", default="Arduino/simplified_program2.csv")
+    ap.add_argument("-l", "--log_dir",  type = str, help="Absolute path to directory where log files will be stored", default = "Arduino")
+    args = vars(ap.parse_args())
 
-    exit = threading.Event()
+
     mapping_file = args["mappings"]
     program_file = args["sequence"]
     total_time = 30
@@ -368,5 +369,5 @@ if __name__ == "__main__":
 
     daemons = device.prepare()
     device.run(total_time=total_time, daemons=daemons)
-    exit.wait(total_time)
+    device.exit.wait(total_time)
     device.total_off()
