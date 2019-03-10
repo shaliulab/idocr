@@ -12,6 +12,8 @@ white = (255, 255, 255)
 yellow = (0, 255, 255)
 red = (0, 0, 255)
 blue = (255, 0, 0)
+
+cv2_version = cv2.__version__
  
 
 class Arena():
@@ -67,7 +69,7 @@ class Arena():
         """
       
         print('Arena {} has an area of {}'.format(self.identity, self.area))
-        cv2.putText(img, 'Arena '+ str(self.identity), (self.X - 50, self.Y - 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
+        cv2.putText(img, 'Arena '+ str(self.identity), (self.X - 50, self.Y - 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
         cv2.drawContours(img, [self.contour], 0, red, 1)
         cv2.rectangle(img, (self.X, self.Y), (self.X + self.W, self.Y + self.H), (0,255,255), 2)
         cv2.circle(img, (self.CX1, self.CY1), 2, blue, -1)
@@ -80,7 +82,11 @@ class Arena():
         transform = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.block_size, self.param1)
         #transform = cv2.morphologyEx(transform, cv2.MORPH_OPEN, kernel)
         self.mask_input = transform 
-        (_, flies, _) = cv2.findContours(transform, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        if cv2_version[0] == '4':
+            flies, _ = cv2.findContours(transform, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        else:
+            _, flies, _ = cv2.findContours(transform, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         transform = cv2.bitwise_and(transform, self.mask)
         self.mask_result = transform 
 
@@ -181,7 +187,7 @@ class Fly():
 
 class Tracker():
    
-    def __init__(self, camera, fps = 2, experimenter="Sayed", duration=1200, video=None, kernel_factor=5):
+    def __init__(self, camera="opencv", fps = 2, experimenter="Sayed", duration=1200, video=None, kernel_factor=5):
         """
         Setup video recording parameters.
 
@@ -209,16 +215,13 @@ class Tracker():
 
         # self.record_to_save_header = ['Operator', 'Date_Time', 'Experiment', '', 'Arena', 'Object', 'frame', 'time_point', 'CoordinateX', 'CoordinateY', 'RelativePosX', 'RelativePosY']
 
-        if video is not None:
-            camera = "opencv"
-
         stream = self.initialize_stream(camera, video)
 
         if self.fps is not None and video is not None:
             # Set the FPS of the camera
             stream.set_fps(self.fps)
 
-        print("[INFO] starting video stream...")
+        print("[INFO] Starting video ...")
         time.sleep(0.1)
 
         # Extract 
@@ -261,31 +264,31 @@ class Tracker():
                     exitCode = 0
                     ## TODO
                     ## Check camera is visible!
-                    camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+                    cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
                     # Print the model name of the camera.
-                    print("Using device ", camera.GetDeviceInfo().GetModelName())
+                    print("Using device ", cap.GetDeviceInfo().GetModelName())
                 
                     # The parameter MaxNumBuffer can be used to control the count of buffers
                     # allocated for grabbing. The default value of this parameter is 10.
-                    camera.MaxNumBuffer = 5
+                    cap.MaxNumBuffer = 5
                 
                     countOfImagesToGrab = 100
                     # Start the grabbing of c_countOfImagesToGrab images.
                     # The camera device is parameterized with a default configuration which
                     # sets up free-running continuous acquisition.
-                    camera.StartGrabbingMax(countOfImagesToGrab)
-                    self.stream = camera
+                    cap.StartGrabbingMax(countOfImagesToGrab)
+                    self.cap = cap 
 
                 def get_fps(self):
-                    fps = self.stream.AcquisitionFrameRateAbs.GetValue()
+                    fps = self.cap.AcquisitionFrameRateAbs.GetValue()
                     return fps
 
                 def get_width(self):
-                    width = self.stream.Width.GetValue()
+                    width = self.cap.Width.GetValue()
                     return width
 
                 def get_height(self):
-                    height = self.stream.Height.GetValue()
+                    height = self.cap.Height.GetValue()
                     return height 
 
 
@@ -298,7 +301,7 @@ class Tracker():
 
                 def read_frame(self):
                     # Wait for an image and then retrieve it. A timeout of 5000 ms is used.
-                    grabResult = self.stream.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
+                    grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
                     self.grabResult = grabResult
                     # Image grabbed successfully?
                     ret = grabResult.GrabSucceeded()
@@ -317,12 +320,13 @@ class Tracker():
         else:
             class Stream():
                 def __init__(self):
-                    print("[INFO] Not a pylon camera!")
-                    s = [0 if v is None else v for v in [video]][0]
-                    self.camera = cv2.VideoCapture(s)
+                    s = 0 if video is None else video
+                    if s == 0: print("[INFO] Capturing stream!")
+                    if s != 0: print("[INFO] Opening {}!".format(s))
+                    self.cap = cv2.VideoCapture(s)
 
                 def get_fps(self):
-                    fps = self.camera.get(5)
+                    fps = self.cap.get(5)
                     if fps == 0:
                         return 2
                     return fps
@@ -332,17 +336,17 @@ class Tracker():
                     return t
        
                 def get_width(self):
-                    width = int(self.camera.get(3))
+                    width = int(self.cap.get(3))
                     return width
  
                 def get_height(self):
-                    height = int(self.camera.get(4))
+                    height = int(self.cap.get(4))
                     return height 
  
                 def set_fps(self, fps):
                     if self.get_fps() != fps:
                         print("[INFO] Setting fps to {}".format(fps))
-                        self.camera.set(5, fps)
+                        self.cap.set(5, fps)
  
              #   def set_width(self, width):
              #       if self.stream.get_width() != width:
@@ -352,11 +356,11 @@ class Tracker():
              #           self.stream.set(4, height)
 
                 def read_frame(self):
-                    ret, img = self.camera.read()
+                    ret, img = self.cap.read()
                     return ret, img
                
                 def release(self):
-                    self.camera.release()
+                    self.cap.release()
 
         stream = Stream()
         return stream
@@ -401,7 +405,11 @@ class Tracker():
         image_blur = cv2.GaussianBlur(avgImage, (self.kernel_factor, self.kernel_factor), 0)
         _, image1 = cv2.threshold(image_blur, RangeLow1, RangeUp1, cv2.THRESH_BINARY+cv2.THRESH_OTSU) 
         arena_opening = cv2.morphologyEx(image1, cv2.MORPH_OPEN, self.kernel, iterations = 2)
-        (_, arenas, _) = cv2.findContours(arena_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        if cv2_version[0] == '4':
+            arenas, _ = cv2.findContours(arena_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        else:
+            _, arenas, _ = cv2.findContours(arena_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
         self.arenas = arenas
         return self.arenas
 
@@ -440,6 +448,7 @@ class Tracker():
             # If ret is False, a new frame could not be read
             # Exit 
             if not ret:
+                print("[INFO] Stream or video is finished")
                 break
             
            
@@ -565,8 +574,10 @@ class Tracker():
 
             frame_count +=1
 
-            cv2.imshow("stream", img)
-            cv2.imshow("gray", gray)
+            cv2.namedWindow('result', cv2.WINDOW_NORMAL)
+            cv2.imshow("result", img)
+            cv2.resizeWindow('result', 800,800)
+
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
  

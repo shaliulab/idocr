@@ -7,7 +7,7 @@ Developing Fly Real-time Transcription Scope
 
 ## Instructions
 
-1 **Connect the camera to the computer via LAN**  
+1 **Connect the camera to the computer via LAN** 
 2 **Run the open_camera.sh script to put it under the IP address that pylon expects**
  
 
@@ -57,10 +57,44 @@ if the output you get is a green line that says `/dev/ttyACM0`, good to go! Othe
 
 * Open the pylon camera, track flies and run the Arduino program encoded in program.csv assuming the pin mappings in pins_mapping.csv
 ```
-/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python main.py --track --camera pylon --arduino --mappings Arduino/pins_mapping.csv --sequence Arduino/program.csv
+/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python main.py --track --camera pylon --arduino --mappings Arduino/mappings/main.csv --sequence Arduino/program/main.csv
 ```
 
 * Open the pylon camera, track flies and run the Arduino program encoded in program.csv assuming the pin mappings in pins_mapping.csv and set the fps to 10
 ```
-/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python main.py --track --camera pylon --arduino --mappings Arduino/pins_mapping.csv --sequence Arduino/program.csv --fps 10
+/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python main.py --track --camera pylon --arduino--mappings Arduino/mappings/main.csv --sequence Arduino/program/main.csv --fps 10
 ```
+
+## Troubleshooting
+
+Please make sure the environment is using
+
+* Python3.6 (ideally python3.6.3)
+* Opencv 3.4.5 or Opencv 4.0.0
+
+Otherwise, it might not work.
+
+### Check OpenCV works properly
+
+If OpenCV is capable of making videos, running the command below will create `test_video.mp4` and `test_video.avi` under `videos/`
+```
+ /home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python tests/tk-img2video.py -p "images/frame*tiff" -o videos/test_video
+```
+
+If OpenCV is capable of reading this videos, running any of this commands should return:
+```
+/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python tests/check_video.py -v videos/test_video.avi
+/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python tests/check_video.py -v videos/test_video.mp4
+```
+```
+True
+(1024, 1280, 3)
+```
+
+If instead you get:
+```
+False
+None
+```
+
+your OpenCV installation is broken
