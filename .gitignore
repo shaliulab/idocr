@@ -102,3 +102,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+src/Camera/*py
+src/Camera/new_20x/*
+images/*
