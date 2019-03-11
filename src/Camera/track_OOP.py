@@ -6,6 +6,7 @@ import time
 import matplotlib.pyplot as plt
 from pypylon import pylon
 from pypylon import genicam
+import yaml
 
 
 white = (255, 255, 255)
@@ -17,27 +18,34 @@ cv2_version = cv2.__version__
  
 
 class Arena():
-    
-    def __init__(self, contour, identity):
+
+    ## TODO
+    ## Make config an argument that the user can change from the CLI
+    def __init__(self, contour, identity, config = "config.yml"):
         """Initialize an arena object
         """
         
+        with open(config, 'r') as ymlfile:
+            cfg = yaml.load(ymlfile)
+
+
         self.contour = contour
         self.identity = identity
-        self.min_arena_area = 1000
-        self.block_size = 9
-        self.param1 = 13
+        ## cfg
+        self.min_arena_area = cfg["arena"]["min_area"] 
+        self.block_size = cfg["arena"]["block_size"]
+        self.param1 = cfg["arena"]["param1"]
         
     def compute(self):
         #print("Contour area is:")
         #print(type(self.contour))
         #print(self.contour)
         self.area = cv2.contourArea(self.contour)
-        self.X, self.Y, self.W, self.H = cv2.boundingRect(self.contour)
+        self.x, self.y, self.w, self.h = cv2.boundingRect(self.contour)
         M0 = cv2.moments(self.contour)
         if M0['m00'] != 0 and M0['m10']:
-            self.CX1 = int(M0['m10']/M0['m00'])
-            self.CY1 = int(M0['m01']/M0['m00'])
+            self.cx = int(M0['m10']/M0['m00'])
+            self.cy = int(M0['m01']/M0['m00'])
         else:
             pass
             # handle what happens when the if above is not true 
@@ -55,11 +63,11 @@ class Arena():
         ## TODO:
         ## Give some room for cases where the fly might be by the edges. Expand the arena a few pixels!
         padding = 0
-        y0 = self.Y - padding
-        y1 = self.Y + self.H + padding
+        y0 = self.y - padding
+        y1 = self.y + self.h + padding
 
-        x0 = self.X - padding
-        x1 = self.X + self.W + padding
+        x0 = self.x - padding
+        x1 = self.x + self.w + padding
         mask[y0:y1, x0:x1] = 255
         self.mask = mask
         #self.mask = np.full(gray.shape, 255, dtype=np.uint8)
@@ -68,11 +76,11 @@ class Arena():
         """Draw the arena
         """
       
-        print('Arena {} has an area of {}'.format(self.identity, self.area))
-        cv2.putText(img, 'Arena '+ str(self.identity), (self.X - 50, self.Y - 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
+        #print('Arena {} has an area of {}'.format(self.identity, self.area))
+        cv2.putText(img, 'Arena '+ str(self.identity), (self.x - 50, self.y - 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
         cv2.drawContours(img, [self.contour], 0, red, 1)
-        cv2.rectangle(img, (self.X, self.Y), (self.X + self.W, self.Y + self.H), (0,255,255), 2)
-        cv2.circle(img, (self.CX1, self.CY1), 2, blue, -1)
+        cv2.rectangle(img, (self.x, self.y), (self.x + self.w, self.y + self.h), (0,255,255), 2)
+        cv2.circle(img, (self.cx, self.cy), 2, blue, -1)
         
         return img
 
@@ -96,18 +104,25 @@ class Arena():
 
 class Fly():
     
-    def __init__(self, arena, contour, identity):
+    ## TODO
+    ## Make config an argument that the user can change from the CLI
+    def __init__(self, arena, contour, identity, config = "config.yml"):
         """Initialize fly object
         """
-        
+       
         self.contour = contour
         self.identity = identity
         self.arena  = arena
-        self.min_object_length = 0
-        self.min_obj_arena_dist = 2
-        self.max_object_area = 200
-        self.min_object_area = 0
-        self.min_intensity = 80
+
+        with open(config, 'r') as ymlfile:
+            cfg = yaml.load(ymlfile)
+
+
+        self.min_object_length = cfg["fly"]["min_length"]
+        self.min_obj_arena_dist =  cfg["fly"]["min_dist_arena"]
+        self.max_object_area =  cfg["fly"]["max_area"]
+        self.min_object_area =  cfg["fly"]["min_area"]
+        self.min_intensity =  cfg["fly"]["min_intensity"]
     
     def compute(self):
         # compute area of the fly contour
@@ -122,8 +137,8 @@ class Fly():
         M1 = cv2.moments(self.contour)
         if M1['m00'] != 0 and M1['m10']:
             # used in the validation step
-            self.cx1 = int(M1['m10']/M1['m00'])
-            self.cy1 = int(M1['m01']/M1['m00'])
+            self.cx = int(M1['m10']/M1['m00'])
+            self.cy = int(M1['m01']/M1['m00'])
         else:
             # handle what happens when the if above is not true
             pass
@@ -150,14 +165,13 @@ class Fly():
         #print(fly_passed_3)
         #print(fly_passed_4)
 
-        if not (fly_passed_1 and fly_passed_2 and fly_passed_3 and fly_passed_4) or getattr(self, "cx1") is None:
+        if not (fly_passed_1 and fly_passed_2 and fly_passed_3 and fly_passed_4) or getattr(self, "cx") is None:
                 return False
         else:
             # the center of the fly contour needs to be within the contour of the arena it was found in
             # it has to be more than min_obj_arena_dist pixels from the arena contour (inside it)
             # if min_obj_arena_dist is 0, then it's fine if it borders the arena contour
-            fly_passed_5 = cv2.pointPolygonTest(self.arena.contour, (self.cx1, self.cy1), True) > self.min_obj_arena_dist
-            print(fly_passed_5)
+            fly_passed_5 = cv2.pointPolygonTest(self.arena.contour, (self.cx, self.cy), True) > self.min_obj_arena_dist
             return fly_passed_5 
         
          
@@ -166,7 +180,6 @@ class Fly():
         """Draw fly
         """
         
-        print('Find fly {}'.format(self.identity))
         if self.identity > 1:
             cv2.putText(img, 'Error: more than one object found per arena', (25,40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, white, 1)
 
@@ -179,7 +192,7 @@ class Fly():
     def save(self, frame_count, time_position):
         record = "\t".join(["{}"] * 10) + "\n"
         record.format(frame_count, time_position, self.arena.identity, self.identity,
-                      self.cx1, self.cy1, self.arena.CX1, self.arena.CY1, self.cx1-self.arena.CX1, self.cy1-self.arena.CY1)
+                      self.cx, self.cy, self.arena.cx, self.arena.cy, self.cx-self.arena.cx, self.cy-self.arena.cy)
         return record
 
 
@@ -187,16 +200,19 @@ class Fly():
 
 class Tracker():
    
-    def __init__(self, camera="opencv", fps = 2, experimenter="Sayed", duration=1200, video=None, kernel_factor=5):
+    def __init__(self, camera = "opencv", duration = 1200, video = None, config = "config.yml"):
         """
         Setup video recording parameters.
-
         duration: in seconds
         """
 
+        with open(config, 'r') as ymlfile:
+            cfg = yaml.load(ymlfile)
+
                    
+        self.experimenter = cfg["tracker"]["experimenter"]
         self.duration = duration
-        self.frame_count = 0
+        #self.frame_count = 0
         self.missing_fly = 0
         now = datetime.datetime.now()
         self.Date_time = now.strftime("%Y_%m_%dT%H_%M_%S")
@@ -208,9 +224,10 @@ class Tracker():
 
 
         self.N = 10
-        self.fps = fps
-        self.kernel_factor = kernel_factor
+        self.fps = cfg["tracker"]["fps"]
+        kernel_factor = cfg["arena"]["kernel_factor"] 
         self.kernel = np.ones((kernel_factor, kernel_factor), np.uint8)
+        self.kernel_factor = kernel_factor
 
 
         # self.record_to_save_header = ['Operator', 'Date_Time', 'Experiment', '', 'Arena', 'Object', 'frame', 'time_point', 'CoordinateX', 'CoordinateY', 'RelativePosX', 'RelativePosY']
@@ -222,7 +239,6 @@ class Tracker():
             stream.set_fps(self.fps)
 
         print("[INFO] Starting video ...")
-        time.sleep(0.1)
 
         # Extract 
         #VIDEO_POS = cap.get(0)
@@ -384,7 +400,7 @@ class Tracker():
         cv2.putText(img,'RIGHT',                       (1100,525), cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
         return img
 
-    def find_arenas(self, frame_count, gray, RangeLow1 = 0, RangeUp1 = 255, N = 10):
+    def find_arenas(self, frame_count, gray, RangeLow1 = 0, RangeUp1 = 255):
         """Performs Otsu thresholding followed by morphological transformations to improve the signal/noise.
         Input image is the average image
         Output is a tuple of length 2, where every elemnt is either a list of contours or None (if no contours were found)
@@ -396,7 +412,6 @@ class Tracker():
         RangeLow1: value assigned to pixels below the Otsu threshold
         RangeUp1: value assigned to pixels above the Otsu threshold
         kernel_factor: size of the square kernel used in blurring and openings
-        N: number of frames that must have passed for the program to search for arenas
         """
 
         # assign the grayscale to the ith frame in accuImage
@@ -505,7 +520,7 @@ class Tracker():
 
                 ## Find flies in this arena
                 fly_contours = arena.find_flies(gray, self.kernel)
-                print('There are {} potential flies found in arena {}'.format(len(fly_contours), arena.identity))
+                #print('There are {} potential flies found in arena {}'.format(len(fly_contours), arena.identity))
 
                 # Initialize a fly identity that will be increased with 1
                 # for every validated fly i.e. not on every loop iteration!
@@ -519,8 +534,9 @@ class Tracker():
                     # If not validated, move on the next fly contour
                     # i.e. ignore the current fly 
                     if not fly.validate(gray):
-                        print("Fly not validated")
+                        #print("Fly not validated")
                         continue
+                    print("Fly validated in arena {}".format(fly.arena.identity))
                     # Draw the fly
                     img = fly.draw(img, frame_count)
 
@@ -574,9 +590,9 @@ class Tracker():
 
             frame_count +=1
 
-            cv2.namedWindow('result', cv2.WINDOW_NORMAL)
+            #cv2.namedWindow('result', cv2.WINDOW_NORMAL)
             cv2.imshow("result", img)
-            cv2.resizeWindow('result', 800,800)
+            #cv2.resizeWindow('result', 800,800)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break

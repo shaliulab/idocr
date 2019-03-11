@@ -22,6 +22,7 @@ ap.add_argument("-e", "--experimenter", type = str, default="Sayed", help="Add n
 ap.add_argument("-a", "--arduino", action = 'store_true',        help="Shall I run Arduino?")
 ap.add_argument("-t", "--track", action = 'store_true',          help="Shall I track flies?")
 ap.add_argument("-c", "--camera", type = str, default = "opencv", help="Stream source")
+ap.add_argument("--config", type = str, default = "config.yml", help="Path to config file")
 ap.add_argument("-f", "--fps", type = int, help="Frames per second in the opened stream. Default as stated in the __init__ method in Tracker, is set to 2")
 args = vars(ap.parse_args())
 
@@ -60,7 +61,7 @@ if args["arduino"]:
 
 if args["track"]:
     from src.Camera.track_OOP import Tracker
-    tracker = Tracker(camera = args["camera"], experimenter = args["experimenter"], video = args["video"], fps = args["fps"])
+    tracker = Tracker(camera = args["camera"], video = args["video"], config = args["config"])
 
 #input_totaltime = input("Do you want to start tracking now? (y/n)")
 #if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:
