@@ -76,7 +76,7 @@ class LearningMemoryDevice():
     def prepare(self):
  
         # They are not run throughout the lifetime of the program, just at some interval and without intermitency
-        daemons = {}
+        threads = {}
         
         count = {p: 0 for p in self.program.pin_id}
         for p in self.program.pin_id:
@@ -85,7 +85,7 @@ class LearningMemoryDevice():
             d_end =   np.asscalar(self.program.query('pin_id == "{}"'.format(p))["end"].iloc[count[p]])
             d_on =   np.asscalar(self.program.query('pin_id == "{}"'.format(p))["on"].iloc[count[p]])
             d_off =   np.asscalar(self.program.query('pin_id == "{}"'.format(p))["off"].iloc[count[p]])
-            d_name = 'daemon-{}_{}'.format(p, count[p])
+            d_name = 'thread-{}_{}'.format(p, count[p])
 
             kwargs = {
                 "pin_number"   : d_pin_number,
@@ -100,11 +100,12 @@ class LearningMemoryDevice():
 
             }
             d = MyThread(name=d_name,
-                         target=self.pin_daemon,
+                         target=self.pin_thread,
                          kwargs = kwargs)
-            d.setDaemon(True)
+
+            d.setDaemon(False)
             d.do_run = True
-            daemons[d_name]=d
+            threads[d_name]=d
             count[p] += 1
         
         
@@ -119,7 +120,7 @@ class LearningMemoryDevice():
         self.program_start = datetime.datetime.now()
 
         # Make the main thread run quit when signaled to stop
-        # This will stop all the daemons in a controlled fashion,
+        # This will stop all the threads in a controlled fashion,
         # which means all the pins are turned of before the thread
         # peacefully dies
         quit = self.thread_off()
@@ -127,8 +128,8 @@ class LearningMemoryDevice():
             signal.signal(getattr(signal, 'SIG'+sig), quit)
 
 
-        self.daemons = daemons
-        return daemons
+        self.threads = threads
+        return threads
 
     def toggle_pin(self, pin_number, value, message=None):
         # global self.pin_state
@@ -154,7 +155,7 @@ class LearningMemoryDevice():
  
  
 
-    def pin_daemon(self, pin_number, total_time, program_start, start, end, on, off, n_iters=np.nan, d_name="", board=None):
+    def pin_thread(self, pin_number, total_time, program_start, start, end, on, off, n_iters=np.nan, d_name="", board=None):
         """
         pin_number: integer declaring the number of the pin on the Arduino board
         
@@ -162,7 +163,7 @@ class LearningMemoryDevice():
                      After total_time, all pins should go off, no matter what their program is
         
         program_start: datetime object declaring the exact moment when run()
-        (the function that calls pin_daemon when defining the threads) is executed. Only makes sense in scheduled pins.
+        (the function that calls pin_thread when defining the threads) is executed. Only makes sense in scheduled pins.
         
         start: timepoint in seconds when the pin should go on for the first time. Only makes sense in scheduled pins.
         
@@ -269,8 +270,8 @@ class LearningMemoryDevice():
 
 
  
-    def run(self, total_time, daemons):
-        [d.start(self.program_start, total_time) for d in daemons.values()]
+    def run(self, total_time, threads):
+        [d.start(self.program_start, total_time) for d in threads.values()]
 
 
  
@@ -327,7 +328,7 @@ class LearningMemoryDevice():
 
     def total_off(self):
         # stop all the threads
-        for d in self.daemons.values():
+        for d in self.threads.values():
             d.do_run = False
             #print("Thread {} stopped".format(d._kwargs["d_name"]))
             print("Stopping thread")
@@ -367,7 +368,7 @@ if __name__ == "__main__":
     device = LearningMemoryDevice(mapping, program, args["port"], args["log_dir"])
     device.off()
 
-    daemons = device.prepare()
-    device.run(total_time=total_time, daemons=daemons)
+    threads = device.prepare()
+    device.run(total_time=total_time, threads=threads)
     device.exit.wait(total_time)
     device.total_off()

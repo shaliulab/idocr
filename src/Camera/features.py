@@ -70,6 +70,7 @@ class Arena():
         x1 = self.x + self.w + padding
         mask[y0:y1, x0:x1] = 255
         self.mask = mask
+        return mask
         #self.mask = np.full(gray.shape, 255, dtype=np.uint8)
 
     def draw(self, img):
