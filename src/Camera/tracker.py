@@ -5,6 +5,8 @@ import datetime
 import numpy as np
 from pypylon import pylon
 from pypylon import genicam
+import cv2
+cv2_version = cv2.__version__
 
 streams_dict = {"pylon": PylonStream, "opencv": StandardStream}
 

@@ -22,6 +22,7 @@ ap.add_argument("-u", "--time",     type = str, default = "m",            help="
 ap.add_argument("-e", "--experimenter", type = str, default="Sayed", help="Add name of the experimenter/operator")
 ap.add_argument("-a", "--arduino", action = 'store_true',        help="Shall I run Arduino?")
 ap.add_argument("-t", "--track", action = 'store_true',          help="Shall I track flies?")
+ap.add_argument("--verbose", action = 'store_true')
 ap.add_argument("-c", "--camera", type = str, default = "opencv", help="Stream source")
 ap.add_argument("--config", type = str, default = "config.yml", help="Path to config file")
 ap.add_argument("-f", "--fps", type = int, help="Frames per second in the opened stream. Default as stated in the __init__ method in Tracker, is set to 2")
@@ -47,11 +48,11 @@ tf = np.where(tu == "m", 60, 1)
 if args["arduino"]:
     from src.Arduino.learning_memory import LearningMemoryDevice
 
-    total_time = 30
+    total_time = args["duration"] 
 
     mapping=pd.read_csv(args["mappings"])
     program=pd.read_csv(args["sequence"], skip_blank_lines=True)
-    device = LearningMemoryDevice(mapping, program, args["port"], args["log_dir"])
+    device = LearningMemoryDevice(mapping, program, args["port"], args["log_dir"], communicate=args["verbose"])
     device.off()
     daemons = device.prepare()
 
@@ -69,4 +70,5 @@ if args["track"]:
 
 if args["arduino"]: device.run(total_time=total_time, daemons=daemons)
 if args["track"]: tracker.track()
+if not args["track"]: time.sleep(args["duration"])
 if args["arduino"]: device.total_off()
