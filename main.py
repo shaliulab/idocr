@@ -40,7 +40,7 @@ if args["arduino"]:
     program=pd.read_csv(args["sequence"], skip_blank_lines=True)
     device = LearningMemoryDevice(mapping, program, args["port"], args["log_dir"], communicate=args["verbose"])
     device.off()
-    daemons = device.prepare()
+    threads = device.prepare()
 
 # Set up general settings
 
@@ -54,7 +54,7 @@ if args["track"]:
 #input_totaltime = input("Do you want to start tracking now? (y/n)")
 #if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:
 
-if args["arduino"]: device.run(total_time=total_time, daemons=daemons)
+if args["arduino"]: device.run(total_time=total_time, threads=threads)
 if args["track"] and not args["gui"]:
     tracker.run()
 if not args["track"]:
