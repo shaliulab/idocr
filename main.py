@@ -23,25 +23,11 @@ ap.add_argument("-e", "--experimenter", type = str, default="Sayed", help="Add n
 ap.add_argument("-a", "--arduino", action = 'store_true',        help="Shall I run Arduino?")
 ap.add_argument("-t", "--track", action = 'store_true',          help="Shall I track flies?")
 ap.add_argument("--verbose", action = 'store_true')
+ap.add_argument("--gui", action = 'store_true')
 ap.add_argument("-c", "--camera", type = str, default = "opencv", help="Stream source")
 ap.add_argument("--config", type = str, default = "config.yml", help="Path to config file")
 ap.add_argument("-f", "--fps", type = int, help="Frames per second in the opened stream. Default as stated in the __init__ method in Tracker, is set to 2")
 args = vars(ap.parse_args())
-
-exit = threading.Event()
-
-# Define tf as a time factor to scale time units to seconds or minutes
-# according to user input
-
-tu = args["time"]
-try:
-  assert(tu != "m" or tu != "s")
-except AssertionError as error:
-    print("Please enter a valid time unit: accepted m (minutes) or s (seconds)")
-    exit(1)
-
-tf = np.where(tu == "m", 60, 1)
-
 
 # Setup Arduino controls
 ##########################
@@ -69,6 +55,9 @@ if args["track"]:
 #if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:
 
 if args["arduino"]: device.run(total_time=total_time, daemons=daemons)
-if args["track"]: tracker.track()
-if not args["track"]: time.sleep(args["duration"])
+if args["track"] and not args["gui"]:
+    tracker.run()
+if not args["track"]:
+    print("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
+    time.sleep(args["duration"])
 if args["arduino"]: device.total_off()

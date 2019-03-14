@@ -1,5 +1,5 @@
-from features import Arena, Fly
-from streams import PylonStream, StandardStream
+from .features import Arena, Fly
+from .streams import PylonStream, StandardStream
 import tkinter as tk
 from PIL import ImageTk, Image
 import yaml
@@ -321,10 +321,7 @@ class Tracker(Frame):
 
     def run(self):
         status = self.track()
-        print("Track is done")
         self.merge_masks()
-        print("Merge masks is done")
-        print(status)
         if status:
             if self.gui:
                 self.tkinter_update(self.img, 0, 0)
@@ -336,12 +333,10 @@ class Tracker(Frame):
                 cv2.imshow("mask", self.main_mask)
                 # Check if user forces leave (press q)
                 keypress_stop = cv2.waitKey(1) & 0xFF in [27, ord('q')]
-                if keypress_stop:
-                    self.onStop()
-                    return False
-                else:
-                    self.track()
-                    self.merge_masks()
+                if not keypress_stop and status:
+                    self.run()
+                self.onClose()
+                return False
         else:
             return False
 
@@ -422,4 +417,4 @@ if __name__ == "__main__":
     ap.add_argument("--gui", action = 'store_true')
     args = vars(ap.parse_args())
     tracker = Tracker(video=args["video"], gui=args["gui"])
-    if not args["gui"]: tracker.track()
+    if not args["gui"]: tracker.run()
