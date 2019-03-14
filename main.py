@@ -49,7 +49,7 @@ if args["arduino"]:
 
 if args["track"]:
     from src.Camera.tracker import Tracker
-    tracker = Tracker(camera = args["camera"], video = args["video"], config = args["config"])
+    tracker = Tracker(camera = args["camera"], video = args["video"], config = args["config"], gui=args["gui"])
 
 #input_totaltime = input("Do you want to start tracking now? (y/n)")
 #if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:

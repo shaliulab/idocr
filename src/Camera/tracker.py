@@ -106,6 +106,7 @@ class Tracker(Frame):
         self.frame_count = 0
 
         if self.gui:
+            print("[INFO] initializing GUI")
             self.tkinter_initialize()
 
 
