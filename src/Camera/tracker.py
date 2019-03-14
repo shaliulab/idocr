@@ -10,6 +10,7 @@ from pypylon import genicam
 import threading
 import argparse
 import cv2
+import imutils
 
 cv2_version = cv2.__version__
 
@@ -17,6 +18,7 @@ streams_dict = {"pylon": PylonStream, "opencv": StandardStream}
 
 def tkinter_preprocess(img):
     image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    image = imutils.resize(image, width=700)
     image = Image.fromarray(image)
     image = ImageTk.PhotoImage(image)
     return image
@@ -260,7 +262,8 @@ class Tracker(Frame):
                 self.masks[arena.identity] = mask 
 
                 ## Find flies in this arena
-                fly_contours = arena.find_flies(gray, self.kernel)
+                gray_masked = cv2.bitwise_and(gray, mask)
+                fly_contours = arena.find_flies(gray_masked, self.kernel)
                 #print('There are {} potential flies found in arena {}'.format(len(fly_contours), arena.identity))
 
                 # Initialize a fly identity that will be increased with 1
@@ -346,7 +349,7 @@ class Tracker(Frame):
     def tkinter_initialize(self):
         self.stopEvent = None
         self.root = tk.Tk()
-        self.root.geometry("1200x2400")
+        self.root.geometry("1600x600")
         Frame.__init__(self, self.root)
 
         self.panel = np.full((1,2), None)
@@ -376,7 +379,7 @@ class Tracker(Frame):
             label = tk.Label(image=image)
             self.panel[i,j] = label
             self.panel[i,j].image = image
-            label.place(x=i, y=0+j*1200)
+            label.place(y=i, x=50*(j+1)+j*750)
 #            side = "left" if j == 0 else "right"
 #            print(side)
 #            self.panel[i,j].pack(side=side, padx=10, pady=10)
@@ -405,7 +408,7 @@ class Tracker(Frame):
         masks = self.masks.values()
         if len(masks) != 0:
             masks = np.array(list(masks))
-            main_mask = np.bitwise_and.reduce(masks)
+            main_mask = np.bitwise_or.reduce(masks)
         else:
             main_mask = np.full(self.img.shape, 255, dtype=np.uint8)
     
