@@ -11,7 +11,7 @@ import logging
 import datetime
 # import ipdb
 import time
-import pickle # share pin state across threads
+#import pickle # share pin state across threads
 import glob
 import os # file removal and we cleaning
 import argparse
@@ -55,9 +55,9 @@ class LearningMemoryDevice():
         self.pin_state = pin_state
 
         self.board = Arduino(port)
-        filehandler = open(os.path.join(log_dir, "pin_state.obj"),"wb")
-        pickle.dump(pin_state,filehandler)
-        filehandler.close()    
+        #filehandler = open(os.path.join(log_dir, "pin_state.obj"),"wb")
+        #pickle.dump(pin_state,filehandler)
+        #filehandler.close()    
         self.exit = threading.Event()
         self.communicate = communicate
 
@@ -135,17 +135,17 @@ class LearningMemoryDevice():
 
         self.board.digital[pin_number].write(value)
 
-        if self.communicate:
-            filehandler = open(os.path.join(self.log_dir, "pin_state.obj"),"rb")
-            pin_state = pickle.load(filehandler)
-            filehandler.close()
+        #if self.communicate:
+            #filehandler = open(os.path.join(self.log_dir, "pin_state.obj"),"rb")
+            #pin_state = pickle.load(filehandler)
+            #filehandler.close()
 
-            pin_state[self.mapping.query('pin_number == "{}"'.format(pin_number))["pin_id"].iloc[0]]=value
-            #print(self.pin_state["RIGHT_ODOUR_2"])
+            #pin_state[self.mapping.query('pin_number == "{}"'.format(pin_number))["pin_id"].iloc[0]]=value
+            ##print(self.pin_state["RIGHT_ODOUR_2"])
 
-            filehandler = open(os.path.join(self.log_dir, "pin_state.obj"),"wb")
-            pickle.dump(pin_state,filehandler)
-            filehandler.close()
+            #filehandler = open(os.path.join(self.log_dir, "pin_state.obj"),"wb")
+            #pickle.dump(pin_state,filehandler)
+            #filehandler.close()
     
         self.show_circuit(
                     #pin_state,
