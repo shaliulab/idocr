@@ -17,7 +17,7 @@ ap.add_argument("-m", "--mappings", type = str,                           help="
 ap.add_argument("-s", "--sequence", type = str,                           help="Absolute path to csv providing the sequence of instructions to be sent to Arduino")
 ap.add_argument("-v", "--video",    type = str, default = None,           help="location to the video file")
 ap.add_argument("-l", "--log_dir",  type = str, default = ".",            help="Absolute path to directory where log files will be stored")
-ap.add_argument("-d", "--duration", type = str, default = 1200,           help="How long should it last?")
+ap.add_argument("-d", "--duration", type = int, default = 1200,           help="How long should it last?")
 ap.add_argument("-u", "--time",     type = str, default = "m",            help="Time unit to be used")
 ap.add_argument("-e", "--experimenter", type = str, default="Sayed", help="Add name of the experimenter/operator")
 ap.add_argument("-a", "--arduino", action = 'store_true',        help="Shall I run Arduino?")
@@ -34,11 +34,8 @@ args = vars(ap.parse_args())
 if args["arduino"]:
     from src.Arduino.learning_memory import LearningMemoryDevice
 
-    total_time = args["duration"] 
-
-    mapping=pd.read_csv(args["mappings"])
-    program=pd.read_csv(args["sequence"], skip_blank_lines=True)
-    device = LearningMemoryDevice(mapping, program, args["port"], args["log_dir"], communicate=args["verbose"])
+    total_time = args["duration"]
+    device = LearningMemoryDevice(args["mappings"], args["sequence"], args["port"], args["log_dir"], communicate=args["verbose"])
     device.off()
     threads = device.prepare()
 

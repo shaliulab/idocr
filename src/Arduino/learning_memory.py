@@ -19,6 +19,13 @@ import timeit
 import signal
 
 
+def convert(s):
+    try:
+        return np.float(s)
+    except ValueError:
+        num, denom = s.split('/')
+        return np.float(num) / np.float(denom)
+
 def check_do_run(d, max_sleep):
     stop = False 
     start_sleeping = datetime.datetime.now()
@@ -46,10 +53,23 @@ class MyThread(threading.Thread):
 
 class LearningMemoryDevice():
     def __init__(self, mapping, program, port, log_dir, communicate=True):
+
+        mapping = pd.read_csv(mapping, skip_blank_lines=True, comment="#")
+        program = pd.read_csv(program, skip_blank_lines=True, comment="#")
+        mapping = mapping.set_index('pin_id')
+        program = program.set_index('pin_id')
+        program['start'] = program['start'].apply(convert)
+        program['end'] = program['end'].apply(convert)
+        program['on'] = program['on'].apply(convert)
+        program['off'] = program['off'].apply(convert)
+        print(program)
+        program = program * 60
+
+
         self.mapping = mapping
         self.program = program 
         self.port = port
-        pin_names = mapping.pin_id
+        pin_names = mapping.index
         pin_state = {p: 0 for p in pin_names}
 
         self.pin_state = pin_state
@@ -78,13 +98,16 @@ class LearningMemoryDevice():
         # They are not run throughout the lifetime of the program, just at some interval and without intermitency
         threads = {}
         
-        count = {p: 0 for p in self.program.pin_id}
-        for p in self.program.pin_id:
-            d_pin_number = np.asscalar(self.mapping.query('pin_id == "{}"'.format(p))["pin_number"])
-            d_start = np.asscalar(self.program.query('pin_id == "{}"'.format(p))["start"].iloc[count[p]])
-            d_end =   np.asscalar(self.program.query('pin_id == "{}"'.format(p))["end"].iloc[count[p]])
-            d_on =   np.asscalar(self.program.query('pin_id == "{}"'.format(p))["on"].iloc[count[p]])
-            d_off =   np.asscalar(self.program.query('pin_id == "{}"'.format(p))["off"].iloc[count[p]])
+        count = {p: 0 for p in self.program.index}
+        for p in self.program.index:
+            d_pin_number = np.asscalar(self.mapping.loc[p]["pin_number"])
+            x0 = count[p]
+            x1 = count[p]+1
+
+            d_start =      np.asscalar(self.program.loc[[p]].iloc[x0:x1,:]["start"])
+            d_end =        np.asscalar(self.program.loc[[p]].iloc[x0:x1,:]["end"])
+            d_on =         np.asscalar(self.program.loc[[p]].iloc[x0:x1,:]["on"])
+            d_off =        np.asscalar(self.program.loc[[p]].iloc[x0:x1,:]["off"])
             d_name = 'thread-{}_{}'.format(p, count[p])
 
             kwargs = {
@@ -184,6 +207,7 @@ class LearningMemoryDevice():
 
         # this is true for pins of type: CI, SI (intermitent)
         if n_iters != n_iters and on == on:
+            [print(type(e)) for e in [end, total_time, on, off]]
             n_iters = min(end, total_time) // (on + off) # check if total time is accessible
             
         
@@ -216,7 +240,7 @@ class LearningMemoryDevice():
     #     self.write_start_time(pin_number, "Pin {}-{} executes at {}\n", start)
     
         
-        p = self.mapping.query('pin_number == "{}"'.format(pin_number))["pin_id"].iloc[0]
+        pin_id = self.mapping.query('pin_number == "{}"'.format(pin_number)).index[0]
     
         if n_iters == n_iters:    
     #         for _ in tqdm(range(int(n_iters))):
@@ -271,7 +295,7 @@ class LearningMemoryDevice():
 
  
     def run(self, total_time, threads):
-        [d.start(self.program_start, total_time) for d in threads.values()]
+        [d.start(self.program_start, 60*total_time) for d in threads.values()]
 
 
  
@@ -282,9 +306,9 @@ class LearningMemoryDevice():
        pin_state_g = {p: "x" if v == 1 else "0" for p, v in self.pin_state.items()}
        #print(pin_state_g["RIGHT_ODOUR_2"])
 
-       main_pins = self.mapping.query('pin_group == "main"')["pin_id"].values[1:]
-       left_pins = self.mapping.query('pin_group == "left"')["pin_id"].values
-       right_pins = self.mapping.query('pin_group == "right"')["pin_id"].values
+       main_pins = self.mapping.query('pin_group == "main"').index.values[1:]
+       left_pins = self.mapping.query('pin_group == "left"').index.values
+       right_pins = self.mapping.query('pin_group == "right"').index.values
        
        show_data = [self.pin_id2n(p) for p in main_pins] + [pin_state_g[p] for p in main_pins]
        show_data2 = [self.left_pair(p, pin_state_g) for p in left_pins] 
@@ -313,7 +337,7 @@ class LearningMemoryDevice():
 
 
     def pin_id2n(self, pin_id):
-        return str(self.mapping.query('pin_id  == "'+pin_id+'"')["pin_number"].iloc[0]).zfill(2)
+        return str(self.mapping.loc[[pin_id]]["pin_number"].iloc[0]).zfill(2)
     
     def left_pair(self, p, pin_state_g):
         return [self.pin_id2n(p), pin_state_g[p]]
@@ -352,23 +376,20 @@ if __name__ == "__main__":
     # Arguments to follow the command, adding video, etc options
     ap = argparse.ArgumentParser()
     ap.add_argument("-p", "--port",     type = str, help="Absolute path to the Arduino port. Usually '/dev/ttyACM0' in Linux and COM in Windows", default = "/dev/ttyACM0")
-    ap.add_argument("-m", "--mappings", type = str, help="Absolute path to csv providing pin number-pin name mappings", default = "Arduino/pins_mapping_breadboard.csv")
-    ap.add_argument("-s", "--sequence", type = str, help="Absolute path to csv providing the sequence of instructions to be sent to Arduino", default="Arduino/simplified_program2.csv")
+    ap.add_argument("-m", "--mappings", type = str, help="Absolute path to csv providing pin number-pin name mappings", required=True)
+    ap.add_argument("-s", "--sequence", type = str, help="Absolute path to csv providing the sequence of instructions to be sent to Arduino", required=True)
     ap.add_argument("-l", "--log_dir",  type = str, help="Absolute path to directory where log files will be stored", default = "Arduino")
+    ap.add_argument("-d", "--duration",  type = int, required=True)
     args = vars(ap.parse_args())
 
 
-    mapping_file = args["mappings"]
-    program_file = args["sequence"]
-    total_time = 30
-
-    mapping=pd.read_csv(mapping_file)
-    program=pd.read_csv(program_file, skip_blank_lines=True)
+    mapping = args["mappings"]
+    program = args["sequence"]
 
     device = LearningMemoryDevice(mapping, program, args["port"], args["log_dir"])
     device.off()
 
     threads = device.prepare()
-    device.run(total_time=total_time, threads=threads)
-    device.exit.wait(total_time)
+    device.run(total_time=args["duration"], threads=threads)
+    device.exit.wait(args["duration"])
     device.total_off()
