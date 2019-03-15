@@ -47,7 +47,6 @@ class Tracker(Frame):
                    
         self.experimenter = cfg["tracker"]["experimenter"]
         self.duration = duration
-        #self.frame_count = 0
         self.missing_fly = 0
         now = datetime.datetime.now()
         self.Date_time = now.strftime("%Y_%m_%dT%H_%M_%S")
@@ -116,6 +115,10 @@ class Tracker(Frame):
         self.stream = stream
         self.time_position = 0
         self.frame_count = 0
+        self.img = np.full((self.video_height, self.video_width, 3), 0, np.uint8)
+        self.transform = np.full((self.video_height, self.video_width), 0, np.uint8)
+        self.gray_masked = np.full((self.video_height, self.video_width), 0, np.uint8)
+ 
 
 
         if self.gui:
@@ -218,6 +221,7 @@ class Tracker(Frame):
             if not ret:
                 print("[INFO] Stream or video is finished. Closing")
                 self.onClose()
+                self.stop = True
                 return False
            
             img = crop_stream(img, self.crop)
@@ -236,8 +240,6 @@ class Tracker(Frame):
 
                 if self.arena_contours is None:
                     print("[INFO] No arenas found in current frame")
-                    self.img = np.full(gray.shape, 0, np.uint8)
-                    self.transform = np.full(gray.shape, 0, np.uint8)
                     status = self.track()
                     return status
      
@@ -344,10 +346,12 @@ class Tracker(Frame):
         status = self.track()
         if status:
             self.merge_masks()
+            self.gray_gui = cv2.bitwise_and(self.transform, self.transform, mask = self.main_mask)
+
             if self.gui:
-                self.tkinter_update('img', 0, 0)
-                self.tkinter_update('main_mask', 0, 1)
-                self.tkinter_update('transform', 0, 2)
+                self.tkinter_update('img', 0, 0, gui_width = (self.gui_width + self.gui_pad) * 2)
+                #self.tkinter_update('main_mask', 0, 1)
+                self.tkinter_update('gray_gui', 0, 2)
                 self.init = False
                 self.root.after(10, self.run)
                 # set a callback to handle when the window is closed
@@ -357,8 +361,9 @@ class Tracker(Frame):
                     self.root.mainloop()
             else:
                 cv2.imshow("img", self.img)
-                cv2.imshow("mask", self.main_mask)
-                cv2.imshow("transform", self.transform)
+                #cv2.imshow("mask", self.main_mask)
+                #cv2.imshow('transform', self.transform)
+                cv2.imshow("gray_gui", self.gray_gui)
                 # Check if user forces leave (press q)
                 keypress_stop = cv2.waitKey(1) & 0xFF in [27, ord('q')]
                 if not keypress_stop and status:
@@ -393,9 +398,9 @@ class Tracker(Frame):
 
         
 
-    def tkinter_preprocess(self, img):
+    def tkinter_preprocess(self, img, gui_width):
         image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        image = imutils.resize(image, width=self.gui_width)
+        image = imutils.resize(image, width=gui_width)
         image = Image.fromarray(image)
         image = ImageTk.PhotoImage(image)
         return image
@@ -403,17 +408,20 @@ class Tracker(Frame):
 
 
 
-    def tkinter_update(self, img, i, j):
+    def tkinter_update(self, img, i, j, gui_width = None):
+
+        if gui_width is None:
+            gui_width = self.gui_width
 
         img = getattr(self, img, False)
 
-        image = self.tkinter_preprocess(img)
+        image = self.tkinter_preprocess(img, gui_width)
 
         if self.init:
             label = tk.Label(image=image)
             self.panel[i,j] = label
             self.panel[i,j].image = image
-            x = self.gui_pad * (j + 1) + j * (self.gui_width + self.gui_pad)
+            x = self.gui_pad * (j + 1) + j * (gui_width + self.gui_pad)
             print(x)
             label.place(x = x, y = self.gui_pad * (i + 1) + i * (self.gui_width + self.gui_pad))
 #            side = "left" if j == 0 else "right"
@@ -441,6 +449,7 @@ class Tracker(Frame):
 
         self.stop = True
         self.save_record()
+        print("{} frames analyzed".format(self.frame_count))
         sys.exit(1)
 
     def merge_masks(self):

@@ -57,8 +57,15 @@ class PylonStream():
         grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
         self.grabResult = grabResult
         # Image grabbed successfully?
-        ret = grabResult.GrabSucceeded()
+        ret = False
+        count = 0
+        while not ret or count < 10:
+            ret = grabResult.GrabSucceeded()
+            count += 1
+        if count == 10:
+            print("[INFO] Tried reading next frame 10 times and none worked. Exiting :(")
         #print(ret)
+        print(ret)
         if ret:
             # Access the image data.
             #print("SizeX: ", grabResult.Width)

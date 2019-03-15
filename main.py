@@ -39,6 +39,8 @@ total_time = args["duration"] * 60
 if args["track"]:
     from src.Camera.tracker import Tracker
     tracker = Tracker(camera = args["camera"], video = args["video"], config = args["config"], gui=args["gui"])
+else:
+    tracker = None
 
 # Setup Arduino controls
 ##########################
