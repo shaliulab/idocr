@@ -439,6 +439,7 @@ class Tracker(Frame):
             self.stream.release()
             cv2.destroyAllWindows()
 
+        self.stop = True
         self.save_record()
         sys.exit(1)
 

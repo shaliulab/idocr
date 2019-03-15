@@ -87,9 +87,7 @@ class LearningMemoryDevice():
         start_sleeping = datetime.datetime.now()
         while ((datetime.datetime.now() - start_sleeping).total_seconds() < max_sleep):
             stop_arduino = self.exit.is_set()
-            stop_gui = getattr(self.tracker, "stopEvent", False)
-            if stop_gui is not False:
-                stop_gui = stop_gui.is_set()
+            stop_gui = getattr(self.tracker, "stop", False)
             if not stop_arduino and not stop_gui:
                 time.sleep(0.001)
     
