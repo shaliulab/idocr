@@ -17,13 +17,20 @@ class PylonStream():
         # The parameter MaxNumBuffer can be used to control the count of buffers
         # allocated for grabbing. The default value of this parameter is 10.
         cap.MaxNumBuffer = 5
-    
-        countOfImagesToGrab = 100
+
+   
         # Start the grabbing of c_countOfImagesToGrab images.
         # The camera device is parameterized with a default configuration which
         # sets up free-running continuous acquisition.
-        cap.StartGrabbingMax(countOfImagesToGrab)
+        cap.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
+
+        #width = cap.Width.GetValue() // 3
+        #offset_x = width
+        #cap.OffsetX.Max = 1000
+        #cap.OffsetX = offset_x
+        #cap.Width = width
         self.cap = cap 
+
 
     def get_fps(self):
         fps = self.cap.AcquisitionFrameRateAbs.GetValue()
@@ -51,6 +58,7 @@ class PylonStream():
         self.grabResult = grabResult
         # Image grabbed successfully?
         ret = grabResult.GrabSucceeded()
+        #print(ret)
         if ret:
             # Access the image data.
             #print("SizeX: ", grabResult.Width)

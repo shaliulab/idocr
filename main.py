@@ -29,14 +29,15 @@ ap.add_argument("--config", type = str, default = "config.yml", help="Path to co
 ap.add_argument("-f", "--fps", type = int, help="Frames per second in the opened stream. Default as stated in the __init__ method in Tracker, is set to 2")
 args = vars(ap.parse_args())
 
+total_time = args["duration"] * 60
+
 # Setup Arduino controls
 ##########################
 if args["arduino"]:
     from src.Arduino.learning_memory import LearningMemoryDevice
 
-    total_time = args["duration"]
     device = LearningMemoryDevice(args["mappings"], args["sequence"], args["port"], args["log_dir"], communicate=args["verbose"])
-    device.off()
+    device.total_off(exit=False)
     threads = device.prepare()
 
 # Set up general settings
@@ -52,9 +53,11 @@ if args["track"]:
 #if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:
 
 if args["arduino"]: device.run(total_time=total_time, threads=threads)
-if args["track"] and not args["gui"]:
-    tracker.run()
+if args["track"]:
+    _ = tracker.run(init=True)
 if not args["track"]:
     print("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
-    time.sleep(args["duration"])
-if args["arduino"]: device.total_off()
+    time.sleep(total_time)
+if args["arduino"]:
+    print("Quitting arguino")
+    device.quit()

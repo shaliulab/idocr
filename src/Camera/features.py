@@ -33,8 +33,6 @@ class Arena():
         self.identity = identity
         ## cfg
         self.min_arena_area = cfg["arena"]["min_area"] 
-        self.block_size = cfg["arena"]["block_size"]
-        self.param1 = cfg["arena"]["param1"]
         
     def compute(self):
         #print("Contour area is:")
@@ -57,9 +55,9 @@ class Arena():
         else:
             return True
         
-    def make_mask(self, gray):
+    def make_mask(self, shape):
 
-        mask = np.full(gray.shape, 0, dtype = np.uint8)
+        mask = np.full(shape, 0, dtype = np.uint8)
         ## TODO:
         ## Give some room for cases where the fly might be by the edges. Expand the arena a few pixels!
         padding = 0
@@ -85,19 +83,13 @@ class Arena():
         
         return img
 
-    def find_flies(self, gray, kernel):
-        """A masked version of gray
-        """
-        transform = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.block_size, self.param1)
+    def find_flies(self, transform, kernel):
         #transform = cv2.morphologyEx(transform, cv2.MORPH_OPEN, kernel)
-        self.mask_input = transform 
 
         if cv2_version[0] == '4':
             flies, _ = cv2.findContours(transform, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         else:
             _, flies, _ = cv2.findContours(transform, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        transform = cv2.bitwise_and(transform, self.mask)
-        self.mask_result = transform 
 
         return flies
  

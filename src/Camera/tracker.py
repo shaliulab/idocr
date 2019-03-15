@@ -11,17 +11,23 @@ import threading
 import argparse
 import cv2
 import imutils
+import sys
 
 cv2_version = cv2.__version__
 
 streams_dict = {"pylon": PylonStream, "opencv": StandardStream}
 
-def tkinter_preprocess(img):
-    image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    image = imutils.resize(image, width=700)
-    image = Image.fromarray(image)
-    image = ImageTk.PhotoImage(image)
-    return image
+def crop_stream(img, crop):
+    width = img.shape[1]
+    fw = width//crop
+    y0 = fw * (crop // 2)
+    if len(img.shape) == 3:
+        img = img[:,y0:(y0+fw),:]
+    else:
+        img = img[:,y0:(y0+fw)]
+    return img
+
+
 
 
 Frame = tk.Frame
@@ -59,7 +65,11 @@ class Tracker(Frame):
         self.kernel_factor = kernel_factor
         self.gui = gui
         self.arena_contours = None
-
+        self.block_size = cfg["arena"]["block_size"]
+        self.param1 = cfg["arena"]["param1"]
+        self.crop = cfg["tracker"]["crop"]
+        self.gui_width = 250
+        self.gui_pad = 20
 
         # self.record_to_save_header = ['Operator', 'Date_Time', 'Experiment', '', 'Arena', 'Object', 'frame', 'time_point', 'CoordinateX', 'CoordinateY', 'RelativePosX', 'RelativePosY']
 
@@ -96,14 +106,17 @@ class Tracker(Frame):
 
         # Make accuImage an array of size heightxwidthxnframes that will
         # store in the :,:,i element the result of the tracking for frame i
-        video_width = stream.get_width()
+        video_width = stream.get_width() // self.crop
         video_height = stream.get_height()
+        self.video_width = video_width
+        self.video_height = video_height
         print("[INFO] frame width is {}".format(video_width))
         print("[INFO] frame height is {}".format(video_height))
         self.accuImage = np.zeros((video_height, video_width, self.N), np.uint8)
         self.stream = stream
         self.time_position = 0
         self.frame_count = 0
+
 
         if self.gui:
             print("[INFO] initializing GUI")
@@ -207,6 +220,7 @@ class Tracker(Frame):
                 self.onClose()
                 return False
            
+            img = crop_stream(img, self.crop)
             # Make single channel i.e. grayscale
             if len(img.shape) == 3:
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  
@@ -221,9 +235,14 @@ class Tracker(Frame):
                 self.arena_contours = self.find_arenas(gray)
 
                 if self.arena_contours is None:
-                    print("No arenas found in frame {}".format(self.frame_count))
-                    self.panel[0,0].after(10, self.track)
-        
+                    print("[INFO] No arenas found in current frame")
+                    self.img = np.full(gray.shape, 0, np.uint8)
+                    self.transform = np.full(gray.shape, 0, np.uint8)
+                    status = self.track()
+                    return status
+     
+            transform = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.block_size, self.param1)
+            self.transform = transform
 
             ## DEBUG
             ## Initialize an arena dictionary to keep track of the found arenas
@@ -235,6 +254,7 @@ class Tracker(Frame):
             # for every validated arena i.e. not on every loop iteration!
             id_arena = 0
             # For every arena contour detected
+
             for arena_contour in self.arena_contours:
                         
                 # Initialize an Arena object
@@ -255,7 +275,7 @@ class Tracker(Frame):
                 # Make a mask for this arena
                 ## TODO Right now the masking module does not work
                 ## and is not required either
-                mask = arena.make_mask(gray)
+                mask = arena.make_mask(gray.shape)
 
                 ## DEBUG
                 ## Add the arena to the dictionary
@@ -263,7 +283,7 @@ class Tracker(Frame):
                 self.masks[arena.identity] = mask 
 
                 ## Find flies in this arena
-                gray_masked = cv2.bitwise_and(gray, mask)
+                gray_masked = cv2.bitwise_and(self.transform, mask)
                 fly_contours = arena.find_flies(gray_masked, self.kernel)
                 #print('There are {} potential flies found in arena {}'.format(len(fly_contours), arena.identity))
 
@@ -320,18 +340,25 @@ class Tracker(Frame):
             print("Number of frames that fly is not detected in is {}".format(self.missing_fly))
             return None
 
-    def run(self):
+    def run(self, init=False):
         status = self.track()
-        self.merge_masks()
         if status:
+            self.merge_masks()
             if self.gui:
-                self.tkinter_update(self.img, 0, 0)
-                self.tkinter_update(self.main_mask, 0, 1)
+                self.tkinter_update('img', 0, 0)
+                self.tkinter_update('main_mask', 0, 1)
+                self.tkinter_update('transform', 0, 2)
                 self.init = False
                 self.root.after(10, self.run)
+                # set a callback to handle when the window is closed
+                if init:
+                    self.root.wm_title("Learning memory stream")
+                    self.root.wm_protocol("WM_DELETE_WINDOW", self.onClose)
+                    self.root.mainloop()
             else:
                 cv2.imshow("img", self.img)
                 cv2.imshow("mask", self.main_mask)
+                cv2.imshow("transform", self.transform)
                 # Check if user forces leave (press q)
                 keypress_stop = cv2.waitKey(1) & 0xFF in [27, ord('q')]
                 if not keypress_stop and status:
@@ -339,16 +366,19 @@ class Tracker(Frame):
                 self.onClose()
                 return False
         else:
+            self.onClose()
             return False
 
 
     def tkinter_initialize(self):
         self.stopEvent = None
         self.root = tk.Tk()
-        self.root.geometry("1600x600")
+        w = self.gui_width * 3 + self.gui_pad * 6
+        print("[INFO] GUI Window size is set to {}x800".format(w))
+        self.root.geometry("{}x800".format(w))
         Frame.__init__(self, self.root)
 
-        self.panel = np.full((1,2), None)
+        self.panel = np.full((1,3), None)
         #print(self.panel.shape)
         #print(self.panel[0,0])
         self.init = True
@@ -359,23 +389,33 @@ class Tracker(Frame):
         self.stopEvent = threading.Event()
         #self.thread = threading.Thread(name="Track thread", target=self.track, args=())
         #self.thread.start()
-        self.run()
+        #self.run()
 
-        # set a callback to handle when the window is closed
-        self.root.wm_title("Learning memory stream")
-        self.root.wm_protocol("WM_DELETE_WINDOW", self.onClose)
-        self.root.mainloop()
+        
+
+    def tkinter_preprocess(self, img):
+        image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        image = imutils.resize(image, width=self.gui_width)
+        image = Image.fromarray(image)
+        image = ImageTk.PhotoImage(image)
+        return image
+
+
 
 
     def tkinter_update(self, img, i, j):
 
-        image = tkinter_preprocess(img)
+        img = getattr(self, img, False)
+
+        image = self.tkinter_preprocess(img)
 
         if self.init:
             label = tk.Label(image=image)
             self.panel[i,j] = label
             self.panel[i,j].image = image
-            label.place(y=i, x=50*(j+1)+j*750)
+            x = self.gui_pad * (j + 1) + j * (self.gui_width + self.gui_pad)
+            print(x)
+            label.place(x = x, y = self.gui_pad * (i + 1) + i * (self.gui_width + self.gui_pad))
 #            side = "left" if j == 0 else "right"
 #            print(side)
 #            self.panel[i,j].pack(side=side, padx=10, pady=10)
@@ -389,15 +429,18 @@ class Tracker(Frame):
         if self.gui:
             # set the stop event, cleanup the camera, and allow the rest of
             # the quit process to continue
-            print("[INFO] closing...")
+            print("[INFO] Pressed x on window. Closing GUI...")
             self.stopEvent.set()
             self.stream.release()
             self.root.quit()
+            #self.root.destroy()
+
         else:
             self.stream.release()
             cv2.destroyAllWindows()
 
         self.save_record()
+        sys.exit(1)
 
     def merge_masks(self):
     
