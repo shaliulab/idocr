@@ -31,15 +31,6 @@ args = vars(ap.parse_args())
 
 total_time = args["duration"] * 60
 
-# Setup Arduino controls
-##########################
-if args["arduino"]:
-    from src.Arduino.learning_memory import LearningMemoryDevice
-
-    device = LearningMemoryDevice(args["mappings"], args["sequence"], args["port"], args["log_dir"], communicate=args["verbose"])
-    device.total_off(exit=False)
-    threads = device.prepare()
-
 # Set up general settings
 
 #print('VIDEO resolution is %d by %d !' % (cap.get(3), cap.get(4)))
@@ -48,6 +39,16 @@ if args["arduino"]:
 if args["track"]:
     from src.Camera.tracker import Tracker
     tracker = Tracker(camera = args["camera"], video = args["video"], config = args["config"], gui=args["gui"])
+
+# Setup Arduino controls
+##########################
+if args["arduino"]:
+    from src.Arduino.learning_memory import LearningMemoryDevice
+
+    device = LearningMemoryDevice(args["mappings"], args["sequence"], args["port"], args["log_dir"], communicate=args["verbose"], tracker = tracker)
+    device.total_off(exit=False)
+    threads = device.prepare()
+
 
 #input_totaltime = input("Do you want to start tracking now? (y/n)")
 #if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:

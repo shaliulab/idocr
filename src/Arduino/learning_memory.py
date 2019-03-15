@@ -39,8 +39,9 @@ class MyThread(threading.Thread):
 
 
 class LearningMemoryDevice():
-    def __init__(self, mapping, program, port, log_dir, communicate=True):
+    def __init__(self, mapping, program, port, log_dir, communicate=True, tracker = None):
 
+        self.tracker = tracker
         mapping = pd.read_csv(mapping, skip_blank_lines=True, comment="#")
         program = pd.read_csv(program, skip_blank_lines=True, comment="#")
         mapping = mapping.set_index('pin_id')
@@ -85,7 +86,11 @@ class LearningMemoryDevice():
         stop = False 
         start_sleeping = datetime.datetime.now()
         while ((datetime.datetime.now() - start_sleeping).total_seconds() < max_sleep):
-            if not self.exit.is_set():
+            stop_arduino = self.exit.is_set()
+            stop_gui = getattr(self.tracker, "stopEvent", False)
+            if stop_gui is not False:
+                stop_gui = stop_gui.is_set()
+            if not stop_arduino and not stop_gui:
                 time.sleep(0.001)
     
                 #print(getattr(d, "do_run"))
