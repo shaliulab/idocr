@@ -58,10 +58,12 @@ class PylonStream():
         self.grabResult = grabResult
         # Image grabbed successfully?
         ret = False
-        count = 0
+        count = 1
+        ret = grabResult.GrabSucceeded()
         while not ret or count < 10:
-            ret = grabResult.GrabSucceeded()
             count += 1
+            print("Pylon could not fetch next frame. Trial no {}".format(count))
+            ret = grabResult.GrabSucceeded()
         if count == 10:
             print("[INFO] Tried reading next frame 10 times and none worked. Exiting :(")
         #print(ret)
