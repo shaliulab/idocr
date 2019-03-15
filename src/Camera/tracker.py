@@ -346,7 +346,10 @@ class Tracker(Frame):
         status = self.track()
         if status:
             self.merge_masks()
-            self.gray_gui = cv2.bitwise_and(self.transform, self.transform, mask = self.main_mask)
+            #print(self.transform.shape)
+            #print(self.main_mask.shape)
+            #self.gray_gui = cv2.bitwise_and(self.transform, self.transform, mask = self.main_mask)
+            self.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
 
             if self.gui:
                 self.tkinter_update('img', 0, 0, gui_width = (self.gui_width + self.gui_pad) * 2)

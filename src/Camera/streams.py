@@ -60,14 +60,15 @@ class PylonStream():
         ret = False
         count = 1
         ret = grabResult.GrabSucceeded()
-        while not ret or count < 10:
+        while not ret and count < 10:
             count += 1
             print("Pylon could not fetch next frame. Trial no {}".format(count))
+            grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
+            self.grabResult = grabResult
             ret = grabResult.GrabSucceeded()
         if count == 10:
             print("[INFO] Tried reading next frame 10 times and none worked. Exiting :(")
         #print(ret)
-        print(ret)
         if ret:
             # Access the image data.
             #print("SizeX: ", grabResult.Width)
