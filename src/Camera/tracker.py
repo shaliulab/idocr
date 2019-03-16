@@ -277,7 +277,7 @@ class Tracker(Frame):
                 # Make a mask for this arena
                 ## TODO Right now the masking module does not work
                 ## and is not required either
-                mask = arena.make_mask(gray.shape)
+                mask = arena.make_mask(gray.shape[:2])
 
                 ## DEBUG
                 ## Add the arena to the dictionary
@@ -346,9 +346,6 @@ class Tracker(Frame):
         status = self.track()
         if status:
             self.merge_masks()
-            #print(self.transform.shape)
-            #print(self.main_mask.shape)
-            #self.gray_gui = cv2.bitwise_and(self.transform, self.transform, mask = self.main_mask)
             self.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
 
             if self.gui:
@@ -462,7 +459,7 @@ class Tracker(Frame):
             masks = np.array(list(masks))
             main_mask = np.bitwise_or.reduce(masks)
         else:
-            main_mask = np.full(self.img.shape, 255, dtype=np.uint8)
+            main_mask = np.full(self.img.shape[:2], 255, dtype=np.uint8)
     
         self.main_mask = main_mask
 
