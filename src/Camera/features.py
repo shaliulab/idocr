@@ -21,7 +21,7 @@ class Arena():
 
     ## TODO
     ## Make config an argument that the user can change from the CLI
-    def __init__(self, contour, identity, config = "config.yml"):
+    def __init__(self, tracker, contour, identity, config = "config.yml"):
         """Initialize an arena object
         """
         
@@ -29,15 +29,13 @@ class Arena():
             cfg = yaml.load(ymlfile)
 
 
+        self.tracker = tracker
         self.contour = contour
         self.identity = identity
         ## cfg
         self.min_arena_area = cfg["arena"]["min_area"] 
         
     def compute(self):
-        #print("Contour area is:")
-        #print(type(self.contour))
-        #print(self.contour)
         self.area = cv2.contourArea(self.contour)
         self.x, self.y, self.w, self.h = cv2.boundingRect(self.contour)
         M0 = cv2.moments(self.contour)
@@ -75,7 +73,7 @@ class Arena():
         """Draw the arena
         """
       
-        #print('Arena {} has an area of {}'.format(self.identity, self.area))
+        self.tracker.log.debug('Arena {} has an area of {}'.format(self.identity, self.area))
         cv2.putText(img, 'Arena '+ str(self.identity), (self.x - 50, self.y - 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
         cv2.drawContours(img, [self.contour], 0, red, 1)
         cv2.rectangle(img, (self.x, self.y), (self.x + self.w, self.y + self.h), (0,255,255), 2)
@@ -99,10 +97,11 @@ class Fly():
     
     ## TODO
     ## Make config an argument that the user can change from the CLI
-    def __init__(self, arena, contour, identity, config = "config.yml"):
+    def __init__(self, tracker, arena, contour, identity, config = "config.yml"):
         """Initialize fly object
         """
        
+        self.tracker = tracker
         self.contour = contour
         self.identity = identity
         self.arena  = arena
@@ -151,12 +150,10 @@ class Fly():
         fly_passed_4 = self.area < self.max_object_area
 
         ## DEBUG
-        #print(self.area)
-        #print(self.diagonal)
-        #print(fly_passed_1)
-        #print(fly_passed_2)
-        #print(fly_passed_3)
-        #print(fly_passed_4)
+        self.tracker.log.debug(fly_passed_1)
+        self.tracker.log.debug(fly_passed_2)
+        self.tracker.log.debug(fly_passed_3)
+        self.tracker.log.debug(fly_passed_4)
 
         if not (fly_passed_1 and fly_passed_2 and fly_passed_3 and fly_passed_4) or getattr(self, "cx") is None:
                 return False
@@ -177,8 +174,7 @@ class Fly():
             cv2.putText(img, 'Error: more than one object found per arena', (25,40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, white, 1)
 
         cv2.rectangle(img, (self.x, self.y), (self.x + self.w, self.y + self.h), blue, 2)
-        #print((self.x, self.y, self.x + self.w, self.y + self. h))
-        print("Frame count is {}".format(frame_count))
+        self.tracker.log.debug("tl: {},{}. br: {},{}".format(self.x, self.y, self.x + self.w, self.y + self. h))
 
         return img
 

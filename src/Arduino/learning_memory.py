@@ -2,7 +2,6 @@ from pyfirmata import ArduinoMega as Arduino # import the right board but always
 from pyfirmata import Pin
 from pyfirmata import util
 import numpy as np
-import warnings
 from tqdm import tqdm
 import pandas as pd
 import sys
@@ -18,7 +17,10 @@ import argparse
 import timeit
 import signal
 import serial
+import logging, coloredlogs
+import warnings
 
+coloredlogs.install()
 
 def convert(s):
     try:
@@ -38,10 +40,13 @@ class MyThread(threading.Thread):
         super(MyThread, self).start()
 
 
+
 class LearningMemoryDevice():
     def __init__(self, mapping, program, port, log_dir, communicate=True, tracker = None):
 
         self.tracker = tracker
+        self.log = logging.getLogger(__name__)
+
         mapping = pd.read_csv(mapping, skip_blank_lines=True, comment="#")
         program = pd.read_csv(program, skip_blank_lines=True, comment="#")
         mapping = mapping.set_index('pin_id')
@@ -50,8 +55,10 @@ class LearningMemoryDevice():
         program['end'] = program['end'].apply(convert)
         program['on'] = program['on'].apply(convert)
         program['off'] = program['off'].apply(convert)
-        print(program)
+        
+        logging.info(program)
         program = program * 60
+
 
 
         self.mapping = mapping
@@ -65,7 +72,7 @@ class LearningMemoryDevice():
         try:
             self.board = Arduino(port)
         except serial.serialutil.SerialException:
-            print('Please provide the correct port')
+            self.log.error('Please provide the correct port')
             sys.exit(1)
         #filehandler = open(os.path.join(log_dir, "pin_state.obj"),"wb")
         #pickle.dump(pin_state,filehandler)
@@ -90,8 +97,8 @@ class LearningMemoryDevice():
             stop_gui = getattr(self.tracker, "stop", False)
             if not stop_arduino and not stop_gui:
                 time.sleep(0.001)
-    
-                #print(getattr(d, "do_run"))
+                if getattr(self, "tracker.stop", False):
+                    self.log.debug("Tracker signaled stop")
             else:
                 stop = True
                 break
@@ -157,9 +164,7 @@ class LearningMemoryDevice():
         signals = ('TERM', 'HUP', 'INT')
         out_signals = [None,]*3
         for i, sig in enumerate(signals):
-            #print(sig)
             out_sig = signal.signal(getattr(signal, 'SIG'+sig), self.quit)
-            #print(out_sig)
             out_signals[i] = out_sig
             
 
@@ -172,11 +177,10 @@ class LearningMemoryDevice():
         d = threading.currentThread()
         # global self.pin_state
 
-        print("{} setting pin {} to {} at {}".format(
+        self.log.info("{} - {}".format(
             d._kwargs["d_name"],
-            pin_number,
-            value,
-            datetime.datetime.now()))
+            value
+        ))
 
         self.board.digital[pin_number].write(value)
 
@@ -229,42 +233,33 @@ class LearningMemoryDevice():
         # this is true for pins of type: CI, SI (intermitent)
         # i.e. threads where on is not NaN
         if n_iters != n_iters and on == on:
-            #[print(type(e)) for e in [end, total_time, on, off]]
             n_iters = (min(end, total_time) - start) // (on + off) # check if total time is accessible
-            print("{} will cycle {} times".format(d._kwargs["d_name"], n_iters))
+            self.log.info("{} will cycle {} times".format(d_name, n_iters))
             
         
         # halt all threads until program_start + sync_time is reached
         # wait until all threads are ready to begin
         sleep1 = (program_start + datetime.timedelta(seconds=sync_time) - datetime.datetime.now()).total_seconds()
         stop = self.check_do_run(d, sleep1)
-        print('{} started running at {}'.format(d._kwargs["d_name"], datetime.datetime.now()))
+        self.log.info('{} running'.format(d_name))
         if stop:
             self.toggle_pin(pin_number, 0)
             return 0
 
     
         thread_start = datetime.datetime.now()    
-        self.write_start_time(pin_number, "Pin {}-{} starts at {}\n", start)
         
-        
-        logging.debug("Running program on pin {}".format(pin_number))  
-    
         # halt the thread until program_start + time sleep in the syncing + start is reached
         # i.e. wait until it is time to turn on a pin
         sleep2 = (thread_start + datetime.timedelta(seconds=start) - datetime.datetime.now()).total_seconds()
         if sleep2 > 0:
             stop = self.check_do_run(d, sleep2)
             if stop:
-                #print("[INFO] Signaled exit")
+                self.log.info("Signaled exit")
                 self.toggle_pin(pin_number, 0)
                 return 0
         else:
-            pass
-    #         print(d_name.format(pin_number))
-    #         print(sleep2)      
-            
-    #     self.write_start_time(pin_number, "Pin {}-{} executes at {}\n", start)
+             self.log.warning("{} delayed {}".format(d_name, -sleep2))
     
         
         pin_id = self.mapping.query('pin_number == "{}"'.format(pin_number)).index[0]
@@ -313,19 +308,6 @@ class LearningMemoryDevice():
             if stop:
                 self.toggle_pin(pin_number, 0)
                 return 0
-            #if stop:
-            #    self.toggle_pin(pin_number, 0)
-            #    return 0
-
-
-
-            #time.sleep(sleep_time)
-#            while ((datetime.datetime.now() - start_sleeping).total_seconds() < sleep_time):
-#                if getattr(d, "do_run", True):
-#                    pass
-#                    #print(getattr(d, "do_run"))
-#                else:
-#                    break
 
         self.toggle_pin(pin_number, 0)
 
@@ -342,7 +324,6 @@ class LearningMemoryDevice():
                     message=None, flush=True):
        #global pin_state
        pin_state_g = {p: "x" if v == 1 else "0" for p, v in self.pin_state.items()}
-       #print(pin_state_g["RIGHT_ODOUR_2"])
 
        main_pins = self.mapping.query('pin_group == "main"').index.values[1:]
        left_pins = self.mapping.query('pin_group == "left"').index.values
@@ -381,26 +362,19 @@ class LearningMemoryDevice():
         return [self.pin_id2n(p), pin_state_g[p]]
 
 
-    def write_start_time(self, pin_number, message, start):
-        
-        handle = open(os.path.join(self.log_dir, "log_{}.txt".format(pin_number)), "a+")
-        handle.write(message.format(pin_number, start, datetime.datetime.now()))
-        handle.close()
-
-
     def total_off(self, exit=True):
         # stop all the threads
         if getattr(self, "threads", False):
-            print("Quitting")
+            self.log.info("Quitting program")
             for d in self.threads.values():
                 #d.do_run = False
                 try:
-                    print("{} stopped running at {}".format(d._kwargs["d_name"], datetime.datetime.now()))
+                    self.log.info("{} stopped".format(d._kwargs["d_name"]))
                 except AttributeError:
                     pass
                 #id.join()
         else:
-            print("Setting all pins on Arduino to 0")
+            self.log.info("Completely turning off Arduino")
     
         for p in self.mapping.pin_number:
             self.board.digital[p].write(0)
@@ -411,7 +385,7 @@ class LearningMemoryDevice():
 
     def thread_off(self):
         def quit(signo, _frame=None):
-           print(signo)
+           self.log.info("Received {}".format(signo))
            self.exit.set()
            self.total_off()
     

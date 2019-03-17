@@ -9,6 +9,8 @@ import pandas as pd
 import glob
 import os
 import threading
+import logging, logging.config, coloredlogs
+import yaml
 
 # Arguments to follow the command, adding video, etc options
 ap = argparse.ArgumentParser()
@@ -30,11 +32,34 @@ ap.add_argument("-f", "--fps", type = int, help="Frames per second in the opened
 args = vars(ap.parse_args())
 
 total_time = args["duration"] * 60
+coloredlogs.install()
 
 # Set up general settings
 
 #print('VIDEO resolution is %d by %d !' % (cap.get(3), cap.get(4)))
 #print('FPS is: {}'.format(int(cap.get(5))))
+
+def setup_logging(
+    default_path='logging.yaml',
+    default_level=logging.INFO,
+    env_key='LOG_CFG'
+):
+    """Setup logging configuration
+
+    """
+    path = default_path
+    value = os.getenv(env_key, None)
+    if value:
+        path = value
+    if os.path.exists(path):
+        with open(path, 'rt') as f:
+            config = yaml.safe_load(f.read())
+        logging.config.dictConfig(config)
+    else:
+        logging.basicConfig(level=default_level)
+
+setup_logging()
+log = logging.getLogger(__name__)
 
 if args["track"]:
     from src.Camera.tracker import Tracker
@@ -57,10 +82,11 @@ if args["arduino"]:
 
 if args["arduino"]: device.run(total_time=total_time, threads=threads)
 if args["track"]:
+    log.info("Starting tracking")
     _ = tracker.run(init=True)
 if not args["track"]:
-    print("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
+    log.debug("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
     time.sleep(total_time)
 if args["arduino"]:
-    print("Quitting arguino")
+    log.info("Quitting arguino")
     device.quit()

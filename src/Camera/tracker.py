@@ -1,6 +1,5 @@
 from .features import Arena, Fly
 from .streams import PylonStream, StandardStream
-import tkinter as tk
 from PIL import ImageTk, Image
 import yaml
 import datetime
@@ -12,7 +11,10 @@ import argparse
 import cv2
 import imutils
 import sys
-
+import logging, coloredlogs
+coloredlogs.install()
+import tkinter as tk
+Frame = tk.Frame
 cv2_version = cv2.__version__
 
 streams_dict = {"pylon": PylonStream, "opencv": StandardStream}
@@ -29,8 +31,6 @@ def crop_stream(img, crop):
 
 
 
-
-Frame = tk.Frame
 class Tracker(Frame):
    
     def __init__(self, camera = "opencv", duration = 1200, video = None, config = "config.yml", gui=False):
@@ -62,6 +62,8 @@ class Tracker(Frame):
         kernel_factor = cfg["arena"]["kernel_factor"] 
         self.kernel = np.ones((kernel_factor, kernel_factor), np.uint8)
         self.kernel_factor = kernel_factor
+        self.found_flies = 0
+        self.old_found = 0
         self.gui = gui
         self.arena_contours = None
         self.block_size = cfg["arena"]["block_size"]
@@ -84,7 +86,8 @@ class Tracker(Frame):
             # Set the FPS of the camera
             stream.set_fps(self.fps)
 
-        print("[INFO] Starting video ...")
+        self.log = logging.getLogger(__name__)
+        self.log.info("Starting video ...")
 
         # Extract 
         #VIDEO_POS = cap.get(0)
@@ -109,8 +112,7 @@ class Tracker(Frame):
         video_height = stream.get_height()
         self.video_width = video_width
         self.video_height = video_height
-        print("[INFO] frame width is {}".format(video_width))
-        print("[INFO] frame height is {}".format(video_height))
+        self.log.info("Stream has shape w:{} h:{}".format(video_width, video_height))
         self.accuImage = np.zeros((video_height, video_width, self.N), np.uint8)
         self.stream = stream
         self.time_position = 0
@@ -122,7 +124,7 @@ class Tracker(Frame):
 
 
         if self.gui:
-            print("[INFO] initializing GUI")
+            self.log.info("Initializing GUI")
             self.tkinter_initialize()
 
 
@@ -205,7 +207,7 @@ class Tracker(Frame):
         if not event_stop:
             # Check if experiment is over
             if self.time_position > self.duration:
-                print("[INFO] Experiement duration is reached. Closing")
+                self.log.info("Experiement duration is reached. Closing")
                 self.save_record()
                 return False
 
@@ -219,7 +221,7 @@ class Tracker(Frame):
             # If ret is False, a new frame could not be read
             # Exit 
             if not ret:
-                print("[INFO] Stream or video is finished. Closing")
+                self.log.info("Stream or video is finished. Closing")
                 self.onClose()
                 self.stop = True
                 return False
@@ -235,14 +237,15 @@ class Tracker(Frame):
             img = self.annotate_frame(img)
             
             # Find arenas for the first N frames
-            if self.frame_count < self.N:
+            if self.frame_count < self.N and self.frame_count > 0:
                 self.arena_contours = self.find_arenas(gray)
 
-                if self.arena_contours is None:
-                    print("[INFO] No arenas found in current frame")
-                    status = self.track()
-                    return status
-     
+            if self.arena_contours is None:
+                self.log.warning("Frame #{} no arenas".format(self.frame_count))
+                self.frame_count += 1
+                status = self.track()
+                return status
+
             transform = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.block_size, self.param1)
             self.transform = transform
 
@@ -260,7 +263,7 @@ class Tracker(Frame):
             for arena_contour in self.arena_contours:
                         
                 # Initialize an Arena object
-                arena = Arena(arena_contour, id_arena)
+                arena = Arena(self, arena_contour, id_arena)
                 # and compute parameters used in validation and drawing
                 arena.compute()
                 # Validate the arena
@@ -295,15 +298,16 @@ class Tracker(Frame):
                 # For every arena contour detected
                 for fly_contour in fly_contours:
                     # Initialize a Fly object
-                    fly = Fly(arena, fly_contour, id_fly)
+                    fly = Fly(self, arena, fly_contour, id_fly)
                     # and compute parameters used in validation and drawing
                     fly.compute()
                     # If not validated, move on the next fly contour
                     # i.e. ignore the current fly 
                     if not fly.validate(gray):
-                        #print("Fly not validated")
+                        self.log.debug("Fly not validated")
                         continue
-                    print("Fly validated in arena {}".format(fly.arena.identity))
+                    self.log.debug("Fly {} in arena {} validated with area {} and length {}".format(fly.identity, fly.arena.identity, fly.area, fly.diagonal))
+                    self.found_flies += 1
                     # Draw the fly
                     img = fly.draw(img, self.frame_count)
 
@@ -331,6 +335,15 @@ class Tracker(Frame):
 
             self.frame_count +=1
             self.img = img
+            if self.frame_count % 100 == 0:
+                self.log.info("Frame #{}".format(self.frame_count))
+
+            if self.old_found != self.found_flies:
+                self.log.debug("Found {} flies in frame {}".format(self.found_flies, self.frame_count))
+            self.old_found = self.found_flies
+            self.found_flies = 0
+
+
             return True
 
         #########################
@@ -339,11 +352,12 @@ class Tracker(Frame):
 
         else:
             self.save_prompt()
-            print("Number of frames that fly is not detected in is {}".format(self.missing_fly))
+            self.log.info("Number of frames that fly is not detected in is {}".format(self.missing_fly))
             return None
 
     def run(self, init=False):
         status = self.track()
+
         if status:
             self.merge_masks()
             self.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
@@ -379,7 +393,7 @@ class Tracker(Frame):
         self.stopEvent = None
         self.root = tk.Tk()
         w = self.gui_width * 3 + self.gui_pad * 6
-        print("[INFO] GUI Window size is set to {}x800".format(w))
+        self.log.info("GUI Window size is set to {}x800".format(w))
         self.root.geometry("{}x800".format(w))
         Frame.__init__(self, self.root)
 
@@ -422,11 +436,8 @@ class Tracker(Frame):
             self.panel[i,j] = label
             self.panel[i,j].image = image
             x = self.gui_pad * (j + 1) + j * (gui_width + self.gui_pad)
-            print(x)
-            label.place(x = x, y = self.gui_pad * (i + 1) + i * (self.gui_width + self.gui_pad))
-#            side = "left" if j == 0 else "right"
-#            print(side)
-#            self.panel[i,j].pack(side=side, padx=10, pady=10)
+            y = self.gui_pad * (i + 1) + i * (self.gui_width + self.gui_pad)
+            label.place(x = x, y = y)
         else:
             self.panel[i,j].configure(image=image)
             self.panel[i,j].image = image
@@ -437,7 +448,7 @@ class Tracker(Frame):
         if self.gui:
             # set the stop event, cleanup the camera, and allow the rest of
             # the quit process to continue
-            print("[INFO] Pressed x on window. Closing GUI...")
+            self.log.info("Pressed X on window. Closing GUI...")
             self.stopEvent.set()
             self.stream.release()
             self.root.quit()
@@ -449,7 +460,7 @@ class Tracker(Frame):
 
         self.stop = True
         self.save_record()
-        print("{} frames analyzed".format(self.frame_count))
+        self.log.info("{} frames analyzed".format(self.frame_count))
         sys.exit(1)
 
     def merge_masks(self):

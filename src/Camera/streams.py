@@ -1,10 +1,16 @@
 from pypylon import pylon
 from pypylon import genicam
+import logging, coloredlogs
 import cv2
+
+coloredlogs.install()
+
+log = logging.getLogger(__name__)
+
 
 class PylonStream():
     def __init__(self, video=None):
-        print("[INFO] Starting a pylon camera!")
+        log.info("Starting pylon camera!")
 
         # The exit code of the sample application.
         exitCode = 0
@@ -12,7 +18,7 @@ class PylonStream():
         ## Check camera is visible!
         cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
         # Print the model name of the camera.
-        print("Using device ", cap.GetDeviceInfo().GetModelName())
+        log.info("Using device {}".format(cap.GetDeviceInfo().GetModelName()))
     
         # The parameter MaxNumBuffer can be used to control the count of buffers
         # allocated for grabbing. The default value of this parameter is 10.
@@ -62,12 +68,13 @@ class PylonStream():
         ret = grabResult.GrabSucceeded()
         while not ret and count < 10:
             count += 1
-            print("Pylon could not fetch next frame. Trial no {}".format(count))
+            log.warning("Pylon could not fetch next frame. Trial no {}".format(count))
             grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
             self.grabResult = grabResult
             ret = grabResult.GrabSucceeded()
         if count == 10:
-            print("[INFO] Tried reading next frame 10 times and none worked. Exiting :(")
+            log.error("Tried reading next frame 10 times and none worked. Exiting :(")
+            sys.exit(1)
         #print(ret)
         if ret:
             # Access the image data.
@@ -84,8 +91,8 @@ class StandardStream():
 
     def __init__(self, video=None):
         s = 0 if video is None else video
-        if s == 0: print("[INFO] Capturing stream!")
-        if s != 0: print("[INFO] Opening {}!".format(s))
+        if s == 0: log.info("Capturing stream!")
+        if s != 0: log.info("Opening {}!".format(s))
         self.cap = cv2.VideoCapture(s)
 
     def get_fps(self):
@@ -108,7 +115,7 @@ class StandardStream():
 
     def set_fps(self, fps):
         if self.get_fps() != fps:
-            print("[INFO] Setting fps to {}".format(fps))
+            log.info("Settting fps to {}".format(fps))
             self.cap.set(5, fps)
 
  #   def set_width(self, width):
