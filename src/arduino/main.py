@@ -19,6 +19,7 @@ import signal
 import serial
 import logging, coloredlogs
 import warnings
+import yaml
 from src.saver.main import Saver
 
 coloredlogs.install()
@@ -43,7 +44,7 @@ class MyThread(threading.Thread):
 
 
 class LearningMemoryDevice():
-    def __init__(self, mapping, program, port, communicate=True, tracker = None, config = "config.yaml"):
+    def __init__(self, mapping, program, port, communicate=True, tracker = None, config = "config.yml"):
 
         with open(config, 'r') as ymlfile:
             cfg = yaml.load(ymlfile)
@@ -88,13 +89,12 @@ class LearningMemoryDevice():
         self.communicate = communicate
         self.quit = self.thread_off()
 
-        self.log_dir = log_dir
-        log_files = glob.glob(os.path.join(self.log_dir, 'log*'))
-        for f in log_files + [os.path.join(self.log_dir, e) for e in "pin_state.txt"]:
-            try:
-                os.remove(f)
-            except OSError:
-                pass
+        #log_files = glob.glob(os.path.join(self.log_dir, 'log*'))
+        #for f in log_files + [os.path.join(self.log_dir, e) for e in "pin_state.txt"]:
+        #    try:
+        #        os.remove(f)
+        #    except OSError:
+        #        pass
 
     def check_do_run(self, d, max_sleep):
         stop = False 
@@ -191,7 +191,7 @@ class LearningMemoryDevice():
 
         self.board.digital[pin_number].write(value)
         self.saver.process_row(
-                d = {"pin_number": pin_number, "value": value, "thread": d_kwargs["d_name"], 
+                d = {"pin_number": pin_number, "value": value, "thread": d._kwargs["d_name"], 
                      "time": getattr(self.tracker, "time_position", None)},
                 key = "df"
 
@@ -413,7 +413,6 @@ if __name__ == "__main__":
     ap.add_argument("-p", "--port",     type = str, help="Absolute path to the Arduino port. Usually '/dev/ttyACM0' in Linux and COM in Windows", default = "/dev/ttyACM0")
     ap.add_argument("-m", "--mappings", type = str, help="Absolute path to csv providing pin number-pin name mappings", required=True)
     ap.add_argument("-s", "--sequence", type = str, help="Absolute path to csv providing the sequence of instructions to be sent to Arduino", required=True)
-    ap.add_argument("-l", "--log_dir",  type = str, help="Absolute path to directory where log files will be stored", default = "Arduino")
     ap.add_argument("-d", "--duration",  type = int, required=True)
     args = vars(ap.parse_args())
 
@@ -421,7 +420,7 @@ if __name__ == "__main__":
     mapping = args["mappings"]
     program = args["sequence"]
 
-    device = LearningMemoryDevice(mapping, program, args["port"], args["log_dir"])
+    device = LearningMemoryDevice(mapping, program, args["port"])
     device.total_off(exit=False)
 
     threads = device.prepare()

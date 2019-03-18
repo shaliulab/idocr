@@ -20,7 +20,7 @@ class Saver():
         i = 0
         while os.path.isfile(self.store + ".h5") or os.path.isfile(self.store + ".csv"):
             i += 1
-            self.store = store + "_" + i
+            self.store = "{}_{}".format(store, i)
 
     def process_row(self, d, key, max_len = 5000):
         """
