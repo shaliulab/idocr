@@ -17,7 +17,7 @@ tracker:
     fps: 2
     experimenter: "Sayed"
     crop: 1
-    store: "store"
+    store: "data/store"
 
 arduino:
-    store: "arduino_events"
+    store: "metadata/arduino_events"
