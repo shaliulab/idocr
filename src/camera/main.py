@@ -176,24 +176,24 @@ class Tracker(Frame):
         return self.arenas
 
        
-    def save_record(self, input_save_name=None):
-        filename = '_'.join([e if e is not None else '' for e in [self.Date_time, input_save_name]]) + ".txt"
-        #filename = "{}.txt".format(self.Date_time)
-        with open(filename, 'w') as f:
-            for rowrecord in self.record_to_save:
-                f.write(rowrecord)
-        return None
+#    def save_record(self, input_save_name=None):
+#        filename = '_'.join([e if e is not None else '' for e in [self.Date_time, input_save_name]]) + ".txt"
+#        #filename = "{}.txt".format(self.Date_time)
+#        with open(filename, 'w') as f:
+#            for rowrecord in self.record_to_save:
+#                f.write(rowrecord)
+#        return None
 
                   
-    def save_prompt(self):
-                
-        input_save = input("Do you want to save the file? (y/n) ")
-        if input_save in ['Y', 'Yes', 'YES', 'OK', 'yes', 'y']:
-            input_save1 = input("Do you want to add file name to the default one? (y/n) ")
-            input_save_name = None
-            if input_save1 in ['Y', 'Yes', 'YES', 'OK', 'yes', 'y']:
-                input_save_name = input("Please write your own filename: ")
-            save_record(input_save_name)
+#    def save_prompt(self):
+#                
+#        input_save = input("Do you want to save the file? (y/n) ")
+#        if input_save in ['Y', 'Yes', 'YES', 'OK', 'yes', 'y']:
+#            input_save1 = input("Do you want to add file name to the default one? (y/n) ")
+#            input_save_name = None
+#            if input_save1 in ['Y', 'Yes', 'YES', 'OK', 'yes', 'y']:
+#                input_save_name = input("Please write your own filename: ")
+#            save_record(input_save_name)
 
 
 
@@ -209,7 +209,7 @@ class Tracker(Frame):
             # Check if experiment is over
             if self.time_position > self.duration:
                 self.log.info("Experiement duration is reached. Closing")
-                self.save_record()
+                #self.save_record()
                 return False
 
             # How much time has passed since we started tracking?
@@ -360,7 +360,7 @@ class Tracker(Frame):
         ##
 
         else:
-            self.save_prompt()
+            #self.save_prompt()
             self.log.info("Number of frames that fly is not detected in is {}".format(self.missing_fly))
             return None
 
@@ -472,7 +472,7 @@ class Tracker(Frame):
             cv2.destroyAllWindows()
 
         self.stop = True
-        self.save_record()
+        #self.save_record()
         self.log.info("{} frames analyzed".format(self.frame_count))
         sys.exit(1)
 
