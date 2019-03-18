@@ -34,10 +34,9 @@ def crop_stream(img, crop):
 
 class Tracker(Frame):
    
-    def __init__(self, camera = "opencv", duration = 1200, video = None, config = "config.yml", gui=False, time_suffix=None):
+    def __init__(self, camera = "opencv", video = None, config = "config.yml", gui=False, time_suffix=None):
         """
         Setup video recording parameters.
-        duration: in seconds
         """
 
 
@@ -48,7 +47,6 @@ class Tracker(Frame):
                    
         self.time_suffix = time_suffix
         self.experimenter = cfg["tracker"]["experimenter"]
-        self.duration = duration
         self.missing_fly = 0
         now = datetime.datetime.now()
         self.Date_time = now.strftime("%Y_%m_%dT%H_%M_%S")
@@ -209,8 +207,8 @@ class Tracker(Frame):
 
         if not event_stop:
             # Check if experiment is over
-            if self.time_position > self.duration:
-                self.log.info("Experiement duration is reached. Closing")
+            if self.time_position > self.total_time:
+                self.log.info("Experiment duration is reached. Closing")
                 #self.save_record()
                 return False
 
@@ -370,8 +368,9 @@ class Tracker(Frame):
             self.log.info("Number of frames that fly is not detected in is {}".format(self.missing_fly))
             return None
 
-    def run(self, init=False):
+    def run(self, init = False, total_time = None):
         status = self.track()
+        self.total_time = total_time
 
         if status:
             self.merge_masks()

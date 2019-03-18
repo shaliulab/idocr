@@ -86,7 +86,7 @@ try:
     if args["arduino"]: device.run(total_time=total_time, threads=threads)
     if args["track"]:
         log.info("Starting tracking")
-        _ = tracker.run(init=True)
+        _ = tracker.run(init=True, total_time=total_time)
 except Exception as e:
     log.exception(e)
 
