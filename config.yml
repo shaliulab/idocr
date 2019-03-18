@@ -16,3 +16,7 @@ fly:
 tracker:   
     fps: 2
     experimenter: "Sayed"
+    store: "store"
+
+arduino:
+    store: "arduino_events"

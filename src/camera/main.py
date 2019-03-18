@@ -88,7 +88,7 @@ class Tracker(Frame):
         self.log = logging.getLogger(__name__)
         self.log.info("Starting video ...")
 
-        self.saver = Saver(store = "store.h5", cache = {})
+        self.saver = Saver(store = cfg["tracker"]["store"], cache = {})
 
         # Extract 
         #VIDEO_POS = cap.get(0)

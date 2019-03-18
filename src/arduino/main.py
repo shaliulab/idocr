@@ -43,11 +43,15 @@ class MyThread(threading.Thread):
 
 
 class LearningMemoryDevice():
-    def __init__(self, mapping, program, port, communicate=True, tracker = None):
+    def __init__(self, mapping, program, port, communicate=True, tracker = None, config = "config.yaml"):
+
+        with open(config, 'r') as ymlfile:
+            cfg = yaml.load(ymlfile)
+
 
         self.tracker = tracker
         self.log = logging.getLogger(__name__)
-        self.saver = Saver(store = "arduino_events", cache = {})
+        self.saver = Saver(store = cfg["arduino"]["store"]", cache = {})
 
 
         mapping = pd.read_csv(mapping, skip_blank_lines=True, comment="#")
