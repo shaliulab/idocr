@@ -62,7 +62,7 @@ setup_logging()
 log = logging.getLogger(__name__)
 
 if args["track"]:
-    from src.Camera.tracker import Tracker
+    from src.camera.main import Tracker
     tracker = Tracker(camera = args["camera"], video = args["video"], config = args["config"], gui=args["gui"])
 else:
     tracker = None
@@ -70,7 +70,7 @@ else:
 # Setup Arduino controls
 ##########################
 if args["arduino"]:
-    from src.Arduino.learning_memory import LearningMemoryDevice
+    from src.arduino.main import LearningMemoryDevice
 
     device = LearningMemoryDevice(args["mappings"], args["sequence"], args["port"], args["log_dir"], communicate=args["verbose"], tracker = tracker)
     device.total_off(exit=False)

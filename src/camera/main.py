@@ -1,5 +1,6 @@
 from .features import Arena, Fly
 from .streams import PylonStream, StandardStream
+from src.saver.main import Saver
 from PIL import ImageTk, Image
 import yaml
 import datetime
@@ -69,18 +70,16 @@ class Tracker(Frame):
         self.block_size = cfg["arena"]["block_size"]
         self.param1 = cfg["arena"]["param1"]
         self.crop = cfg["tracker"]["crop"]
+        # tkinter variables
+        # based on https://www.pyimagesearch.com/2016/05/30/displaying-a-video-feed-with-opencv-and-tkinter/
         self.gui_width = 250
         self.gui_pad = 20
+        
 
         # self.record_to_save_header = ['Operator', 'Date_Time', 'Experiment', '', 'Arena', 'Object', 'frame', 'time_point', 'CoordinateX', 'CoordinateY', 'RelativePosX', 'RelativePosY']
 
         stream = streams_dict[camera](video)
 
-
-        # tkinter variables
-        # based on https://www.pyimagesearch.com/2016/05/30/displaying-a-video-feed-with-opencv-and-tkinter/
-        #self.vs = vs
-        #self.frame = None
 
         if self.fps is not None and video is not None:
             # Set the FPS of the camera
@@ -88,6 +87,8 @@ class Tracker(Frame):
 
         self.log = logging.getLogger(__name__)
         self.log.info("Starting video ...")
+
+        self.saver = Saver(store = "store.h5", cache = {})
 
         # Extract 
         #VIDEO_POS = cap.get(0)
@@ -307,7 +308,12 @@ class Tracker(Frame):
                         self.log.debug("Fly not validated")
                         continue
                     self.log.debug("Fly {} in arena {} validated with area {} and length {}".format(fly.identity, fly.arena.identity, fly.area, fly.diagonal))
+                    self.saver.process_row(
+                            d = {"frame": self.frame_count, "time": self.time_position, "arena": arena.identity, "fly": fly.identity, "cx": fly.cx, "cy": fly.cy},
+                            key = "df",
+                            )
                     self.found_flies += 1
+                    
                     # Draw the fly
                     img = fly.draw(img, self.frame_count)
 
@@ -316,6 +322,9 @@ class Tracker(Frame):
                     
                     # Update the id_fly to account for one more fly detected
                     id_fly += 1
+
+                    if id_fly > 1:
+                        self.log.warning("Arena {} in frame {}. Multiple flies found".format(arena.identity, self.frame_count))
 
                     ############################################
                     ## End for loop over all putative flies
@@ -445,6 +454,8 @@ class Tracker(Frame):
  
 
     def onClose(self):
+        for k, lst in self.saver.cache.items():  # you can instead use .iteritems() in python 2
+            self.saver.store_and_clear(lst, k)
         if self.gui:
             # set the stop event, cleanup the camera, and allow the rest of
             # the quit process to continue
