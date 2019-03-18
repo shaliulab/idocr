@@ -61,9 +61,11 @@ def setup_logging(
 setup_logging()
 log = logging.getLogger(__name__)
 
+start_time = datetime.datetime.now().strftime("%H%M%S-%d%m%Y")
+
 if args["track"]:
     from src.camera.main import Tracker
-    tracker = Tracker(camera = args["camera"], video = args["video"], config = args["config"], gui=args["gui"])
+    tracker = Tracker(camera = args["camera"], video = args["video"], config = args["config"], gui=args["gui"], time_suffix = start_time)
 else:
     tracker = None
 
@@ -72,7 +74,7 @@ else:
 if args["arduino"]:
     from src.arduino.main import LearningMemoryDevice
 
-    device = LearningMemoryDevice(args["mappings"], args["sequence"], args["port"], communicate=args["verbose"], tracker = tracker)
+    device = LearningMemoryDevice(args["mappings"], args["sequence"], args["port"], communicate=args["verbose"], tracker = tracker, time_suffix = start_time)
     device.total_off(exit=False)
     threads = device.prepare()
 
