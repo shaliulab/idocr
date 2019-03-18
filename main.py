@@ -80,10 +80,14 @@ if args["arduino"]:
 #input_totaltime = input("Do you want to start tracking now? (y/n)")
 #if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:
 
-if args["arduino"]: device.run(total_time=total_time, threads=threads)
-if args["track"]:
-    log.info("Starting tracking")
-    _ = tracker.run(init=True)
+try:
+    if args["arduino"]: device.run(total_time=total_time, threads=threads)
+    if args["track"]:
+        log.info("Starting tracking")
+        _ = tracker.run(init=True)
+except Exception as e:
+    log.exception(e)
+
 if not args["track"]:
     log.debug("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
     time.sleep(total_time)
