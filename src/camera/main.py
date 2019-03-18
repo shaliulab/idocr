@@ -223,7 +223,7 @@ class Tracker(Frame):
             # Exit 
             if not ret:
                 self.log.info("Stream or video is finished. Closing")
-                self.onClose()
+                self.onClose(x=False)
                 self.stop = True
                 return False
            
@@ -394,7 +394,7 @@ class Tracker(Frame):
                 self.onClose()
                 return False
         else:
-            self.onClose()
+            self.onClose(x=False)
             return False
 
 
@@ -453,13 +453,15 @@ class Tracker(Frame):
 
  
 
-    def onClose(self):
+    def onClose(self, x=True):
         for k, lst in self.saver.cache.items():  # you can instead use .iteritems() in python 2
             self.saver.store_and_clear(lst, k)
+
+        if x:
+            self.log.info("User manually exited app. Closing...")
         if self.gui:
             # set the stop event, cleanup the camera, and allow the rest of
             # the quit process to continue
-            self.log.info("Pressed X on window. Closing GUI...")
             self.stopEvent.set()
             self.stream.release()
             self.root.quit()
