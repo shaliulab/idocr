@@ -19,6 +19,7 @@ import signal
 import serial
 import logging, coloredlogs
 import warnings
+from src.saver.main import Saver
 
 coloredlogs.install()
 
@@ -42,10 +43,12 @@ class MyThread(threading.Thread):
 
 
 class LearningMemoryDevice():
-    def __init__(self, mapping, program, port, log_dir, communicate=True, tracker = None):
+    def __init__(self, mapping, program, port, communicate=True, tracker = None):
 
         self.tracker = tracker
         self.log = logging.getLogger(__name__)
+        self.saver = Saver(store = "arduino_events", cache = {})
+
 
         mapping = pd.read_csv(mapping, skip_blank_lines=True, comment="#")
         program = pd.read_csv(program, skip_blank_lines=True, comment="#")
@@ -183,6 +186,12 @@ class LearningMemoryDevice():
         ))
 
         self.board.digital[pin_number].write(value)
+        self.saver.process_row(
+                d = {"pin_number": pin_number, "value": value, "thread": d_kwargs["d_name"], 
+                     "time": getattr(self.tracker, "time_position", None)},
+                key = "df"
+
+        )
 
         #if self.communicate:
             #filehandler = open(os.path.join(self.log_dir, "pin_state.obj"),"rb")
@@ -386,6 +395,8 @@ class LearningMemoryDevice():
     def thread_off(self):
         def quit(signo, _frame=None):
            self.log.info("Received {}".format(signo))
+           for k, lst in self.saver.cache.items():  # you can instead use .iteritems() in python 2
+               self.saver.store_and_clear(lst, k)
            self.exit.set()
            self.total_off()
     
