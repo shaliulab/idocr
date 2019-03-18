@@ -34,7 +34,7 @@ def crop_stream(img, crop):
 
 class Tracker(Frame):
    
-    def __init__(self, camera = "opencv", duration = 1200, video = None, config = "config.yml", gui=False):
+    def __init__(self, camera = "opencv", duration = 1200, video = None, config = "config.yml", gui=False, time_suffix=None):
         """
         Setup video recording parameters.
         duration: in seconds
@@ -46,6 +46,7 @@ class Tracker(Frame):
             cfg = yaml.load(ymlfile)
 
                    
+        self.time_suffix = time_suffix
         self.experimenter = cfg["tracker"]["experimenter"]
         self.duration = duration
         self.missing_fly = 0
@@ -89,6 +90,7 @@ class Tracker(Frame):
         self.log.info("Starting video ...")
 
         self.saver = Saver(store = cfg["tracker"]["store"], cache = {})
+        self.saver.update_parent(self)
 
         # Extract 
         #VIDEO_POS = cap.get(0)
@@ -309,7 +311,11 @@ class Tracker(Frame):
                         continue
                     self.log.debug("Fly {} in arena {} validated with area {} and length {}".format(fly.identity, fly.arena.identity, fly.area, fly.diagonal))
                     self.saver.process_row(
-                            d = {"frame": self.frame_count, "time": self.time_position, "arena": arena.identity, "fly": fly.identity, "cx": fly.cx, "cy": fly.cy},
+                            d = {
+                                "frame": self.frame_count, "time_position": self.time_position,
+                                "arena": arena.identity, "fly": fly.identity, "cx": fly.cx, "cy": fly.cy,
+                                "datetime": datetime.datetime.now()
+                                },
                             key = "df",
                             )
                     self.found_flies += 1

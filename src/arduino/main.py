@@ -44,15 +44,17 @@ class MyThread(threading.Thread):
 
 
 class LearningMemoryDevice():
-    def __init__(self, mapping, program, port, communicate=True, tracker = None, config = "config.yml"):
+    def __init__(self, mapping, program, port, communicate=True, tracker = None, config = "config.yml", time_suffix = None):
 
         with open(config, 'r') as ymlfile:
             cfg = yaml.load(ymlfile)
 
 
+        self.time_suffix = time_suffix
         self.tracker = tracker
         self.log = logging.getLogger(__name__)
         self.saver = Saver(store = cfg["arduino"]["store"], cache = {})
+        self.saver.update_parent(self)
 
 
         mapping = pd.read_csv(mapping, skip_blank_lines=True, comment="#")
@@ -64,7 +66,6 @@ class LearningMemoryDevice():
         program['on'] = program['on'].apply(convert)
         program['off'] = program['off'].apply(convert)
         
-        logging.info(program)
         program = program * 60
 
 
@@ -162,7 +163,9 @@ class LearningMemoryDevice():
 #                self.toggle_pin(pin_number, 0)
 #                time.sleep(0.05)
                 
-        self.program_start = datetime.datetime.now()
+        program_start = datetime.datetime.now()
+        self.program_start = program_start
+        self.tracker.program_start = program_start
 
         # Make the main thread run quit when signaled to stop
         # This will stop all the threads in a controlled fashion,
@@ -191,8 +194,11 @@ class LearningMemoryDevice():
 
         self.board.digital[pin_number].write(value)
         self.saver.process_row(
-                d = {"pin_number": pin_number, "value": value, "thread": d._kwargs["d_name"], 
-                     "time": getattr(self.tracker, "time_position", None)},
+                d = {
+                    "pin_number": pin_number, "value": value, "thread": d._kwargs["d_name"], 
+                    "time_position": getattr(self.tracker, "time_position", None),
+                    "datetime": datetime.datetime.now()
+                    },
                 key = "df"
 
         )
@@ -268,11 +274,11 @@ class LearningMemoryDevice():
         if sleep2 > 0:
             stop = self.check_do_run(d, sleep2)
             if stop:
-                self.log.info("Signaled exit")
+                self.log.debug("{} received exit".format(d_name))
                 self.toggle_pin(pin_number, 0)
                 return 0
         else:
-             self.log.warning("{} delayed {}".format(d_name, -sleep2))
+             self.log.warning("{} delayed {} seconds".format(d_name, -sleep2))
     
         
         pin_id = self.mapping.query('pin_number == "{}"'.format(pin_number)).index[0]
