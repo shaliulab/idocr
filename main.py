@@ -65,7 +65,7 @@ start_time = datetime.datetime.now().strftime("%H%M%S-%d%m%Y")
 
 if args["track"]:
     from src.camera.main import Tracker
-    tracker = Tracker(camera = args["camera"], video = args["video"], config = args["config"], gui=args["gui"], time_suffix = start_time)
+    tracker = Tracker(camera = args["camera"], video = args["video"], config = args["config"], gui=args["gui"], time_suffix = start_time, total_time = total_time)
 else:
     tracker = None
 
@@ -86,7 +86,7 @@ try:
     if args["arduino"]: device.run(total_time=total_time, threads=threads)
     if args["track"]:
         log.info("Starting tracking")
-        _ = tracker.run(init=True, total_time=total_time)
+        _ = tracker.run(init=True)
 except Exception as e:
     log.exception(e)
 

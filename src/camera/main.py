@@ -34,7 +34,7 @@ def crop_stream(img, crop):
 
 class Tracker(Frame):
    
-    def __init__(self, camera = "opencv", video = None, config = "config.yml", gui=False, time_suffix=None):
+    def __init__(self, camera = "opencv", video = None, config = "config.yml", gui=False, time_suffix=None, total_time = None):
         """
         Setup video recording parameters.
         """
@@ -55,6 +55,8 @@ class Tracker(Frame):
                                          "ArenaCenterX", "ArenaCenterY",
                                          "RelativePosX", "RelativePosY"]
                                        ) + "\n"]
+
+        self.total_time = total_time
 
 
         self.N = 10
@@ -368,9 +370,8 @@ class Tracker(Frame):
             self.log.info("Number of frames that fly is not detected in is {}".format(self.missing_fly))
             return None
 
-    def run(self, init = False, total_time = None):
+    def run(self, init = False):
         status = self.track()
-        self.total_time = total_time
 
         if status:
             self.merge_masks()
