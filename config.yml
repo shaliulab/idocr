@@ -16,6 +16,7 @@ fly:
 tracker:   
     fps: 2
     experimenter: "Sayed"
+    crop: 1
     store: "store"
 
 arduino:
