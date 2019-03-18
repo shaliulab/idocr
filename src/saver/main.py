@@ -1,5 +1,6 @@
 import logging, coloredlogs
 import pandas as pd
+import os.path
 coloredlogs.install()
 
 
@@ -13,9 +14,13 @@ max_len = 5000
 class Saver():
 
     def __init__(self, store=STORE, cache = CACHE):
-        self.store = STORE
+        self.store = store 
         self.cache = cache
         self.log = logging.getLogger(__name__)
+        i = 0
+        while os.path.isfile(self.store + ".h5") or os.path.isfile(self.store + ".csv"):
+            i += 1
+            self.store = store + "_" + i
 
     def process_row(self, d, key, max_len = 5000):
         """

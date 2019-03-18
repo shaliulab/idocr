@@ -51,7 +51,7 @@ class LearningMemoryDevice():
 
         self.tracker = tracker
         self.log = logging.getLogger(__name__)
-        self.saver = Saver(store = cfg["arduino"]["store"]", cache = {})
+        self.saver = Saver(store = cfg["arduino"]["store"], cache = {})
 
 
         mapping = pd.read_csv(mapping, skip_blank_lines=True, comment="#")
