@@ -2,7 +2,6 @@ from pyfirmata import ArduinoMega as Arduino # import the right board but always
 from pyfirmata import Pin
 from pyfirmata import util
 import numpy as np
-from tqdm import tqdm
 import pandas as pd
 import sys
 import threading
@@ -21,7 +20,6 @@ import logging, coloredlogs
 import warnings
 import yaml
 from src.saver.main import Saver
-
 coloredlogs.install()
 
 def convert(s):
@@ -74,9 +72,7 @@ class LearningMemoryDevice():
         self.program = program 
         self.port = port
         pin_names = mapping.index
-        pin_state = {p: 0 for p in pin_names}
-
-        self.pin_state = pin_state
+        self.pin_state = {p: 0 for p in pin_names}
 
         try:
             self.board = Arduino(port)
@@ -113,8 +109,19 @@ class LearningMemoryDevice():
         return stop 
 
 
-    #def off(self):
-    #    [self.board.digital[pin_number].write(0) for pin_number in self.mapping.pin_number]
+    #def reporter(self, freq, total_time, program_start):
+
+    #    log = logging.getLogger("reporter")
+
+    #    while True:
+    #        for _, row in self.mapping.iterrows():
+    #            p = row["pin_number"]
+    #            pin_id = row.name
+    #            state = self.board.digital[p].read()
+    #            self.pin_state[p] = state
+    #            log.info("Pin {} ({}) is {}".format(p, pin_id, state))
+    #            print("Pin {} ({}) is {}".format(p, pin_id, state))
+    #        time.sleep(freq)
 
     def prepare(self):
  
@@ -155,6 +162,15 @@ class LearningMemoryDevice():
             count[p] += 1
         
         
+        #rep_thread = MyThread(name = "reporter",
+        #        target = self.reporter,
+        #        kwargs = {"freq": 0.010, "program_start": None, "total_time": None}
+        #        )
+        #rep_thread.setDaemon(False)
+        #rep_thread.do_run = True
+        #self.rep_thread = rep_thread
+
+
         ## Signal start
 #        for i in range(2):
 #            for pin_number in self.mapping.pin_number:
@@ -215,10 +231,10 @@ class LearningMemoryDevice():
             #pickle.dump(pin_state,filehandler)
             #filehandler.close()
     
-        self.show_circuit(
-                    #pin_state,
-                    message
-                    )
+        #self.show_circuit(
+        #            #pin_state,
+        #            message
+        #            )
  
  
 
@@ -284,7 +300,6 @@ class LearningMemoryDevice():
         pin_id = self.mapping.query('pin_number == "{}"'.format(pin_number)).index[0]
     
         if n_iters == n_iters:    
-    #         for _ in tqdm(range(int(n_iters))):
             for _ in range(int(n_iters)):
 
                 start_time = datetime.datetime.now()
@@ -330,12 +345,9 @@ class LearningMemoryDevice():
 
         self.toggle_pin(pin_number, 0)
 
-
-
- 
     def run(self, total_time, threads):
-        [d.start(self.program_start, 60*total_time) for d in threads.values()]
-
+        [d.start(self.program_start, 60 * total_time) for d in threads.values()]
+        #self.rep_thread.start(self.program_start, 60 * total_time)
 
  
     def show_circuit(self, 
@@ -403,7 +415,7 @@ class LearningMemoryDevice():
 
 
     def thread_off(self):
-        def quit(signo, _frame=None):
+        def quit(signo=None, _frame=None):
            self.log.info("Received {}".format(signo))
            for k, lst in self.saver.cache.items():  # you can instead use .iteritems() in python 2
                self.saver.store_and_clear(lst, k)
@@ -430,7 +442,7 @@ if __name__ == "__main__":
     device.total_off(exit=False)
 
     threads = device.prepare()
-    total_time = 60*args["duration"]
+    total_time = 60 * args["duration"]
     device.run(total_time=total_time, threads=threads)
     time.sleep(total_time)
     #device.exit.wait(args["duration"])
