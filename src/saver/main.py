@@ -29,7 +29,7 @@ class Saver():
 
     def update_parent(self, parent):
         self.parent = parent
-        self.store = "{}__{}".format(self.store, self.parent.time_suffix)
+        self.store = "{}__{}".format(self.store, self.parent.start_time.strftime("%H%M%S-%d%m%Y"))
 
 
     def process_row(self, d, key, max_len = 5000):

@@ -51,9 +51,9 @@ class PylonStream():
         return height 
 
 
-    def get_time_position(self, frame_count):
-        t = frame_count / self.get_fps()
-        return t
+#    def get_time_position(self, frame_count):
+#        t = frame_count / self.get_fps()
+#        return t
 
     def set_fps(self, fps):
         self.stream.AcquisitionFrameRateAbs.SetValue(fps)
@@ -101,9 +101,9 @@ class StandardStream():
             return 2
         return fps
 
-    def get_time_position(self, frame_count):
-        t = frame_count / self.get_fps()
-        return t
+#    def get_time_position(self, frame_count):
+#        t = frame_count / self.get_fps()
+#        return t
 
     def get_width(self):
         width = int(self.cap.get(3))

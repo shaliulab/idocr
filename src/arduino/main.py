@@ -42,13 +42,13 @@ class MyThread(threading.Thread):
 
 
 class LearningMemoryDevice():
-    def __init__(self, mapping, program, port, communicate=True, tracker = None, config = "config.yml", time_suffix = None):
+    def __init__(self, mapping, program, port, communicate=True, tracker = None, config = "config.yml", start_time = None):
 
         with open(config, 'r') as ymlfile:
             cfg = yaml.load(ymlfile)
 
 
-        self.time_suffix = time_suffix
+        self.start_time = start_time 
         self.tracker = tracker
         self.log = logging.getLogger(__name__)
         self.saver = Saver(store = cfg["arduino"]["store"], cache = {})

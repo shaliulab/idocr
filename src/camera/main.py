@@ -34,7 +34,7 @@ def crop_stream(img, crop):
 
 class Tracker(Frame):
    
-    def __init__(self, camera = "opencv", video = None, config = "config.yml", gui=False, time_suffix=None, total_time = None):
+    def __init__(self, camera = "opencv", video = None, config = "config.yml", gui=False, start_time=None, total_time = None):
         """
         Setup video recording parameters.
         """
@@ -45,7 +45,7 @@ class Tracker(Frame):
             cfg = yaml.load(ymlfile)
 
                    
-        self.time_suffix = time_suffix
+        self.start_time = start_time 
         self.experimenter = cfg["tracker"]["experimenter"]
         self.missing_fly = 0
         now = datetime.datetime.now()
@@ -215,7 +215,7 @@ class Tracker(Frame):
                 return False
 
             # How much time has passed since we started tracking?
-            time_position = self.stream.get_time_position(self.frame_count)
+            time_position = (datetime.datetime.now() - self.start_time).total_seconds()
             self.time_position = time_position
 
             # Read a new frame
