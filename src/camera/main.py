@@ -39,12 +39,9 @@ class Tracker(Frame):
         Setup video recording parameters.
         """
 
-
-
         with open(config, 'r') as ymlfile:
             cfg = yaml.load(ymlfile)
 
-                   
         self.start_time = start_time 
         self.experimenter = cfg["tracker"]["experimenter"]
         self.missing_fly = 0
@@ -71,6 +68,7 @@ class Tracker(Frame):
         self.block_size = cfg["arena"]["block_size"]
         self.param1 = cfg["arena"]["param1"]
         self.crop = cfg["tracker"]["crop"]
+        self.cfg = cfg
         # tkinter variables
         # based on https://www.pyimagesearch.com/2016/05/30/displaying-a-video-feed-with-opencv-and-tkinter/
         self.gui_width = 250

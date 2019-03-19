@@ -61,11 +61,12 @@ def setup_logging(
 setup_logging()
 log = logging.getLogger(__name__)
 
-start_time = datetime.datetime.now().strftime("%H%M%S-%d%m%Y")
+start_time = datetime.datetime.now()
+log.info("Start time: {}".format(start_time.strftime("%H%M%S-%d%m%Y")))
 
 if args["track"]:
     from src.camera.main import Tracker
-    tracker = Tracker(camera = args["camera"], video = args["video"], config = args["config"], gui=args["gui"], time_suffix = start_time, total_time = total_time)
+    tracker = Tracker(camera = args["camera"], video = args["video"], config = args["config"], gui=args["gui"], start_time = start_time, total_time = total_time)
 else:
     tracker = None
 
@@ -74,7 +75,7 @@ else:
 if args["arduino"]:
     from src.arduino.main import LearningMemoryDevice
 
-    device = LearningMemoryDevice(args["mappings"], args["sequence"], args["port"], communicate=args["verbose"], tracker = tracker, time_suffix = start_time)
+    device = LearningMemoryDevice(args["mappings"], args["sequence"], args["port"], communicate=args["verbose"], tracker = tracker, start_time = start_time)
     device.total_off(exit=False)
     threads = device.prepare()
 
@@ -83,7 +84,9 @@ if args["arduino"]:
 #if input_totaltime in ['Y', 'yes', 'y', 'Yes', 'YES', 'OK']:
 
 try:
-    if args["arduino"]: device.run(total_time=total_time, threads=threads)
+    if args["arduino"]:
+        device.run(total_time=total_time, threads=threads)
+
     if args["track"]:
         log.info("Starting tracking")
         _ = tracker.run(init=True)

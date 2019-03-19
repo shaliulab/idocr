@@ -181,7 +181,8 @@ class LearningMemoryDevice():
                 
         program_start = datetime.datetime.now()
         self.program_start = program_start
-        self.tracker.program_start = program_start
+        if getattr(self, "tracker", False):
+            self.tracker.program_start = program_start
 
         # Make the main thread run quit when signaled to stop
         # This will stop all the threads in a controlled fashion,
@@ -190,7 +191,7 @@ class LearningMemoryDevice():
         signals = ('TERM', 'HUP', 'INT')
         out_signals = [None,]*3
         for i, sig in enumerate(signals):
-            out_sig = signal.signal(getattr(signal, 'SIG'+sig), self.quit)
+            out_sig = signal.signal(getattr(signal, 'SIG' + sig), self.quit)
             out_signals[i] = out_sig
             
 
@@ -203,12 +204,13 @@ class LearningMemoryDevice():
         d = threading.currentThread()
         # global self.pin_state
 
+        self.board.digital[pin_number].write(value)
+
         self.log.info("{} - {}".format(
             d._kwargs["d_name"],
             value
         ))
 
-        self.board.digital[pin_number].write(value)
         self.saver.process_row(
                 d = {
                     "pin_number": pin_number, "value": value, "thread": d._kwargs["d_name"], 
@@ -268,8 +270,9 @@ class LearningMemoryDevice():
         # this is true for pins of type: CI, SI (intermitent)
         # i.e. threads where on is not NaN
         if n_iters != n_iters and on == on:
-            n_iters = (min(end, total_time) - start) // (on + off) # check if total time is accessible
-            self.log.info("{} will cycle {} times".format(d_name, n_iters))
+            n_iters = max(0, (min(end, total_time) - start) // (on + off)) # check if total time is accessible
+        if n_iters > 0:
+            self.log.info("{} will cycle {} times: start {} end {} tt {}".format(d_name, n_iters, start, end, total_time))
             
         
         # halt all threads until program_start + sync_time is reached
@@ -344,9 +347,13 @@ class LearningMemoryDevice():
                 return 0
 
         self.toggle_pin(pin_number, 0)
+        return 1
 
     def run(self, total_time, threads):
-        [d.start(self.program_start, 60 * total_time) for d in threads.values()]
+        for process in threads.values():
+            process.start(self.program_start, total_time)
+        #for process in threads.values():
+        #    process.join()
         #self.rep_thread.start(self.program_start, 60 * total_time)
 
  
@@ -417,8 +424,8 @@ class LearningMemoryDevice():
     def thread_off(self):
         def quit(signo=None, _frame=None):
            self.log.info("Received {}".format(signo))
-           for k, lst in self.saver.cache.items():  # you can instead use .iteritems() in python 2
-               self.saver.store_and_clear(lst, k)
+           #for k, lst in self.saver.cache.items():  # you can instead use .iteritems() in python 2
+           #    self.saver.store_and_clear(lst, k)
            self.exit.set()
            self.total_off()
     

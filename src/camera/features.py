@@ -25,14 +25,12 @@ class Arena():
         """Initialize an arena object
         """
         
-        with open(config, 'r') as ymlfile:
-            cfg = yaml.load(ymlfile)
-
 
         self.tracker = tracker
         self.contour = contour
         self.identity = identity
         ## cfg
+        cfg = self.tracker.cfg
         self.min_arena_area = cfg["arena"]["min_area"] 
         
     def compute(self):
@@ -106,9 +104,7 @@ class Fly():
         self.identity = identity
         self.arena  = arena
 
-        with open(config, 'r') as ymlfile:
-            cfg = yaml.load(ymlfile)
-
+        cfg = self.tracker.cfg
 
         self.min_object_length = cfg["fly"]["min_length"]
         self.min_obj_arena_dist =  cfg["fly"]["min_dist_arena"]

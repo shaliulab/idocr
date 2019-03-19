@@ -106,3 +106,5 @@ venv.bak/
 src/Camera/*py
 src/Camera/new_20x/*
 images/*
+data/*
+metadata/*
