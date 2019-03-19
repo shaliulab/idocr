@@ -233,6 +233,7 @@ class Tracker(Frame):
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  
             else:
                 gray = img.copy()
+                img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
             # Annotate frame
             img = self.annotate_frame(img)
