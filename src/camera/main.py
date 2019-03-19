@@ -371,8 +371,7 @@ class Tracker(Frame):
 
     def run(self, init = False):
         status = self.track()
-
-        if status:
+        while status:
             self.merge_masks()
             self.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
 
@@ -381,7 +380,7 @@ class Tracker(Frame):
                 #self.tkinter_update('main_mask', 0, 1)
                 self.tkinter_update('gray_gui', 0, 2)
                 self.init = False
-                self.root.after(10, self.run)
+                status = self.root.after(100, self.track())
                 # set a callback to handle when the window is closed
                 if init:
                     self.root.wm_title("Learning memory stream")
@@ -395,9 +394,10 @@ class Tracker(Frame):
                 # Check if user forces leave (press q)
                 keypress_stop = cv2.waitKey(1) & 0xFF in [27, ord('q')]
                 if not keypress_stop and status:
-                    self.run()
-                self.onClose()
-                return False
+                    status = self.track()
+                else:
+                  self.onClose()
+                  return False
         else:
             self.onClose(x=False)
             return False
