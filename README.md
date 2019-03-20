@@ -12,7 +12,7 @@ Developing Fly Real-time Transcription Scope
  
 
 ```
-bash ~/Public/open_camera.sh
+bash /home/luna.kuleuven.be/u0127714/VIBFlySleepLab/FReTS/src/open_camera.sh
 ```
 3 Run the python program to track flies and control the Arduino board
 
