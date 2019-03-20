@@ -65,6 +65,7 @@ class LearningMemoryDevice(ReadConfigMixin, PDReader):
             sys.exit(1)
     
         self.exit = threading.Event()
+        self.finished = False
         self.communicate = communicate
         self.quit = self.thread_off()
 
@@ -77,8 +78,8 @@ class LearningMemoryDevice(ReadConfigMixin, PDReader):
             stop_gui = getattr(self.tracker, "stop", False)
             if not stop_arduino and not stop_gui:
                 time.sleep(0.001)
-                if getattr(self, "tracker.stop", False):
-                    self.log.debug("Tracker signaled stop")
+                if getattr(self.tracker, "stop", False):
+                    self.log.info("Tracker signaled stop")
             else:
                 stop = True
                 break
@@ -121,24 +122,20 @@ class LearningMemoryDevice(ReadConfigMixin, PDReader):
             d.do_run = True
             threads[d_name]=d
             count[p] += 1
+
+        ################################
+        ## Finished preparing/configuring the threads
+        ################################
+        
         self.threads = threads
+        self.threads_finished = {k: False for k in threads.keys()}
+
         
         program_start = datetime.datetime.now()
         self.program_start = program_start
         #if getattr(self, "tracker", False):
         #    self.tracker.program_start = program_start
-
-        # Make the main thread run quit when signaled to stop
-        # This will stop all the threads in a controlled fashion,
-        # which means all the pins are turned of before the thread
-        # peacefully dies
-        signals = ('TERM', 'HUP', 'INT')
-        # out_signals = [None,]*3
-        for _, sig in enumerate(signals):
-            _ = signal.signal(getattr(signal, 'SIG' + sig), self.quit)
-            # out_signals[i] = out_sig
-            
-
+         
 
         return threads
 
@@ -157,7 +154,7 @@ class LearningMemoryDevice(ReadConfigMixin, PDReader):
         # Update log with info severity level unless
         # on pin13, then use severity debug
         f = self.log.info
-        if pin_number == 13: f = self.log.debug
+        # if pin_number == 13: f = self.log.debug
         f("{} - {}".format(
             d._kwargs["d_name"],
             value
@@ -294,12 +291,50 @@ class LearningMemoryDevice(ReadConfigMixin, PDReader):
         self.toggle_pin(pin_number, 0)
         return 1
 
-    def run(self, total_time, threads):
+    def _run(self, total_time, threads):
+
+        t = threading.currentThread()
+        self.log.info('Starting slave threads')
         for process in threads.values():
             process.start(self.program_start, total_time)
-        #for process in threads.values():
-        #    process.join()
-        #self.rep_thread.start(self.program_start, 60 * total_time)
+        self.log.debug('{} waiting for slave threads'.format(t.name))
+        
+        while not self.exit.is_set() and not np.bitwise_and.reduce(list(self.threads_finished.values())) and not getattr(self.tracker, "stop", False):
+            time.sleep(0.001)
+
+        
+        time.sleep(.1)
+        self.total_off()
+        self.log.info('{} storing and cleaning cache'.format(t.name))
+        for k, lst in self.saver.cache.items():
+            self.saver.store_and_clear(lst, k)
+
+        self.finished = True
+
+        return None
+
+    def run(self, total_time, threads):
+
+        # Make the main thread run quit when signaled to stop
+        # This will stop all the threads in a controlled fashion,
+        # which means all the pins are turned of before the thread
+        # peacefully dies
+        signals = ('TERM', 'HUP', 'INT')
+        for sig in signals:
+            signal.signal(getattr(signal, 'SIG' + sig), self.quit)
+
+        t = threading.Thread(
+            name = 'SUPER_ARDUINO',
+            target = self._run,
+            kwargs = {
+                "total_time": total_time,
+                "threads": threads
+                }
+        )
+
+        t.start()
+        return None
+
 
  
     def show_circuit(self, 
@@ -355,7 +390,6 @@ class LearningMemoryDevice(ReadConfigMixin, PDReader):
                     self.log.info("{} stopped".format(d._kwargs["d_name"]))
                 except AttributeError:
                     pass
-                #id.join()
         else:
             self.log.info("Completely turning off Arduino")
     
@@ -369,10 +403,8 @@ class LearningMemoryDevice(ReadConfigMixin, PDReader):
     def thread_off(self):
         def quit(signo=None, _frame=None):
            self.log.info("Received {}".format(signo))
-           #for k, lst in self.saver.cache.items():  # you can instead use .iteritems() in python 2
-           #    self.saver.store_and_clear(lst, k)
            self.exit.set()
-           self.total_off()
+        #    sys.exit(1)
     
         return quit
     ######################

@@ -17,6 +17,7 @@ coloredlogs.install()
 import tkinter as tk
 Frame = tk.Frame
 cv2_version = cv2.__version__
+import time
 
 streams_dict = {"pylon": PylonStream, "opencv": StandardStream}
 
@@ -73,7 +74,8 @@ class Tracker(Frame):
         # based on https://www.pyimagesearch.com/2016/05/30/displaying-a-video-feed-with-opencv-and-tkinter/
         self.gui_width = 250
         self.gui_pad = 20
-        
+        self.device = None
+        self.stop = False
 
         # self.record_to_save_header = ['Operator', 'Date_Time', 'Experiment', '', 'Arena', 'Object', 'frame', 'time_point', 'CoordinateX', 'CoordinateY', 'RelativePosX', 'RelativePosY']
 
@@ -477,9 +479,11 @@ class Tracker(Frame):
             cv2.destroyAllWindows()
 
         self.stop = True
-        #self.save_record()
         self.log.info("{} frames analyzed".format(self.frame_count))
-        sys.exit(1)
+        while not getattr(self.device, "finished", False):
+            time.sleep(0.001)
+        sys.exit(0)
+
 
     def merge_masks(self):
     
