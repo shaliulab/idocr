@@ -5,17 +5,18 @@ import numpy as np
 def mixedomatic(cls):
     """ Mixed-in class decorator. """
     classinit = cls.__dict__.get('__init__')  # Possibly None.
+    bases = [e for e in cls.__bases__ if e.__name__[-5:] == "Mixin"]
 
     # Define an __init__ function for the class.
     def __init__(self, *args, **kwargs):
         # Call the __init__ functions of all the bases.
-        for base in cls.__bases__:
+        for base in bases:
             base.__init__(self, *args, **kwargs)
         # Also call any __init__ function that was in the class.
         if classinit:
             classinit(self, *args, **kwargs)
 
-        for base in cls.__bases__:
+        for base in bases:
             __init2__ = base.__dict__.get('__init2__')
             if __init2__:
                 __init2__(self, *args, **kwargs)
@@ -27,7 +28,7 @@ def mixedomatic(cls):
 class ReadConfigMixin():
 
     def __init__(self, *args, **kwargs):
- 
+
         with open(kwargs["config"], 'r') as ymlfile:
             cfg = yaml.load(ymlfile)
 
