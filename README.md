@@ -12,7 +12,7 @@ Developing Fly Real-time Transcription Scope
  
 
 ```
-bash ~/Public/open_camera.sh
+bash /home/luna.kuleuven.be/u0127714/VIBFlySleepLab/FReTS/src/open_camera.sh
 ```
 3 Run the python program to track flies and control the Arduino board
 
@@ -57,7 +57,9 @@ if the output you get is a green line that says `/dev/ttyACM0`, good to go! Othe
 
 * Open the pylon camera, track flies and run the Arduino program encoded in program.csv assuming the pin mappings in pins_mapping.csv
 ```
-/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python main.py --track --camera pylon --arduino --mappings Arduino/mappings/main.csv --sequence Arduino/program/main.csv
+cd /home/luna.kuleuven.be/u0127714/VIBFlySleepLab/FReTS
+
+/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python main.py --track --camera pylon --arduino --mappings mappings/main.csv --sequence programs/learn.csv
 ```
 
 * Open the pylon camera, track flies and run the Arduino program encoded in program.csv assuming the pin mappings in pins_mapping.csv and set the fps to 10
