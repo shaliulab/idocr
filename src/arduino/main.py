@@ -1,4 +1,5 @@
 from pyfirmata import ArduinoMega as Arduino # import the right board but always call it Arduino
+from src.frets_utils import *
 from pyfirmata import Pin
 from pyfirmata import util
 import numpy as np
@@ -22,39 +23,9 @@ import yaml
 from src.saver.main import Saver
 coloredlogs.install()
 
-def convert(s):
-    try:
-        return np.float(s)
-    except ValueError:
-        num, denom = s.split('/')
-        return np.float(num) / np.float(denom)
+class PDReader():
 
-class MyThread(threading.Thread):
-    def start(self, program_start, total_time):
-        """
-        Extend the start method in threading.Thread() to receive 2 more args, program_start and total_time
-
-        """
-        self._kwargs["program_start"] = program_start
-        self._kwargs["total_time"] = total_time 
-        super(MyThread, self).start()
-
-
-
-class LearningMemoryDevice():
-    def __init__(self, mapping, program, port, communicate=True, tracker = None, config = "config.yml", start_time = None):
-
-        with open(config, 'r') as ymlfile:
-            cfg = yaml.load(ymlfile)
-
-
-        self.start_time = start_time 
-        self.tracker = tracker
-        self.log = logging.getLogger(__name__)
-        self.saver = Saver(store = cfg["arduino"]["store"], cache = {})
-        self.saver.update_parent(self)
-
-
+    def __init__(self, mapping, program):
         mapping = pd.read_csv(mapping, skip_blank_lines=True, comment="#")
         program = pd.read_csv(program, skip_blank_lines=True, comment="#")
         mapping = mapping.set_index('pin_id')
@@ -66,10 +37,23 @@ class LearningMemoryDevice():
         
         program = program * 60
 
-
-
         self.mapping = mapping
         self.program = program 
+
+
+
+@mixedomatic
+class LearningMemoryDevice(ReadConfigMixin, PDReader):
+
+    def __init__(self, mapping, program, port, config = "config.yaml", communicate=True, tracker = None, start_time = None):
+
+        self.start_time = start_time 
+        self.tracker = tracker
+        self.log = logging.getLogger(__name__)
+        self.saver = Saver(store = self.cfg["arduino"]["store"], cache = {})
+        self.saver.update_parent(self)
+        PDReader.__init__(self, mapping, program)
+
         self.port = port
         pin_names = mapping.index
         self.pin_state = {p: 0 for p in pin_names}
@@ -79,19 +63,11 @@ class LearningMemoryDevice():
         except serial.serialutil.SerialException:
             self.log.error('Please provide the correct port')
             sys.exit(1)
-        #filehandler = open(os.path.join(log_dir, "pin_state.obj"),"wb")
-        #pickle.dump(pin_state,filehandler)
-        #filehandler.close()    
+    
         self.exit = threading.Event()
         self.communicate = communicate
         self.quit = self.thread_off()
 
-        #log_files = glob.glob(os.path.join(self.log_dir, 'log*'))
-        #for f in log_files + [os.path.join(self.log_dir, e) for e in "pin_state.txt"]:
-        #    try:
-        #        os.remove(f)
-        #    except OSError:
-        #        pass
 
     def check_do_run(self, d, max_sleep):
         stop = False 
@@ -107,21 +83,6 @@ class LearningMemoryDevice():
                 stop = True
                 break
         return stop 
-
-
-    #def reporter(self, freq, total_time, program_start):
-
-    #    log = logging.getLogger("reporter")
-
-    #    while True:
-    #        for _, row in self.mapping.iterrows():
-    #            p = row["pin_number"]
-    #            pin_id = row.name
-    #            state = self.board.digital[p].read()
-    #            self.pin_state[p] = state
-    #            log.info("Pin {} ({}) is {}".format(p, pin_id, state))
-    #            print("Pin {} ({}) is {}".format(p, pin_id, state))
-    #        time.sleep(freq)
 
     def prepare(self):
  
@@ -160,57 +121,49 @@ class LearningMemoryDevice():
             d.do_run = True
             threads[d_name]=d
             count[p] += 1
+        self.threads = threads
         
-        
-        #rep_thread = MyThread(name = "reporter",
-        #        target = self.reporter,
-        #        kwargs = {"freq": 0.010, "program_start": None, "total_time": None}
-        #        )
-        #rep_thread.setDaemon(False)
-        #rep_thread.do_run = True
-        #self.rep_thread = rep_thread
-
-
-        ## Signal start
-#        for i in range(2):
-#            for pin_number in self.mapping.pin_number:
-#                self.board.digital[pin_number].write(1)
-#                time.sleep(0.05)
-#                self.toggle_pin(pin_number, 0)
-#                time.sleep(0.05)
-                
         program_start = datetime.datetime.now()
         self.program_start = program_start
-        if getattr(self, "tracker", False):
-            self.tracker.program_start = program_start
+        #if getattr(self, "tracker", False):
+        #    self.tracker.program_start = program_start
 
         # Make the main thread run quit when signaled to stop
         # This will stop all the threads in a controlled fashion,
         # which means all the pins are turned of before the thread
         # peacefully dies
         signals = ('TERM', 'HUP', 'INT')
-        out_signals = [None,]*3
-        for i, sig in enumerate(signals):
-            out_sig = signal.signal(getattr(signal, 'SIG' + sig), self.quit)
-            out_signals[i] = out_sig
+        # out_signals = [None,]*3
+        for _, sig in enumerate(signals):
+            _ = signal.signal(getattr(signal, 'SIG' + sig), self.quit)
+            # out_signals[i] = out_sig
             
 
 
-        self.threads = threads
         return threads
 
     def toggle_pin(self, pin_number, value, message=None):
+        """
+        Updates the state of pin pin_number with value, while logging and caching this
+        so user can confirm it. TODO. Finish show_circuit and use message
+        """
 
         d = threading.currentThread()
-        # global self.pin_state
-
+        
+        # Update state of pin (value = 1 or value = 0)
         self.board.digital[pin_number].write(value)
 
-        self.log.info("{} - {}".format(
+
+        # Update log with info severity level unless
+        # on pin13, then use severity debug
+        f = self.log.info
+        if pin_number == 13: f = self.log.debug
+        f("{} - {}".format(
             d._kwargs["d_name"],
             value
         ))
 
+        # Create a new row in the metadata
         self.saver.process_row(
                 d = {
                     "pin_number": pin_number, "value": value, "thread": d._kwargs["d_name"], 
@@ -220,19 +173,7 @@ class LearningMemoryDevice():
                 key = "df"
 
         )
-
-        #if self.communicate:
-            #filehandler = open(os.path.join(self.log_dir, "pin_state.obj"),"rb")
-            #pin_state = pickle.load(filehandler)
-            #filehandler.close()
-
-            #pin_state[self.mapping.query('pin_number == "{}"'.format(pin_number))["pin_id"].iloc[0]]=value
-            ##print(self.pin_state["RIGHT_ODOUR_2"])
-
-            #filehandler = open(os.path.join(self.log_dir, "pin_state.obj"),"wb")
-            #pickle.dump(pin_state,filehandler)
-            #filehandler.close()
-    
+  
         #self.show_circuit(
         #            #pin_state,
         #            message
@@ -242,28 +183,33 @@ class LearningMemoryDevice():
 
     def pin_thread(self, pin_number, total_time, program_start, start, end, on, off, n_iters=np.nan, d_name="", board=None):
         """
-        pin_number: integer declaring the number of the pin on the Arduino board
-        
-        total_time: time in seconds that the whole program is supposed to last.
-                     After total_time, all pins should go off, no matter what their program is
-        
-        program_start: datetime object declaring the exact moment when run()
-        (the function that calls pin_thread when defining the threads) is executed. Only makes sense in scheduled pins.
-        
-        start: timepoint in seconds when the pin should go on for the first time. Only makes sense in scheduled pins.
-        
-        end: timepoint in seconds when the pin should be turned off for good
-        
-        on: duration of the on time in a cycle. Only makes sense in intermitent pins.
-        
-        off: duration of the off time in a cycle. Only makes sense in intermitent pins.
-        
-        n_iters: By default is None, but it will be asigned a value equal to the number of cycles
-                 required by intermitent pins (as instructed in the program). If the pin does not have a cycle,
-                 then it will still be None        
+        Run by every thread independently, this function replicates the program specified in the corresponding row
+        of the program dataframe. Turns on a pin at a specific timepoint and after some waiting time, it turns it off
+        If on and off are not none, it can implement a cycle during this waiting time i.e. the pin can be turned on and off
+        between start and end for on and off seconds respectively.
+
+        Keywords
+          pin_number: integer declaring the number of the pin on the Arduino board
+          
+          total_time: time in seconds that the whole program is supposed to last.
+                       After total_time, all pins should go off, no matter what their program is
+          
+          program_start: datetime object declaring the exact moment when run()
+          (the function that calls pin_thread when defining the threads) is executed. Only makes sense in scheduled pins.
+          
+          start: timepoint in seconds when the pin should go on for the first time. Only makes sense in scheduled pins.
+          
+          end: timepoint in seconds when the pin should be turned off for good
+          
+          on: duration of the on time in a cycle. Only makes sense in intermitent pins.
+          
+          off: duration of the off time in a cycle. Only makes sense in intermitent pins.
+          
+          n_iters: By default is None, but it will be asigned a value equal to the number of cycles
+                   required by intermitent pins (as instructed in the program). If the pin does not have a cycle,
+                   then it will still be None        
         """
         sync_time = 1
-        #global self.pin_state
         d = threading.currentThread()
 
 
@@ -283,7 +229,6 @@ class LearningMemoryDevice():
         if stop:
             self.toggle_pin(pin_number, 0)
             return 0
-
     
         thread_start = datetime.datetime.now()    
         
@@ -300,7 +245,7 @@ class LearningMemoryDevice():
              self.log.warning("{} delayed {} seconds".format(d_name, -sleep2))
     
         
-        pin_id = self.mapping.query('pin_number == "{}"'.format(pin_number)).index[0]
+        # pin_id = self.mapping.query('pin_number == "{}"'.format(pin_number)).index[0]
     
         if n_iters == n_iters:    
             for _ in range(int(n_iters)):
@@ -430,7 +375,13 @@ class LearningMemoryDevice():
            self.total_off()
     
         return quit
-    
+    ######################
+    ## Enf of BaseDevice class
+
+
+#class LearningMemoryDevice(ReadConfigMixin, BaseDevice):
+#    pass
+
 if __name__ == "__main__":
 
     # Arguments to follow the command, adding video, etc options

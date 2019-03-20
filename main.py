@@ -75,7 +75,7 @@ else:
 if args["arduino"]:
     from src.arduino.main import LearningMemoryDevice
 
-    device = LearningMemoryDevice(args["mappings"], args["sequence"], args["port"], communicate=args["verbose"], tracker = tracker, start_time = start_time)
+    device = LearningMemoryDevice(args["mappings"], args["sequence"], args["port"], config = args["config"], communicate=args["verbose"], tracker = tracker, start_time = start_time)
     device.total_off(exit=False)
     threads = device.prepare()
 
