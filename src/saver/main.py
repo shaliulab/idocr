@@ -14,24 +14,17 @@ max_len = 5000
 
 class Saver():
 
-    def __init__(self, store=STORE, cache = CACHE, datetime = True):
-        self.store = store 
+    def __init__(self, store=STORE, cache = CACHE, init_time = None):
+
+
+        self.store = None
+        self.cache = None
+        self.init_time = None
         self.cache = cache
+        self.init_time = init_time
+        self.store = "{}_{}".format(store, init_time.strftime("%H%M%S-%d%m%Y"))
         self.log = logging.getLogger(__name__)
-        i = 0
-        # https://stackoverflow.com/questions/17383716/python-accessing-attributes-and-methods-of-one-class-in-another
-        self.parent = None
-
-        #while os.path.isfile(self.store + ".h5") or os.path.isfile(self.store + ".csv"):
-        #    i += 1
-        #    self.store = "{}_{}".format(store, i)
-
-
-    def update_parent(self, parent):
-        self.parent = parent
-        self.store = "{}__{}".format(self.store, self.parent.start_time.strftime("%H%M%S-%d%m%Y"))
-
-
+        
     def process_row(self, d, key, max_len = 5000):
         """
         Append row d to the store 'key'.

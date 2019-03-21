@@ -1,23 +1,22 @@
 from .features import Arena, Fly
 from .streams import PylonStream, StandardStream
 from src.saver.main import Saver
-from PIL import ImageTk, Image
+from src.interface.main import Interface
+from src.frets_utils import mixedomatic, ReadConfigMixin, setup_logging
 import yaml
 import datetime
 import numpy as np
+import threading
 from pypylon import pylon
 from pypylon import genicam
-import threading
 import argparse
-import cv2
-import imutils
 import sys
 import logging, coloredlogs
 coloredlogs.install()
-import tkinter as tk
-Frame = tk.Frame
+import cv2
 cv2_version = cv2.__version__
 import time
+setup_logging()
 
 streams_dict = {"pylon": PylonStream, "opencv": StandardStream}
 
@@ -32,73 +31,71 @@ def crop_stream(img, crop):
     return img
 
 
-
-class Tracker(Frame):
+class Tracker():
    
-    def __init__(self, camera = "opencv", video = None, config = "config.yml", gui=False, start_time=None, total_time = None):
+    def __init__(self, interface, camera = "opencv", video = None):
         """
         Setup video recording parameters.
         """
 
-        with open(config, 'r') as ymlfile:
-            cfg = yaml.load(ymlfile)
+        # self.record_to_save = ["\t".join(["Frame", "TimePos", "Arena",
+        #                                  "FlyNo", "FlyPosX", "FlyPosY",
+        #                                  "ArenaCenterX", "ArenaCenterY",
+        #                                  "RelativePosX", "RelativePosY"]
+        #                                ) + "\n"]
+        self.interface = None
+        self.found_flies = None
+        self.frame_count = None
+        self.old_found = None
+        self.missing_fly = None
 
-        self.start_time = start_time 
-        self.experimenter = cfg["tracker"]["experimenter"]
-        self.missing_fly = 0
-        now = datetime.datetime.now()
-        self.Date_time = now.strftime("%Y_%m_%dT%H_%M_%S")
-        self.record_to_save = ["\t".join(["Frame", "TimePos", "Arena",
-                                         "FlyNo", "FlyPosX", "FlyPosY",
-                                         "ArenaCenterX", "ArenaCenterY",
-                                         "RelativePosX", "RelativePosY"]
-                                       ) + "\n"]
-
-        self.total_time = total_time
-
-
-        self.N = 10
-        self.fps = cfg["tracker"]["fps"]
-        kernel_factor = cfg["arena"]["kernel_factor"] 
-        self.kernel = np.ones((kernel_factor, kernel_factor), np.uint8)
-        self.kernel_factor = kernel_factor
-        self.found_flies = 0
-        self.old_found = 0
-        self.gui = gui
+        # Initialization
+        # Results variables
         self.arena_contours = None
-        self.block_size = cfg["arena"]["block_size"]
-        self.param1 = cfg["arena"]["param1"]
-        self.crop = cfg["tracker"]["crop"]
-        self.cfg = cfg
-        # tkinter variables
-        # based on https://www.pyimagesearch.com/2016/05/30/displaying-a-video-feed-with-opencv-and-tkinter/
-        self.gui_width = 250
-        self.gui_pad = 20
-        self.device = None
-        self.stop = False
+        self.found_flies = None
+        self.accuImage = None
 
-        # self.record_to_save_header = ['Operator', 'Date_Time', 'Experiment', '', 'Arena', 'Object', 'frame', 'time_point', 'CoordinateX', 'CoordinateY', 'RelativePosX', 'RelativePosY']
+        self.img = None
+        self.transform = None
+        self.gray_masked = None
+        self.status = None
 
-        stream = streams_dict[camera](video)
+        self.arenas = None
+        self.masks = None
+
+        # Config variables
+        self.stream = None
+        self.fps = None
+        self.block_size = None
+        self.param1 = None
+        self.crop = None
+        self.kernel_factor = None
+        self.kernel = None
+        self.N = None
+
+        # Assignment
+        self.interface = interface
+
+        # Results variables
+        self.found_flies = 0
+        self.frame_count = 0
+        self.old_found = 0
+        self.missing_fly = 0
 
 
-        if self.fps is not None and video is not None:
-            # Set the FPS of the camera
-            stream.set_fps(self.fps)
+        # Config variables
+        self.fps = self.interface.cfg["tracker"]["fps"]
+        self.block_size = self.interface.cfg["arena"]["block_size"]
+        self.param1 = self.interface.cfg["arena"]["param1"]
+        self.crop = self.interface.cfg["tracker"]["crop"]
+        self.kernel_factor = self.interface.cfg["arena"]["kernel_factor"] 
+        self.kernel = np.ones((self.kernel_factor, self.kernel_factor), np.uint8)
+        self.N = self.interface.cfg["tracker"]["N"] 
 
         self.log = logging.getLogger(__name__)
         self.log.info("Starting video ...")
 
-        self.saver = Saver(store = cfg["tracker"]["store"], cache = {})
-        self.saver.update_parent(self)
-
-        # Extract 
-        #VIDEO_POS = cap.get(0)
-        #VIDEO_FRAME = cap.get(1)
-        #VIDEO_WIDTH = stream.get_width()
-        #VIDEO_HEIGHT = stream.get_height()
-        #VIDEO_FPS = cap.get(5)
-        #VIDEO_RGB = cap.get(16)
+        self.saver = self.interface.data_saver
         
         ## TODO
         ## Find a way to get camera.Width.SetValue(whatever) to work
@@ -109,27 +106,35 @@ class Tracker(Frame):
         #     cap.set(4, 1024)
 
 
+        self.stream = streams_dict[camera](video)
+        
+        self.interface.video_width = self.stream.get_width() // self.crop
+        self.interface.video_height = self.stream.get_height()
+
+        
         # Make accuImage an array of size heightxwidthxnframes that will
         # store in the :,:,i element the result of the tracking for frame i
-        video_width = stream.get_width() // self.crop
-        video_height = stream.get_height()
-        self.video_width = video_width
-        self.video_height = video_height
-        self.log.info("Stream has shape w:{} h:{}".format(video_width, video_height))
-        self.accuImage = np.zeros((video_height, video_width, self.N), np.uint8)
-        self.stream = stream
-        self.time_position = 0
-        self.frame_count = 0
-        self.img = np.full((self.video_height, self.video_width, 3), 0, np.uint8)
-        self.transform = np.full((self.video_height, self.video_width), 0, np.uint8)
-        self.gray_masked = np.full((self.video_height, self.video_width), 0, np.uint8)
+        self.accuImage = np.zeros((self.interface.video_height, self.interface.video_width, self.N), np.uint8)
+        
+        self.img = np.full((self.interface.video_height, self.interface.video_width, 3), 0, np.uint8)
+        self.transform = np.full((self.interface.video_height, self.interface.video_width), 0, np.uint8)
+        self.gray_masked = np.full((self.interface.video_height, self.interface.video_width), 0, np.uint8)
+
+        self.interface.frame_color = np.full((self.interface.video_height, self.interface.video_width), 3, np.uint8)
+        self.interface.gray_gui = np.full((self.interface.video_height, self.interface.video_width), 0, np.uint8)
+
+
+        self.status = True
  
+        self.arenas = {}
+        self.masks = {}
+
+        self.log.info("Stream has shape w:{} h:{}".format(self.interface.video_width, self.interface.video_height))
 
 
-        if self.gui:
-            self.log.info("Initializing GUI")
-            self.tkinter_initialize()
-
+        if self.fps and video:
+            # Set the FPS of the camera
+            self.stream.set_fps(self.fps)
 
 
     def rotate_frame(self, img, rotation=180):
@@ -145,7 +150,7 @@ class Tracker(Frame):
         ## TODO Dont make coordinates of text hardcoded
         ###################################################
         cv2.putText(img,'Frame: '+ str(self.frame_count),   (25,25),    cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
-        cv2.putText(img,'Time: '+  str(self.time_position), (1000,25),  cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
+        cv2.putText(img,'Time: '+  str(self.interface.timestamp), (1000,25),  cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
         cv2.putText(img,'LEFT',                        (25,525),   cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
         cv2.putText(img,'RIGHT',                       (1100,525), cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
         return img
@@ -170,81 +175,52 @@ class Tracker(Frame):
         _, image1 = cv2.threshold(image_blur, RangeLow1, RangeUp1, cv2.THRESH_BINARY+cv2.THRESH_OTSU) 
         arena_opening = cv2.morphologyEx(image1, cv2.MORPH_OPEN, self.kernel, iterations = 2)
         if cv2_version[0] == '4':
-            arenas, _ = cv2.findContours(arena_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            arena_contours, _ = cv2.findContours(arena_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         else:
-            _, arenas, _ = cv2.findContours(arena_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            _, arena_contours, _ = cv2.findContours(arena_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        self.arenas = arenas
-        return self.arenas
-
-       
-#    def save_record(self, input_save_name=None):
-#        filename = '_'.join([e if e is not None else '' for e in [self.Date_time, input_save_name]]) + ".txt"
-#        #filename = "{}.txt".format(self.Date_time)
-#        with open(filename, 'w') as f:
-#            for rowrecord in self.record_to_save:
-#                f.write(rowrecord)
-#        return None
-
-                  
-#    def save_prompt(self):
-#                
-#        input_save = input("Do you want to save the file? (y/n) ")
-#        if input_save in ['Y', 'Yes', 'YES', 'OK', 'yes', 'y']:
-#            input_save1 = input("Do you want to add file name to the default one? (y/n) ")
-#            input_save_name = None
-#            if input_save1 in ['Y', 'Yes', 'YES', 'OK', 'yes', 'y']:
-#                input_save_name = input("Please write your own filename: ")
-#            save_record(input_save_name)
-
-
+        return arena_contours
 
     def track(self):
         
-        stop_event = getattr(self, "stopEvent", None)
-        event_stop = False 
-
-        if stop_event is threading.Event:
-            event_stop = not x.is_set()
-
-        if not event_stop:
+        if not self.interface.exit.is_set():
             # Check if experiment is over
-            if self.time_position > self.total_time:
+            if self.interface.timestamp > self.interface.duration:
                 self.log.info("Experiment duration is reached. Closing")
                 #self.save_record()
                 return False
 
             # How much time has passed since we started tracking?
-            time_position = (datetime.datetime.now() - self.start_time).total_seconds()
-            self.time_position = time_position
+            self.interface.timestamp = (datetime.datetime.now() - self.interface.tracking_start).total_seconds()
 
             # Read a new frame
-            ret, img = self.stream.read_frame()
+            ret, frame = self.stream.read_frame()
 
             # If ret is False, a new frame could not be read
             # Exit 
             if not ret:
                 self.log.info("Stream or video is finished. Closing")
-                self.onClose(x=False)
-                self.stop = True
+                self.onClose()
+                self.interface.stream_finished = True
                 return False
            
-            img = crop_stream(img, self.crop)
+            frame = crop_stream(frame, self.crop)
             # Make single channel i.e. grayscale
-            if len(img.shape) == 3:
-                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  
+            if len(frame.shape) == 3:
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                frame_color = frame  
             else:
-                gray = img.copy()
-                img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+                gray = frame.copy()
+                frame_color = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
             # Annotate frame
-            img = self.annotate_frame(img)
+            frame_color = self.annotate_frame(frame_color)
             
             # Find arenas for the first N frames
             if self.frame_count < self.N and self.frame_count > 0:
                 self.arena_contours = self.find_arenas(gray)
 
-            if self.arena_contours is None:
+            if self.arena_contours is None or len(self.arena_contours) == 0:
                 self.log.warning("Frame #{} no arenas".format(self.frame_count))
                 self.frame_count += 1
                 status = self.track()
@@ -253,12 +229,7 @@ class Tracker(Frame):
             transform = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.block_size, self.param1)
             self.transform = transform
 
-            ## DEBUG
-            ## Initialize an arena dictionary to keep track of the found arenas
-            self.arenas = {}
-            self.masks = {}
-
-           
+               
             # Initialize an arena identity that will be increased with 1
             # for every validated arena i.e. not on every loop iteration!
             id_arena = 0
@@ -267,7 +238,8 @@ class Tracker(Frame):
             for arena_contour in self.arena_contours:
                         
                 # Initialize an Arena object
-                arena = Arena(self, arena_contour, id_arena)
+                
+                arena = Arena(tracker = self, contour = arena_contour, identity = id_arena)
                 # and compute parameters used in validation and drawing
                 arena.compute()
                 # Validate the arena
@@ -279,7 +251,7 @@ class Tracker(Frame):
                    continue
                
                 # If validated, keep analyzing the current arena
-                img = arena.draw(img)
+                frame_color = arena.draw(frame_color)
 
                 # Make a mask for this arena
                 ## TODO Right now the masking module does not work
@@ -302,9 +274,10 @@ class Tracker(Frame):
                 # For every arena contour detected
                 for fly_contour in fly_contours:
                     # Initialize a Fly object
-                    fly = Fly(self, arena, fly_contour, id_fly)
+                    fly = Fly(tracker = self, arena = arena, contour = fly_contour, identity = id_fly)
                     # and compute parameters used in validation and drawing
                     fly.compute()
+                    
                     # If not validated, move on the next fly contour
                     # i.e. ignore the current fly 
                     if not fly.validate(gray):
@@ -313,7 +286,7 @@ class Tracker(Frame):
                     self.log.debug("Fly {} in arena {} validated with area {} and length {}".format(fly.identity, fly.arena.identity, fly.area, fly.diagonal))
                     self.saver.process_row(
                             d = {
-                                "frame": self.frame_count, "time_position": self.time_position,
+                                "frame": self.frame_count, "timestamp": self.interface.timestamp,
                                 "arena": arena.identity, "fly": fly.identity, "cx": fly.cx, "cy": fly.cy,
                                 "datetime": datetime.datetime.now()
                                 },
@@ -322,11 +295,8 @@ class Tracker(Frame):
                     self.found_flies += 1
                     
                     # Draw the fly
-                    img = fly.draw(img, self.frame_count)
-
-                    # Save the fly
-                    self.record_to_save.append(fly.save(self.frame_count, self.time_position))
-                    
+                    frame_color = fly.draw(frame_color, self.frame_count)
+                  
                     # Update the id_fly to account for one more fly detected
                     id_fly += 1
 
@@ -350,7 +320,7 @@ class Tracker(Frame):
                 ## End for loop over all putative arenas
 
             self.frame_count +=1
-            self.img = img
+            self.interface.frame_color = frame_color
             if self.frame_count % 100 == 0:
                 self.log.info("Frame #{}".format(self.frame_count))
 
@@ -370,119 +340,43 @@ class Tracker(Frame):
             #self.save_prompt()
             self.log.info("Number of frames that fly is not detected in is {}".format(self.missing_fly))
             return None
-
-    def run(self, init = False):
-        status = self.track()
-        while status:
-            self.merge_masks()
-            self.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
-
-            if self.gui:
-                self.tkinter_update('img', 0, 0, gui_width = (self.gui_width + self.gui_pad) * 2)
-                #self.tkinter_update('main_mask', 0, 1)
-                self.tkinter_update('gray_gui', 0, 2)
-                self.init = False
-                status = self.root.after(100, self.track())
-                # set a callback to handle when the window is closed
-                if init:
-                    self.root.wm_title("Learning memory stream")
-                    self.root.wm_protocol("WM_DELETE_WINDOW", self.onClose)
-                    self.root.mainloop()
-            else:
-                cv2.imshow("img", self.img)
-                #cv2.imshow("mask", self.main_mask)
-                #cv2.imshow('transform', self.transform)
-                cv2.imshow("gray_gui", self.gray_gui)
-                # Check if user forces leave (press q)
-                keypress_stop = cv2.waitKey(1) & 0xFF in [27, ord('q')]
-                if not keypress_stop and status:
-                    status = self.track()
-                else:
-                  self.onClose()
-                  return False
-        else:
-            self.onClose(x=False)
-            return False
-
-
-    def tkinter_initialize(self):
-        self.stopEvent = None
-        self.root = tk.Tk()
-        w = self.gui_width * 3 + self.gui_pad * 6
-        self.log.info("GUI Window size is set to {}x800".format(w))
-        self.root.geometry("{}x800".format(w))
-        Frame.__init__(self, self.root)
-
-        self.panel = np.full((1,3), None)
-        #print(self.panel.shape)
-        #print(self.panel[0,0])
-        self.init = True
-        self.pack(fill=tk.BOTH, expand=1)
-
-        # start a thread that constantly pools the video sensor for
-        # the most recently read frame
-        self.stopEvent = threading.Event()
-        #self.thread = threading.Thread(name="Track thread", target=self.track, args=())
-        #self.thread.start()
-        #self.run()
-
         
+    def _run(self):
 
-    def tkinter_preprocess(self, img, gui_width):
-        image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        image = imutils.resize(image, width=gui_width)
-        image = Image.fromarray(image)
-        image = ImageTk.PhotoImage(image)
-        return image
+        self.status = self.track()
 
+        while self.status and not self.interface.exit.is_set():
 
+            self.merge_masks()
+            self.interface.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
+            self.status = self.track()
+        
+        if not self.interface.exit.is_set():
+            self.interface.exit.set()
 
+    def run(self):
 
-    def tkinter_update(self, img, i, j, gui_width = None):
+        self.interface.tracking_start = datetime.datetime.now()
 
-        if gui_width is None:
-            gui_width = self.gui_width
+        tracker_thread = threading.Thread(
+            name = "tracker_thread",
+            target = self._run
+        )
 
-        img = getattr(self, img, False)
+        tracker_thread.start()
 
-        image = self.tkinter_preprocess(img, gui_width)
-
-        if self.init:
-            label = tk.Label(image=image)
-            self.panel[i,j] = label
-            self.panel[i,j].image = image
-            x = self.gui_pad * (j + 1) + j * (gui_width + self.gui_pad)
-            y = self.gui_pad * (i + 1) + i * (self.gui_width + self.gui_pad)
-            label.place(x = x, y = y)
-        else:
-            self.panel[i,j].configure(image=image)
-            self.panel[i,j].image = image
-
- 
-
-    def onClose(self, x=True):
-        for k, lst in self.saver.cache.items():  # you can instead use .iteritems() in python 2
+        return False
+    
+    def onClose(self):
+        self.stream.release()
+        
+        for k, lst in self.saver.cache.items():
             self.saver.store_and_clear(lst, k)
 
-        if x:
-            self.log.info("User manually exited app. Closing...")
-        if self.gui:
-            # set the stop event, cleanup the camera, and allow the rest of
-            # the quit process to continue
-            self.stopEvent.set()
-            self.stream.release()
-            self.root.quit()
-            #self.root.destroy()
-
-        else:
-            self.stream.release()
-            cv2.destroyAllWindows()
-
-        self.stop = True
+        self.log.info("Tracking stopped")
         self.log.info("{} frames analyzed".format(self.frame_count))
-        while not getattr(self.device, "finished", False):
-            time.sleep(0.001)
-        sys.exit(0)
+
+        if not self.interface.exit.is_set(): self.interface.onClose()
 
 
     def merge_masks(self):
@@ -501,7 +395,9 @@ if __name__ == "__main__":
 
     ap = argparse.ArgumentParser()
     ap.add_argument("-v", "--video")
-    ap.add_argument("--gui", action = 'store_true')
+    ap.add_argument("-c", "--camera", type = str, default = "opencv", help="Stream source")
+    ap.add_argument("-g", "--gui",       type = str,                          help="tkinter/opencv")
     args = vars(ap.parse_args())
-    tracker = Tracker(video=args["video"], gui=args["gui"])
+    interface = Interface(track = True, camera = args["camera"], gui = args["gui"])
+    tracker = Tracker(interface = interface, video=args["video"])
     if not args["gui"]: tracker.run()

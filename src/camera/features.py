@@ -24,17 +24,16 @@ class Arena():
     def __init__(self, tracker, contour, identity, config = "config.yml"):
         """Initialize an arena object
         """
-        
-
         self.tracker = tracker
         self.contour = contour
         self.identity = identity
-        ## cfg
-        cfg = self.tracker.cfg
-        self.min_arena_area = cfg["arena"]["min_area"] 
+        self.min_arena_area = self.tracker.interface.cfg["arena"]["min_area"] 
         
     def compute(self):
+        # try:
         self.area = cv2.contourArea(self.contour)
+        # except:
+
         self.x, self.y, self.w, self.h = cv2.boundingRect(self.contour)
         M0 = cv2.moments(self.contour)
         if M0['m00'] != 0 and M0['m10']:
@@ -104,13 +103,12 @@ class Fly():
         self.identity = identity
         self.arena  = arena
 
-        cfg = self.tracker.cfg
 
-        self.min_object_length = cfg["fly"]["min_length"]
-        self.min_obj_arena_dist =  cfg["fly"]["min_dist_arena"]
-        self.max_object_area =  cfg["fly"]["max_area"]
-        self.min_object_area =  cfg["fly"]["min_area"]
-        self.min_intensity =  cfg["fly"]["min_intensity"]
+        self.min_object_length = self.tracker.interface.cfg["fly"]["min_length"]
+        self.min_obj_arena_dist =  self.tracker.interface.cfg["fly"]["min_dist_arena"]
+        self.max_object_area =  self.tracker.interface.cfg["fly"]["max_area"]
+        self.min_object_area =  self.tracker.interface.cfg["fly"]["min_area"]
+        self.min_intensity =  self.tracker.interface.cfg["fly"]["min_intensity"]
     
     def compute(self):
         # compute area of the fly contour

@@ -1,6 +1,8 @@
-import threading
 import yaml
 import numpy as np
+import logging
+import pandas as pd
+import os
 
 def mixedomatic(cls):
     """ Mixed-in class decorator. """
@@ -29,21 +31,14 @@ class ReadConfigMixin():
 
     def __init__(self, *args, **kwargs):
 
-        with open(kwargs["config"], 'r') as ymlfile:
+        with open(self.interface.config, 'r') as ymlfile:
             cfg = yaml.load(ymlfile)
 
         self.cfg = cfg
         #super().__init__(*args, **kwargs)
 
-class MyThread(threading.Thread):
-    def start(self, program_start, total_time):
-        """
-        Extend the start method in threading.Thread() to receive 2 more args, program_start and total_time
 
-        """
-        self._kwargs["program_start"] = program_start
-        self._kwargs["total_time"] = total_time 
-        super(MyThread, self).start()
+ 
 
 def convert(s):
     try:
@@ -51,3 +46,41 @@ def convert(s):
     except ValueError:
         num, denom = s.split('/')
         return np.float(num) / np.float(denom)
+
+
+def setup_logging(
+    default_path='logging.yaml',
+    default_level=logging.INFO,
+    env_key='LOG_CFG'
+):
+    """Setup logging configuration
+
+    """
+    path = default_path
+    value = os.getenv(env_key, None)
+    if value:
+        path = value
+    if os.path.exists(path):
+        with open(path, 'rt') as f:
+            config = yaml.safe_load(f.read())
+        logging.config.dictConfig(config)
+    else:
+        logging.basicConfig(level=default_level)
+
+
+class PDReader():
+
+    def __init__(self, mapping, program):
+        mapping = pd.read_csv(mapping, skip_blank_lines=True, comment="#")
+        program = pd.read_csv(program, skip_blank_lines=True, comment="#")
+        mapping = mapping.set_index('pin_id')
+        program = program.set_index('pin_id')
+        program['start'] = program['start'].apply(convert)
+        program['end'] = program['end'].apply(convert)
+        program['on'] = program['on'].apply(convert)
+        program['off'] = program['off'].apply(convert)
+        
+        program = program * 60
+
+        self.mapping = mapping
+        self.program = program 
