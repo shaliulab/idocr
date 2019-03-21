@@ -89,4 +89,4 @@ if not args["track"] and args["arduino"]:
 
 if args["arduino"]:
     log.info("Quitting arguino")
-    interface.quit()
+    interface.onClose()

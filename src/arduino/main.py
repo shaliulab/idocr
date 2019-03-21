@@ -29,7 +29,6 @@ class LearningMemoryDevice(PDReader):
     def __init__(self, interface, mapping, program, port):
 
         ## Initialization
-        self.interface = None
         self.mapping = None
         self.program = None
         self.port = None
@@ -41,11 +40,14 @@ class LearningMemoryDevice(PDReader):
 
         self.log = None
     
-        self.interface.arduino_done = False
-        self.interface.arduino_stopped = False
              
         ## Assignment
         self.interface = interface
+
+        self.interface.arduino_done = False
+        self.interface.arduino_stopped = False
+
+
         self.mapping = mapping
         self.program = program
         self.port = port
@@ -147,12 +149,7 @@ class LearningMemoryDevice(PDReader):
         # wait until all threads are finished               
         self.interface.exit.wait()
 
-        self.power_off_arduino()
-        self.log.info('{} storing and cleaning cache'.format(t.name))
-        for k, lst in self.saver.cache.items():
-            self.saver.store_and_clear(lst, k)
-
-        self.interface.arduino_done = True
+        self.onClose()
 
         return None
 
@@ -164,7 +161,7 @@ class LearningMemoryDevice(PDReader):
         # peacefully dies
         signals = ('TERM', 'HUP', 'INT')
         for sig in signals:
-            signal.signal(getattr(signal, 'SIG' + sig), self.interface.onClose)
+            signal.signal(getattr(signal, 'SIG' + sig), self.onClose)
 
         t = threading.Thread(
             name = 'SUPER_ARDUINO',
@@ -177,7 +174,20 @@ class LearningMemoryDevice(PDReader):
 
         t.start()
         return None
-   
+
+    def onClose(self):
+            
+        t = threading.currentThread()
+
+        self.power_off_arduino()
+        self.log.info('{} storing and cleaning cache'.format(t.name))
+        for k, lst in self.saver.cache.items():
+            self.saver.store_and_clear(lst, k)
+
+        self.interface.arduino_done = True
+        if not self.interface.exit.is_set(): self.interface.onClose()
+        return True
+ 
 
     def pin_id2n(self, pin_id):
         return str(self.mapping.loc[[pin_id]]["pin_number"].iloc[0]).zfill(2)

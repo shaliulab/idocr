@@ -175,8 +175,6 @@ class Interface(TkinterGui):
 
     def run(self):
 
-
-
         while not self.exit.is_set():    
 
             if self.gui == "tkinter":
@@ -202,15 +200,14 @@ class Interface(TkinterGui):
                 # if self.interface.timestamp % 1 == 0:
                 
             else:
-                cv2.imshow("img", self.img)
+                cv2.imshow("frame_color", self.frame_color)
                 #cv2.imshow("mask", self.main_mask)
                 #cv2.imshow('transform', self.transform)
                 cv2.imshow("gray_gui", self.gray_gui)
                 # Check if user forces leave (press q)
                 q_pressed = cv2.waitKey(1) & 0xFF in [27, ord('q')]
-                status = self.track()
-                if q_pressed or not status:
-                    self.exit.set()
+                if q_pressed:
+                    break
 
         self.onClose()
 
