@@ -232,7 +232,7 @@ class Tracker():
                
             # Initialize an arena identity that will be increased with 1
             # for every validated arena i.e. not on every loop iteration!
-            id_arena = 0
+            id_arena = 1
             # For every arena contour detected
 
             for arena_contour in self.arena_contours:
@@ -270,7 +270,7 @@ class Tracker():
 
                 # Initialize a fly identity that will be increased with 1
                 # for every validated fly i.e. not on every loop iteration!
-                id_fly = 0
+                id_fly = 1
                 # For every arena contour detected
                 for fly_contour in fly_contours:
                     # Initialize a Fly object
