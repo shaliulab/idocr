@@ -80,11 +80,13 @@ try:
 except Exception as e:
     log.exception(e)
 
-interface.run()          
+if args["gui"]:
+    interface.run()          
 
 
 if not args["track"] and args["arduino"]:
     log.debug("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
+
     interface.exit.wait(duration)
 
 if args["arduino"]:

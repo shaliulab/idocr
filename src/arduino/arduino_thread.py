@@ -11,11 +11,11 @@ setup_logging()
 
 class ArduinoThread(threading.Thread):
 
-    def __init__(self, lmd = None, *args, **kwargs):
+    def __init__(self, lmd, kwargs, name = None):
 
         self.lmd = lmd
         self.log = logging.getLogger(__name__)
-        super(ArduinoThread, self).__init__(*args, **kwargs)
+        super(ArduinoThread, self).__init__(name = name, target = self.pin_thread, kwargs = kwargs)
 
 
     def start(self, start_time, duration):
@@ -28,7 +28,7 @@ class ArduinoThread(threading.Thread):
         super(ArduinoThread, self).start()
 
 
-    def target(self, pin_number, duration, start_time, start, end, on, off, n_iters=np.nan, d_name=None, board=None):
+    def pin_thread(self, pin_number, duration, start_time, start, end, on, off, n_iters=np.nan, d_name=None, board=None):
         """
         Run by every thread independently, this function replicates the program specified in the corresponding row
         of the program dataframe. Turns on a pin at a specific timepoint and after some waiting time, it turns it off
@@ -70,7 +70,7 @@ class ArduinoThread(threading.Thread):
         
         # halt all threads until start_time + sync_time is reached
         # wait until all threads are ready to begin
-        sleep1 = (self.lmd.interface.start_time + datetime.timedelta(seconds=sync_time) - datetime.datetime.now()).total_seconds()
+        sleep1 = (self.lmd.interface.init_time + datetime.timedelta(seconds=sync_time) - datetime.datetime.now()).total_seconds()
         stop = self.lmd.interface.exit.wait(sleep1)
         self.log.info('{} running'.format(d_name))
         if stop:
@@ -177,7 +177,7 @@ class ArduinoThread(threading.Thread):
         self.lmd.saver.process_row(
                 d = {
                     "pin_number": pin_number, "value": value, "thread": d._kwargs["d_name"], 
-                    "time_position": getattr(self.lmd.interface.tracker, "time_position", None),
+                    "timestamp": self.lmd.interface.timestamp,
                     "datetime": datetime.datetime.now()
                     },
                 key = "df"

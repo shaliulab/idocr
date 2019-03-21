@@ -133,10 +133,10 @@ class Interface(TkinterGui):
         self.arduino_stopped = True
         self.exit = threading.Event()
         
-        init_time = datetime.datetime.now()
+        self.init_time = datetime.datetime.now()
 
-        self.metadata_saver = Saver(store = self.cfg["arduino"]["store"], init_time = init_time)
-        self.data_saver = Saver(store = self.cfg["arduino"]["store"], init_time = init_time)
+        self.metadata_saver = Saver(store = self.cfg["arduino"]["store"], init_time = self.init_time)
+        self.data_saver = Saver(store = self.cfg["arduino"]["store"], init_time = self.init_time)
 
         self.threads = {}
         self.threads_finished = {}
@@ -152,7 +152,7 @@ class Interface(TkinterGui):
             self.log.info("Initializing tkinter GUI")
             self.tkinter_initialize()
         
-        self.log.info("Start time: {}".format(init_time.strftime("%H%M%S-%d%m%Y")))
+        self.log.info("Start time: {}".format(self.init_time.strftime("%H%M%S-%d%m%Y")))
 
     
     def onClose(self, signo=None, _frame=None):
@@ -207,9 +207,7 @@ class Interface(TkinterGui):
                 # Check if user forces leave (press q)
                 q_pressed = cv2.waitKey(1) & 0xFF in [27, ord('q')]
                 if q_pressed:
-                    break
-
-        self.onClose()
+                    self.onClose()
 
 
 

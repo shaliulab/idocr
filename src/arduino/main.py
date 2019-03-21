@@ -112,15 +112,17 @@ class LearningMemoryDevice(PDReader):
                 "end"          : d_end,
                 "on"           : d_on,
                 "off"          : d_off,
-                "total_time"   : None,
-                "program_start": None,
+                "duration"   : None,
+                "start_time": None,
                 "d_name"         : d_name, 
                 "board":         self.board
 
             }
-            d = ArduinoThread(name=d_name,
-                        #  target=self.pin_thread,
-                         kwargs = kwargs)
+            d = ArduinoThread(
+                lmd = self,
+                name=d_name,
+                kwargs = kwargs
+            )
 
             d.setDaemon(False)
             d.do_run = True
