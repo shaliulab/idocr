@@ -1,6 +1,8 @@
+import logging
+
 from pypylon import pylon
 from pypylon import genicam
-import logging, coloredlogs
+import coloredlogs
 import cv2
 
 coloredlogs.install()

@@ -1,21 +1,28 @@
-import threading
-# from src.frets_utils import mixedomatic, ReadConfigMixin
-from src.frets_utils import setup_logging
-from src.saver.main import Saver
-import tkinter as tk
-Frame = tk.Frame
-from PIL import ImageTk, Image
-import imutils
-import cv2
+# Standard library imports
+import argparse
 import datetime
-import time
-import yaml
-import numpy as np
 import logging
+import sys
+import threading
+import time
+import tkinter as tk
+
+# Third party imports
+import coloredlogs
+import cv2
+import imutils
+import numpy as np
+from PIL import ImageTk, Image
+import yaml
+
+# Local application imports
+from src.utils.frets_utils import setup_logging
+from src.saver.main import Saver
+
+# Set up package configurations
 setup_logging()
 
-
-class TkinterGui(Frame):
+class TkinterGui(tk.Frame):
 
     def __init__(self):
 
@@ -40,7 +47,7 @@ class TkinterGui(Frame):
         w = self.gui_width * 3 + self.gui_pad * 6
         self.log.info("GUI Window size is set to {}x800".format(w))
         self.root.geometry("{}x800".format(w))
-        Frame.__init__(self, self.root)
+        tk.Frame.__init__(self, self.root)
 
         self.panel = np.full((1,3), None)
         #print(self.panel.shape)

@@ -1,23 +1,25 @@
+# Standard library imports
+import argparse
+import datetime
+import logging
+import sys
+import threading
+import time
+
+# Third party imports
+import cv2
+import numpy as np
+import yaml
+
+# Local application imports
 from .features import Arena, Fly
 from .streams import PylonStream, StandardStream
-from src.saver.main import Saver
 from src.interface.main import Interface
-from src.frets_utils import setup_logging
-import yaml
-import datetime
-import numpy as np
-import threading
-from pypylon import pylon
-from pypylon import genicam
-import argparse
-import sys
-import logging, coloredlogs
-coloredlogs.install()
-import cv2
-cv2_version = cv2.__version__
-import time
-setup_logging()
+from src.utils.frets_utils import setup_logging
 
+# Set up package configurations
+cv2_version = cv2.__version__
+setup_logging()
 streams_dict = {"pylon": PylonStream, "opencv": StandardStream}
 
 def crop_stream(img, crop):

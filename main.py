@@ -5,7 +5,7 @@
 import argparse
 import logging
 import coloredlogs
-from src.frets_utils import setup_logging
+from src.utils.frets_utils import setup_logging
 from src.interface.main import Interface
 
 # Arguments to follow the command, adding video, etc options

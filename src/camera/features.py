@@ -1,12 +1,5 @@
 import numpy as np
-import argparse
-import datetime
 import cv2
-import time
-import matplotlib.pyplot as plt
-from pypylon import pylon
-from pypylon import genicam
-import yaml
 
 
 white = (255, 255, 255)

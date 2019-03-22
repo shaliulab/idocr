@@ -1,27 +1,28 @@
-from pyfirmata import ArduinoMega as Arduino # import the right board but always call it Arduino
+# Standard library imports
+import argparse
 import numpy as np
 import pandas as pd
 import sys
 import threading
 import logging
 import datetime
-# import ipdb
-import time
-#import pickle # share pin state across threads
-import glob
-import os # file removal and we cleaning
-import argparse
-import timeit
-import signal
-import serial
-import logging, coloredlogs
 import warnings
+import time
+import glob
+import os
+import signal
+
+# Third party imports
+import serial
 import yaml
-from src.saver.main import Saver
+
+# Local application imports
+from pyfirmata import ArduinoMega as Arduino # import the right board but always call it Arduino
 from src.interface.main import Interface
-from src.frets_utils import PDReader, setup_logging
+from src.utils.frets_utils import PDReader, setup_logging
 from src.arduino.arduino_thread import ArduinoThread
-coloredlogs.install()
+
+# Set up package configurations
 setup_logging()
 
 class LearningMemoryDevice(PDReader):

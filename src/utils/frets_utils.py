@@ -1,8 +1,12 @@
+# Standard library imports
+import logging
+import os
+
+# Third party imports
 import yaml
 import numpy as np
-import logging
 import pandas as pd
-import os
+import coloredlogs
 
 def mixedomatic(cls):
     """ Mixed-in class decorator. """
@@ -66,6 +70,9 @@ def setup_logging(
         logging.config.dictConfig(config)
     else:
         logging.basicConfig(level=default_level)
+
+    coloredlogs.install()
+
 
 
 class PDReader():

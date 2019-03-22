@@ -1,12 +1,16 @@
-import threading
-import logging
-from src.frets_utils import setup_logging
-import coloredlogs
-import warnings
+# Standard library imports
 import datetime
+import logging
+import threading
+import warnings
+
+# Third party imports
 import numpy as np
 
-coloredlogs.install()
+# Local application imports
+from src.utils.frets_utils import setup_logging
+
+# Set up package configurations
 setup_logging()
 
 class ArduinoThread(threading.Thread):

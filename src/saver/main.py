@@ -1,10 +1,16 @@
-import logging, coloredlogs
-import pandas as pd
+# Standard library imports
+import logging
 import os.path
 import datetime
-coloredlogs.install()
 
+# Third party imports
+import pandas as pd
 
+# Local application imports
+from src.utils.frets_utils import setup_logging
+
+# Set up package configurations
+setup_logging()
 
 # https://stackoverflow.com/questions/16740887/how-to-handle-incoming-real-time-data-with-python-pandas/17056022
 CACHE = {}
@@ -14,13 +20,15 @@ max_len = 5000
 
 class Saver():
 
-    def __init__(self, store=STORE, cache = CACHE, init_time = None):
+    def __init__(self, store=STORE, cache = CACHE, init_time = None, name = None):
 
 
         self.store = None
         self.cache = None
+        self.name = None
         self.init_time = None
         self.cache = cache
+        self.name = name
         self.init_time = init_time
         self.store = "{}_{}".format(store, init_time.strftime("%H%M%S-%d%m%Y"))
         self.log = logging.getLogger(__name__)
@@ -52,8 +60,11 @@ class Saver():
             with pd.HDFStore(self.store + ".h5") as store:
                 store.append(key, df)
         except Exception as e:
-            self.log.error("Could not save cache to h5 file. Please investigate traceback")
+            self.log.info(key)
+            import ipdb; ipdb.set_trace()
+            self.log.error("{} could not save cache to h5 file. Please investigate traceback".format(self.name))
             self.log.exception(e)
+            
         # save to csv
         with open(self.store + ".csv", 'a') as store:
             df.to_csv(store)
