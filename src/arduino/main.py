@@ -10,7 +10,6 @@ import warnings
 import time
 import glob
 import os
-import signal
 
 # Third party imports
 import serial
@@ -139,6 +138,7 @@ class LearningMemoryDevice(PDReader):
         
          
         self.interface.threads = threads
+        return threads
 
     
     def _run(self, threads):
@@ -160,15 +160,7 @@ class LearningMemoryDevice(PDReader):
 
     def run(self, threads):
 
-        # Make the main thread run quit when signaled to stop
-        # This will stop all the threads in a controlled fashion,
-        # which means all the pins are turned of before the thread
-        # peacefully dies
-        signals = ('TERM', 'HUP', 'INT')
-        for sig in signals:
-            signal.signal(getattr(signal, 'SIG' + sig), self.onClose)
-
-        t = threading.Thread(
+        arduino_thread = threading.Thread(
             name = 'SUPER_ARDUINO',
             target = self._run,
             kwargs = {
@@ -176,7 +168,7 @@ class LearningMemoryDevice(PDReader):
                 }
         )
 
-        t.start()
+        self.interface.arduino_thread = arduino_thread.start()
         return None
 
     def onClose(self):
@@ -221,7 +213,10 @@ class LearningMemoryDevice(PDReader):
 #    pass
 
 if __name__ == "__main__":
-
+    
+    import signal
+    from src.interface.main import Interface
+    
     # Arguments to follow the command, adding video, etc options
     ap = argparse.ArgumentParser()
     ap.add_argument("-p", "--port",     type = str, help="Absolute path to the Arduino port. Usually '/dev/ttyACM0' in Linux and COM in Windows", default = "/dev/ttyACM0")
@@ -229,12 +224,12 @@ if __name__ == "__main__":
     ap.add_argument("-s", "--sequence", type = str, help="Absolute path to csv providing the sequence of instructions to be sent to Arduino", required=True)
     ap.add_argument("-d", "--duration",  type = int, required=True)
     args = vars(ap.parse_args())
-
-
+ 
     mapping = args["mapping"]
     program = args["sequence"]
-
+        
     interface = Interface(arduino = True)
+    interface.control_c_handler()
     device = LearningMemoryDevice(interface, mapping, program, args["port"])
     device.power_off_arduino(exit=False)
 

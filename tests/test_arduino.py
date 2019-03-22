@@ -1,7 +1,6 @@
 # https://stackoverflow.com/a/4761058
 import sys
 sys.path.append('../src')
-import unittest
 from pathlib import Path
 import logging
 from tests import test_generic

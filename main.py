@@ -47,7 +47,7 @@ interface = Interface(
 )
 
 interface.prepare()
-interface.run()
+interface.start()
 
 
 

@@ -6,6 +6,7 @@ import sys
 import threading
 import time
 import tkinter as tk
+import signal
 
 # Third party imports
 import coloredlogs
@@ -208,8 +209,19 @@ class Interface(TkinterGui):
             device = None
         self.device = device
 
+    def control_c_handler(self):
+        # Make the main thread run quit when signaled to stop
+        # This will stop all the threads in a controlled fashion,
+        # which means all the pins are turned of before the thread
+        # peacefully dies
+        signals = ('TERM', 'HUP', 'INT')
+        for sig in signals:
+            signal.signal(getattr(signal, 'SIG' + sig), self.onClose)
 
-    def run(self):
+    def start(self):
+
+        self.control_c_handler()
+
         if self.arduino:
             try:
                 self.log.info("Running Arduino")
@@ -230,8 +242,8 @@ class Interface(TkinterGui):
             self.log.debug("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
             self.exit.wait(self.duration)
 
-        while not self.exit.is_set() and self.gui is not None:    
-
+        while not self.exit.is_set() and self.gui is not None and self.track:
+            
             if self.gui == "tkinter":
                 self.tkinter_update_widget(self.frame_color, 0, 0, gui_width = (self.gui_width + self.gui_pad) * 2)
                 #self.tkinter_update('main_mask', 0, 1)

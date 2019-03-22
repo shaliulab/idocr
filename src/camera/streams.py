@@ -27,7 +27,12 @@ class PylonStream():
             
 
         # Print the model name of the camera.
-        log.info("Using device {}".format(cap.GetDeviceInfo().GetModelName()))
+        device_info = cap.GetDeviceInfo()
+        log.info("Using device {}".format(device_info.GetModelName()))
+        print(dir(device_info))
+        print(device_info.GetFullName())
+        # print(device_info.GetPropertyAvailable())
+        
     
         # The parameter MaxNumBuffer can be used to control the count of buffers
         # allocated for grabbing. The default value of this parameter is 10.
