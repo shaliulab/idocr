@@ -68,7 +68,6 @@ class TkinterGui(Frame):
         image = self.tkinter_preprocess(img, gui_width)
 
         if self.tkinter_init:
-            print("I only run once")
             label = tk.Label(image=image)
             self.panel[i,j] = label
             self.panel[i,j].image = image
@@ -87,7 +86,10 @@ class TkinterGui(Frame):
 # @mixedomatic
 class Interface(TkinterGui):
 
-    def __init__(self, arduino=False, track=False, reporting=False, config = "config.yaml", duration = None, experimenter = None, gui = "tkinter"):
+    def __init__(self, arduino=False, track=False, mapping = None, program = None, port = None,
+                 camera = None, video = None, reporting=False, config = "config.yaml",
+                 duration = None, experimenter = None, gui = "tkinter"
+                 ):
 
         with open(config, 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile)
@@ -119,6 +121,11 @@ class Interface(TkinterGui):
         self.threads_finished = None
 
         self.reporting = None
+        self.camera = None
+        self.video = None
+        self.mapping = None
+        self.program = None
+        self.port = None
         
         self.timestamp = None
         self.duration = None
@@ -142,6 +149,11 @@ class Interface(TkinterGui):
         self.threads_finished = {}
 
         self.reporting = reporting
+        self.camera = camera
+        self.video = video
+        self.mapping = mapping
+        self.program = program
+        self.port = port
 
         self.timestamp = 0
         self.duration = duration if duration else self.cfg["interface"]["duration"]
@@ -173,9 +185,49 @@ class Interface(TkinterGui):
         else:
             cv2.destroyAllWindows()
 
-    def run(self):
+    def prepare(self):
+        if self.track:
+            from src.camera.main import Tracker
+            tracker = Tracker(interface = self, camera = self.camera, video = self.video)
+        else:
+            tracker = None
+        self.tracker = tracker
 
-        while not self.exit.is_set():    
+        # Setup Arduino controls
+        ##########################
+        if self.arduino:
+            from src.arduino.main import LearningMemoryDevice
+
+            device = LearningMemoryDevice(interface = self, mapping = self.mapping, program = self.program, port = self.port)
+            device.power_off_arduino(exit=False)
+            device.prepare()
+        else:
+            device = None
+        self.device = device
+
+
+    def run(self):
+        if self.arduino:
+            try:
+                self.log.info("Running Arduino")
+                self.device.run(threads=self.threads)
+            except Exception as e:
+                self.log.exception('Could not run Arduino board')
+                self.log.exception(e)
+        
+        if self.track:
+            try:
+                self.log.info("Running tracker")
+                self.tracker.run()
+            except Exception as e:
+                self.log.exception('Could not run tracker')
+                self.log.exception(e)
+
+        if not self.track and not self.gui and self.arduino:
+            self.log.debug("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
+            self.exit.wait(self.duration)
+
+        while not self.exit.is_set() and self.gui is not None:    
 
             if self.gui == "tkinter":
                 self.tkinter_update_widget(self.frame_color, 0, 0, gui_width = (self.gui_width + self.gui_pad) * 2)
@@ -194,8 +246,6 @@ class Interface(TkinterGui):
                     self.root.wm_title("Learning memory stream")
                     self.root.wm_protocol("WM_DELETE_WINDOW", self.onClose)
                     self.tkinter_init = False
-
-
                 
                 # if self.interface.timestamp % 1 == 0:
                 
@@ -208,6 +258,3 @@ class Interface(TkinterGui):
                 q_pressed = cv2.waitKey(1) & 0xFF in [27, ord('q')]
                 if q_pressed:
                     self.onClose()
-
-
-

@@ -91,6 +91,9 @@ class LearningMemoryDevice(PDReader):
     #     return stop 
 
     def prepare(self):
+
+
+        threads = self.interface.threads
  
         # They are not run throughout the lifetime of the program, just at some interval and without intermitency
         
@@ -126,7 +129,7 @@ class LearningMemoryDevice(PDReader):
 
             d.setDaemon(False)
             d.do_run = True
-            self.interface.threads[d_name]=d
+            threads[d_name]=d
             self.interface.threads_finished[d_name] = False
             count[p] += 1
 
@@ -135,17 +138,17 @@ class LearningMemoryDevice(PDReader):
         ################################
         
          
-        return self.interface.threads
+        self.interface.threads = threads
 
     
-    def _run(self, duration, threads):
+    def _run(self, threads):
 
         t = threading.currentThread()
         self.log.info('Starting slave threads')
         self.interface.arduino_start = datetime.datetime.now()
 
         for process in threads.values():
-            process.start(start_time = self.interface.arduino_start, duration = duration)
+            process.start(start_time = self.interface.arduino_start, duration = self.interface.duration)
         self.log.debug('{} waiting for slave threads'.format(t.name))
 
         # wait until all threads are finished               
@@ -155,7 +158,7 @@ class LearningMemoryDevice(PDReader):
 
         return None
 
-    def run(self, duration, threads):
+    def run(self, threads):
 
         # Make the main thread run quit when signaled to stop
         # This will stop all the threads in a controlled fashion,
@@ -169,7 +172,6 @@ class LearningMemoryDevice(PDReader):
             name = 'SUPER_ARDUINO',
             target = self._run,
             kwargs = {
-                "duration": duration,
                 "threads": threads
                 }
         )
@@ -238,6 +240,6 @@ if __name__ == "__main__":
 
     threads = device.prepare()
     duration = 60 * args["duration"]
-    device.run(duration=duration, threads=threads)
+    device.run(threads=threads)
     time.sleep(duration)
     #device.exit.wait(args["duration"])

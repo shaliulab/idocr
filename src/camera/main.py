@@ -2,7 +2,7 @@ from .features import Arena, Fly
 from .streams import PylonStream, StandardStream
 from src.saver.main import Saver
 from src.interface.main import Interface
-from src.frets_utils import mixedomatic, ReadConfigMixin, setup_logging
+from src.frets_utils import setup_logging
 import yaml
 import datetime
 import numpy as np
