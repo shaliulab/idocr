@@ -149,8 +149,8 @@ class Interface(TkinterGui):
         
         self.init_time = datetime.datetime.now()
 
-        self.metadata_saver = Saver(store = self.cfg["arduino"]["store"], init_time = self.init_time)
-        self.data_saver = Saver(store = self.cfg["arduino"]["store"], init_time = self.init_time)
+        self.metadata_saver = Saver(store = self.cfg["arduino"]["store"], init_time = self.init_time, name = "metadata_saver")
+        self.data_saver = Saver(store = self.cfg["tracker"]["store"], init_time = self.init_time, name = "data_saver")
 
         self.threads = {}
         self.threads_finished = {}
