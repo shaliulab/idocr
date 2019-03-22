@@ -18,6 +18,7 @@ tracker:
     experimenter: "Sayed"
     crop: 1
     store: "data/store"
+    N: 10
 
 arduino:
     store: "metadata/store"
