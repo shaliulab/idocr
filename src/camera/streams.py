@@ -20,9 +20,10 @@ class PylonStream():
         ## Check camera is visible!
         try:
             cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-        except RuntimeException as e:
-            log.exception('Camera could not be loaded. Is it connected?')
-            log.exception(e)
+        except genicam._genicam.RuntimeException as e:
+            log.exception('Camera could not be loaded. Looks like the computer cannot access it')
+            # log.exception(e)
+            exit(1)
             
 
         # Print the model name of the camera.

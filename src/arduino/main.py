@@ -18,9 +18,8 @@ import yaml
 
 # Local application imports
 from pyfirmata import ArduinoMega as Arduino # import the right board but always call it Arduino
-from src.interface.main import Interface
 from src.utils.frets_utils import PDReader, setup_logging
-from src.arduino.arduino_thread import ArduinoThread
+from .arduino_thread import ArduinoThread
 
 # Set up package configurations
 setup_logging()

@@ -14,7 +14,6 @@ import yaml
 # Local application imports
 from .features import Arena, Fly
 from .streams import PylonStream, StandardStream
-from src.interface.main import Interface
 from src.utils.frets_utils import setup_logging
 
 # Set up package configurations
@@ -40,12 +39,19 @@ class Tracker():
         Setup video recording parameters.
         """
 
+    
+
         # self.record_to_save = ["\t".join(["Frame", "TimePos", "Arena",
         #                                  "FlyNo", "FlyPosX", "FlyPosY",
         #                                  "ArenaCenterX", "ArenaCenterY",
         #                                  "RelativePosX", "RelativePosY"]
         #                                ) + "\n"]
+        
+
         self.interface = None
+        self.camera = None
+        self.video = None
+
         self.found_flies = None
         self.frame_count = None
         self.old_found = None
@@ -77,6 +83,9 @@ class Tracker():
 
         # Assignment
         self.interface = interface
+        self.camera = camera
+        self.video = video
+
 
         # Results variables
         self.found_flies = 0
@@ -107,24 +116,8 @@ class Tracker():
         # if VIDEO_HEIGHT != 1024:
         #     cap.set(4, 1024)
 
-
-        self.stream = streams_dict[camera](video)
-        
-        self.interface.video_width = self.stream.get_width() // self.crop
-        self.interface.video_height = self.stream.get_height()
-
-        
-        # Make accuImage an array of size heightxwidthxnframes that will
-        # store in the :,:,i element the result of the tracking for frame i
-        self.accuImage = np.zeros((self.interface.video_height, self.interface.video_width, self.N), np.uint8)
-        
-        self.img = np.full((self.interface.video_height, self.interface.video_width, 3), 0, np.uint8)
-        self.transform = np.full((self.interface.video_height, self.interface.video_width), 0, np.uint8)
-        self.gray_masked = np.full((self.interface.video_height, self.interface.video_width), 0, np.uint8)
-
-        self.interface.frame_color = np.full((self.interface.video_height, self.interface.video_width), 3, np.uint8)
-        self.interface.gray_gui = np.full((self.interface.video_height, self.interface.video_width), 0, np.uint8)
-
+        self.load_camera()
+        self.init_image_arrays()
 
         self.status = True
  
@@ -137,6 +130,30 @@ class Tracker():
         if self.fps and video:
             # Set the FPS of the camera
             self.stream.set_fps(self.fps)
+
+    def load_camera(self):
+        self.stream = streams_dict[self.camera](self.video)
+
+    def init_image_arrays(self):
+
+        self.interface.video_width = self.stream.get_width() // self.crop
+        self.interface.video_height = self.stream.get_height()
+
+        
+        # Make accuImage an array of size heightxwidthxnframes that will
+        # store in the :,:,i element the result of the tracking for frame i
+        self.accuImage = np.zeros((self.interface.video_height, self.interface.video_width, self.N), np.uint8)
+        
+        # self.img = np.zeros((self.interface.video_height, self.interface.video_width, 3), np.uint8)
+        self.transform = np.zeros((self.interface.video_height, self.interface.video_width), np.uint8)
+        self.gray_masked = np.zeros((self.interface.video_height, self.interface.video_width), np.uint8)
+
+        self.interface.frame_color = np.zeros((self.interface.video_height, self.interface.video_width, 3), np.uint8)
+        self.interface.gray_gui = np.zeros((self.interface.video_height, self.interface.video_width), np.uint8)
+
+
+
+
 
 
     def rotate_frame(self, img, rotation=180):
@@ -388,7 +405,7 @@ class Tracker():
             masks = np.array(list(masks))
             main_mask = np.bitwise_or.reduce(masks)
         else:
-            main_mask = np.full(self.img.shape[:2], 255, dtype=np.uint8)
+            main_mask = np.full((self.interface.video_height, self.interface.video_width, 3), 255, dtype=np.uint8)
     
         self.main_mask = main_mask
 
@@ -400,6 +417,5 @@ if __name__ == "__main__":
     ap.add_argument("-c", "--camera", type = str, default = "opencv", help="Stream source")
     ap.add_argument("-g", "--gui",       type = str,                          help="tkinter/opencv")
     args = vars(ap.parse_args())
-    interface = Interface(track = True, camera = args["camera"], gui = args["gui"])
     tracker = Tracker(interface = interface, video=args["video"])
     if not args["gui"]: tracker.run()

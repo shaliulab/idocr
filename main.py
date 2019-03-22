@@ -39,11 +39,13 @@ setup_logging()
 log = logging.getLogger(__name__)
 
 
-interface = Interface(arduino = args["arduino"], track = args["track"],
-                      mapping = args["mapping"], program = args["sequence"], port = args["port"],
-                      camera = args["camera"], video = args["video"],
-                      reporting = args["reporting"], config = args["config"], duration = DURATION, gui = args["gui"]
-                      )
+interface = Interface(
+    arduino = args["arduino"], track = args["track"],
+    mapping = args["mapping"], program = args["sequence"], port = args["port"],
+    camera = args["camera"], video = args["video"],
+    reporting = args["reporting"], config = args["config"], duration = DURATION, gui = args["gui"]
+)
+
 interface.prepare()
 interface.run()
 

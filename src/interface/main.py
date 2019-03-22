@@ -18,6 +18,8 @@ import yaml
 # Local application imports
 from src.utils.frets_utils import setup_logging
 from src.saver.main import Saver
+from src.camera.main import Tracker
+from src.arduino.main import LearningMemoryDevice
 
 # Set up package configurations
 setup_logging()
@@ -83,11 +85,7 @@ class TkinterGui(tk.Frame):
             label.place(x = x, y = y)
         else:
             self.panel[i,j].configure(image=image)
-            self.panel[i,j].image = image
-
-
-        
-
+            self.panel[i,j].image = image     
 
 
 # @mixedomatic
@@ -194,7 +192,6 @@ class Interface(TkinterGui):
 
     def prepare(self):
         if self.track:
-            from src.camera.main import Tracker
             tracker = Tracker(interface = self, camera = self.camera, video = self.video)
         else:
             tracker = None
@@ -203,7 +200,6 @@ class Interface(TkinterGui):
         # Setup Arduino controls
         ##########################
         if self.arduino:
-            from src.arduino.main import LearningMemoryDevice
 
             device = LearningMemoryDevice(interface = self, mapping = self.mapping, program = self.program, port = self.port)
             device.power_off_arduino(exit=False)

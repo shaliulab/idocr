@@ -20,4 +20,7 @@ tracker:
     store: "data/store"
 
 arduino:
-    store: "metadata/arduino_events"
+    store: "metadata/store"
+
+interface:
+    duration: 200
