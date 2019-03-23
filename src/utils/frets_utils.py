@@ -1,5 +1,5 @@
 # Standard library imports
-import logging
+import logging.config
 import os
 
 # Third party imports
