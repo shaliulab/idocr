@@ -18,7 +18,7 @@ import yaml
 # Local application imports
 from pyfirmata import ArduinoMega as Arduino # import the right board but always call it Arduino
 from src.utils.frets_utils import PDReader, setup_logging
-from .arduino_thread import ArduinoThread
+from .arduino_threading import ArduinoThread
 
 # Set up package configurations
 setup_logging()
@@ -168,7 +168,8 @@ class LearningMemoryDevice(PDReader):
                 }
         )
 
-        self.interface.arduino_thread = arduino_thread.start()
+        self.interface.arduino_thread = arduino_thread
+        arduino_thread.start()
         return None
 
     def onClose(self):

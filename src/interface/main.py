@@ -114,6 +114,7 @@ class Interface(TkinterGui):
         # Boolean flags indicating if arduino and or track are active
         self.arduino = None
         self.track = None
+        self.tracker = None
 
         self.arduino_done = None    # becomes true if all events are complete
         self.arduino_stopped = None # becomes true if user stops the arduino controls prematurily with Control C       
@@ -174,11 +175,10 @@ class Interface(TkinterGui):
 
     
     def onClose(self, signo=None, _frame=None):
-        # Setting the Threading.Event() (to True)
-        # triggers the controlled shutdown of 
-        # Arduino communication and
-        # storage of remaining cache
-
+        """
+        Setting the Threading.Event() (to True) triggers the controlled shutdown of 
+        Arduino communication and storage of remaining cache
+        """
         self.exit.set()
         if signo is not None: self.log.info("Received {}".format(signo))
 
@@ -192,6 +192,9 @@ class Interface(TkinterGui):
             cv2.destroyAllWindows()
 
     def prepare(self):
+        """
+        """
+
         if self.track:
             tracker = Tracker(interface = self, camera = self.camera, video = self.video)
         else:
@@ -210,15 +213,20 @@ class Interface(TkinterGui):
         self.device = device
 
     def control_c_handler(self):
-        # Make the main thread run quit when signaled to stop
-        # This will stop all the threads in a controlled fashion,
-        # which means all the pins are turned of before the thread
-        # peacefully dies
+        """
+        Make the main thread run quit when signaled to stop
+        This will stop all the threads in a controlled fashion,
+        which means all the pins are turned of before the thread
+        peacefully dies
+        """
+
         signals = ('TERM', 'HUP', 'INT')
         for sig in signals:
             signal.signal(getattr(signal, 'SIG' + sig), self.onClose)
 
     def start(self):
+        """
+        """
 
         self.control_c_handler()
 

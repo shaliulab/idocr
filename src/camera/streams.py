@@ -1,11 +1,11 @@
 import logging
-
+from src.utils.frets_utils import setup_logging
 from pypylon import pylon
 from pypylon import genicam
-import coloredlogs
 import cv2
 
-coloredlogs.install()
+setup_logging()
+
 
 log = logging.getLogger(__name__)
 
@@ -20,9 +20,8 @@ class PylonStream():
         ## Check camera is visible!
         try:
             cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-        except genicam._genicam.RuntimeException as e:
+        except genicam._genicam.RuntimeException:
             log.exception('Camera could not be loaded. Looks like the computer cannot access it')
-            # log.exception(e)
             exit(1)
             
 
@@ -62,12 +61,7 @@ class PylonStream():
 
     def get_height(self):
         height = self.cap.Height.GetValue()
-        return height 
-
-
-#    def get_time_position(self, frame_count):
-#        t = frame_count / self.get_fps()
-#        return t
+        return height
 
     def set_fps(self, fps):
         self.stream.AcquisitionFrameRateAbs.SetValue(fps)
@@ -104,10 +98,12 @@ class PylonStream():
 class StandardStream():
 
     def __init__(self, video=None):
-        s = 0 if video is None else video
-        if s == 0: log.info("Capturing stream!")
-        if s != 0: log.info("Opening {}!".format(s))
-        self.cap = cv2.VideoCapture(s)
+        if video == 0:
+            log.info("Capturing stream!")
+            self.cap = cv2.VideoCapture(video)
+        elif video != 0:
+            log.info("Opening {}!".format(video))
+            self.cap = cv2.VideoCapture(video.__str__())
 
     def get_fps(self):
         fps = self.cap.get(5)

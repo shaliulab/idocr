@@ -10,6 +10,7 @@ import time
 import cv2
 import numpy as np
 import yaml
+from pathlib import Path
 
 # Local application imports
 from .features import Arena, Fly
@@ -132,14 +133,22 @@ class Tracker():
             self.stream.set_fps(self.fps)
 
     def load_camera(self):
-        self.stream = streams_dict[self.camera](self.video)
+
+        if self.video is not None:
+            self.video = Path(self.video)
+            if self.video.is_file():
+                self.stream = streams_dict[self.camera](self.video.__str__())
+            else:
+                self.log.error("Video under provided path not found. Check for typos")
+                sys.exit(1)
+        else:
+            self.stream = streams_dict[self.camera](0)
 
     def init_image_arrays(self):
 
         self.interface.video_width = self.stream.get_width() // self.crop
         self.interface.video_height = self.stream.get_height()
 
-        
         # Make accuImage an array of size heightxwidthxnframes that will
         # store in the :,:,i element the result of the tracking for frame i
         self.accuImage = np.zeros((self.interface.video_height, self.interface.video_width, self.N), np.uint8)
