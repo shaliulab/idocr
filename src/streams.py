@@ -1,15 +1,17 @@
 import logging
-from src.utils.frets_utils import setup_logging
 from pypylon import pylon
 from pypylon import genicam
 import cv2
+import coloredlogs
+
+from frets_utils import setup_logging
+from decorators import export 
 
 setup_logging()
 
-
 log = logging.getLogger(__name__)
 
-
+@export
 class PylonStream():
     def __init__(self, video=None):
         log.info("Starting pylon camera!")
@@ -95,6 +97,7 @@ class PylonStream():
     def release(self):
         self.grabResult.Release()
 
+@export
 class StandardStream():
 
     def __init__(self, video=None):
@@ -141,3 +144,6 @@ class StandardStream():
    
     def release(self):
         self.cap.release()
+
+streams_dict = {"pylon": PylonStream, "opencv": StandardStream}
+

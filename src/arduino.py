@@ -17,8 +17,8 @@ import yaml
 
 # Local application imports
 from pyfirmata import ArduinoMega as Arduino # import the right board but always call it Arduino
-from src.utils.frets_utils import PDReader, setup_logging
-from .arduino_threading import ArduinoThread
+from frets_utils import PDReader, setup_logging
+from arduino_threading import ArduinoThread
 
 # Set up package configurations
 setup_logging()
@@ -216,7 +216,7 @@ class LearningMemoryDevice(PDReader):
 if __name__ == "__main__":
     
     import signal
-    from src.interface.main import Interface
+    from interface import Interface
     
     # Arguments to follow the command, adding video, etc options
     ap = argparse.ArgumentParser()
@@ -224,18 +224,12 @@ if __name__ == "__main__":
     ap.add_argument("-m", "--mapping", type = str, help="Absolute path to csv providing pin number-pin name mappings", required=True)
     ap.add_argument("-s", "--sequence", type = str, help="Absolute path to csv providing the sequence of instructions to be sent to Arduino", required=True)
     ap.add_argument("-d", "--duration",  type = int, required=True)
+    ap.add_argument("-g", "--gui",       type = str,  default = "tkinter", choices=['opencv', 'tkinter'], help="tkinter/opencv")
+
     args = vars(ap.parse_args())
  
-    mapping = args["mapping"]
-    program = args["sequence"]
-        
-    interface = Interface(arduino = True)
-    interface.control_c_handler()
-    device = LearningMemoryDevice(interface, mapping, program, args["port"])
-    device.power_off_arduino(exit=False)
-
-    threads = device.prepare()
     duration = 60 * args["duration"]
-    device.run(threads=threads)
-    time.sleep(duration)
-    #device.exit.wait(args["duration"])
+        
+    interface = Interface(arduino = True, mapping = args["mapping"], program = args["sequence"], port = args["port"], duration = duration)
+    interface.prepare()
+    interface.start()

@@ -1,5 +1,4 @@
 # Standard library imports
-import argparse
 import datetime
 import logging
 import sys
@@ -7,20 +6,22 @@ import threading
 import time
 
 # Third party imports
+import coloredlogs
 import cv2
 import numpy as np
 import yaml
 from pathlib import Path
 
 # Local application imports
-from .features import Arena, Fly
-from .streams import PylonStream, StandardStream
-from src.utils.frets_utils import setup_logging
+from features import Arena, Fly
+from streams import PylonStream, StandardStream, streams_dict
+from frets_utils import setup_logging
+from decorators import export
 
 # Set up package configurations
 cv2_version = cv2.__version__
 setup_logging()
-streams_dict = {"pylon": PylonStream, "opencv": StandardStream}
+coloredlogs.install()
 
 def crop_stream(img, crop):
     width = img.shape[1]
@@ -32,7 +33,7 @@ def crop_stream(img, crop):
         img = img[:,y0:(y0+fw)]
     return img
 
-
+@export
 class Tracker():
    
     def __init__(self, interface, camera = "opencv", video = None):
@@ -415,19 +416,18 @@ class Tracker():
     
         self.main_mask = main_mask
 
-
 if __name__ == "__main__":
+    import argparse
+    from .interface import Interface
     
-    import signal
-    from src.interface.main import Interface
-
     ap = argparse.ArgumentParser()
     ap.add_argument("-v", "--video")
     ap.add_argument("-c", "--camera", type = str, default = "opencv", help="Stream source")
-    ap.add_argument("-g", "--gui",       type = str,                          help="tkinter/opencv")
+    ap.add_argument("-g", "--gui",    type = str,                     help="tkinter/opencv")
     args = vars(ap.parse_args())
+    
+    interface = Interface(track = True, camera = args["camera"], video = args["video"], gui = args["gui"])
+    interface.prepare()
+    interface.start()
 
-    interface = Interface(track = True, camera = args["camera"], gui = args["gui"])
-    interface.control_c_handler()
-    tracker = Tracker(interface = interface, video=args["video"])
-    if not args["gui"]: tracker.run()
+

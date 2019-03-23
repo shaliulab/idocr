@@ -2,6 +2,8 @@
 import argparse
 import datetime
 import logging
+from pathlib import Path
+import os.path
 import sys
 import threading
 import time
@@ -17,13 +19,14 @@ from PIL import ImageTk, Image
 import yaml
 
 # Local application imports
-from src.utils.frets_utils import setup_logging
-from src.saver.main import Saver
-from src.camera.main import Tracker
-from src.arduino.main import LearningMemoryDevice
+from frets_utils import setup_logging
+from saver import Saver
+from tracker import Tracker
+from arduino import LearningMemoryDevice
 
 # Set up package configurations
 setup_logging()
+PROJECT_ROOT = os.path.dirname(os.path.realpath(__file__))
 
 class TkinterGui(tk.Frame):
 
@@ -40,6 +43,10 @@ class TkinterGui(tk.Frame):
         self.tkinter_init = True
         self.video_height = None
         self.video_width = None
+        
+        # staff shown in the gui
+        self.frame_color = None
+        self.gray_gui = None
 
 
         self.log = logging.getLogger(__name__)
@@ -86,7 +93,49 @@ class TkinterGui(tk.Frame):
             label.place(x = x, y = y)
         else:
             self.panel[i,j].configure(image=image)
-            self.panel[i,j].image = image     
+            self.panel[i,j].image = image
+
+    def tkinter_update_widgets(self):
+         
+        if self.track:
+            self.tkinter_update_widget(self.frame_color, 0, 0, gui_width = (self.gui_width + self.gui_pad) * 2)
+            #self.tkinter_update('main_mask', 0, 1)
+            self.tkinter_update_widget(self.gray_gui, 0, 2)
+            # status = self.interface.root.after(100, self.track)
+            # set a callback to handle when the window is closed
+        
+            self.root.update_idletasks()
+            self.root.update()
+            time.sleep(.01)
+
+
+            if self.tkinter_init:
+                # # self.interface.tkinter_init = False
+                self.root.wm_title("Learning memory stream")
+                self.root.wm_protocol("WM_DELETE_WINDOW", self.onClose)
+                self.tkinter_init = False
+        
+            # if self.interface.timestamp % 1 == 0:
+        if self.arduino:
+            pass
+    
+    def cv2_update(self):
+        pack = False
+        if self.track:
+            pack = True
+            cv2.imshow("frame_color", self.frame_color)
+            #cv2.imshow('transform', self.transform)
+            cv2.imshow("gray_gui", self.gray_gui)
+            pack = True
+        
+        if self.arduino:
+            pass
+        
+        if self.track or self.arduino and pack:
+            # Check if user forces leave (press q)
+            q_pressed = cv2.waitKey(1) & 0xFF in [27, ord('q')]
+            if q_pressed:
+                self.onClose()
 
 
 # @mixedomatic
@@ -97,7 +146,7 @@ class Interface(TkinterGui):
                  duration = None, experimenter = None, gui = "tkinter"
                  ):
 
-        with open(config, 'r') as ymlfile:
+        with open(Path(PROJECT_ROOT, config), 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile)
 
         TkinterGui.__init__(self)
@@ -250,34 +299,12 @@ class Interface(TkinterGui):
             self.log.debug("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
             self.exit.wait(self.duration)
 
-        while not self.exit.is_set() and self.gui is not None and self.track:
+        while not self.exit.is_set() and self.gui is not None:
             
             if self.gui == "tkinter":
-                self.tkinter_update_widget(self.frame_color, 0, 0, gui_width = (self.gui_width + self.gui_pad) * 2)
-                #self.tkinter_update('main_mask', 0, 1)
-                self.tkinter_update_widget(self.gray_gui, 0, 2)
-                # status = self.interface.root.after(100, self.track)
-                # set a callback to handle when the window is closed
-                
-                self.root.update_idletasks()
-                self.root.update()
-                time.sleep(.01)
+                self.tkinter_update_widgets()
 
-
-                if self.tkinter_init:
-                    # # self.interface.tkinter_init = False
-                    self.root.wm_title("Learning memory stream")
-                    self.root.wm_protocol("WM_DELETE_WINDOW", self.onClose)
-                    self.tkinter_init = False
-                
-                # if self.interface.timestamp % 1 == 0:
                 
             else:
-                cv2.imshow("frame_color", self.frame_color)
-                #cv2.imshow("mask", self.main_mask)
-                #cv2.imshow('transform', self.transform)
-                cv2.imshow("gray_gui", self.gray_gui)
-                # Check if user forces leave (press q)
-                q_pressed = cv2.waitKey(1) & 0xFF in [27, ord('q')]
-                if q_pressed:
-                    self.onClose()
+                self.cv2_update()
+

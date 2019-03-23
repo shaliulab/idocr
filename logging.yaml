@@ -1,0 +1,52 @@
+version: 1
+formatters:
+  simple:
+    (): coloredlogs.ColoredFormatter
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  basic:
+    (): coloredlogs.ColoredFormatter
+    format: '%(asctime)s - %(message)s'
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: simple
+    level: INFO 
+    stream: ext://sys.stdout
+  console_basic:
+    class: logging.StreamHandler
+    formatter: basic
+    level: INFO 
+    stream: ext://sys.stdout
+
+  file_arduino:
+    class: logging.FileHandler
+    level: CRITICAL 
+    formatter: simple
+    filename: arduino.log
+  file_tracker:
+    class: logging.FileHandler
+    level: CRITICAL 
+    formatter: simple
+    filename: tracker.log
+
+loggers:
+  tracker:
+    handlers: [console, file_tracker]
+    level: DEBUG
+    propagate: no
+  arduino:
+    handlers: [console, file_arduino]
+    level: DEBUG
+    propagate: no
+  interface:
+    handlers: [console]
+    level: DEBUG
+    propagate: no
+  saver:
+    handlers: [console]
+    level: DEBUG
+    propagate: no
+
+root:
+  level: DEBUG
+  handlers: [console]

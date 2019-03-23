@@ -5,8 +5,8 @@
 import argparse
 import logging
 import coloredlogs
-from src.utils.frets_utils import setup_logging
-from src.interface.main import Interface
+from frets_utils import setup_logging
+from interface import Interface
 
 # Arguments to follow the command, adding video, etc options
 ap = argparse.ArgumentParser()
@@ -23,7 +23,7 @@ ap.add_argument("-t", "--track", action = 'store_true',                   help="
 ap.add_argument("-r", "--reporting", action = 'store_true')
 ap.add_argument("-g", "--gui",       type = str,  default = "tkinter", choices=['opencv', 'tkinter'], help="tkinter/opencv")
 ap.add_argument("-c", "--camera", type = str, default = "opencv", choices = ["opencv", "pylon"], help="Stream source")
-ap.add_argument("--config", type = str, default = "config.yml", help="Path to config file")
+ap.add_argument("--config", type = str, default = "config.yaml", help="Path to config file")
 ap.add_argument("-f", "--fps", type = int, help="Frames per second in the opened stream. Default as stated in the __init__ method in Tracker, is set to 2")
 args = vars(ap.parse_args())
 
