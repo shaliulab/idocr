@@ -2,7 +2,6 @@
 import argparse
 import datetime
 import logging
-from pathlib import Path
 import os.path
 import sys
 import threading
@@ -146,7 +145,7 @@ class Interface(TkinterGui):
                  duration = None, experimenter = None, gui = "tkinter"
                  ):
 
-        with open(Path(PROJECT_ROOT, config), 'r') as ymlfile:
+        with open(config, 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile)
 
         TkinterGui.__init__(self)

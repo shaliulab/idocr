@@ -16,8 +16,6 @@ class PylonStream():
     def __init__(self, video=None):
         log.info("Starting pylon camera!")
 
-        # The exit code of the sample application.
-        exitCode = 0
         ## TODO
         ## Check camera is visible!
         try:
@@ -30,8 +28,7 @@ class PylonStream():
         # Print the model name of the camera.
         device_info = cap.GetDeviceInfo()
         log.info("Using device {}".format(device_info.GetModelName()))
-        print(dir(device_info))
-        print(device_info.GetFullName())
+        log.info(device_info.GetFullName())
         # print(device_info.GetPropertyAvailable())
         
     
