@@ -41,9 +41,7 @@ class ReadConfigMixin():
         self.cfg = cfg
         #super().__init__(*args, **kwargs)
 
-
  
-
 def convert(s):
     try:
         return np.float(s)

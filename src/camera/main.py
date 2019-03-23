@@ -153,9 +153,6 @@ class Tracker():
 
 
 
-
-
-
     def rotate_frame(self, img, rotation=180):
         # Rotate the image by certan angles, 0, 90, 180, 270, etc.
         rows, cols = img.shape[:2]
@@ -381,11 +378,11 @@ class Tracker():
             name = "tracker_thread",
             target = self._run
         )
-
+        
+        self.interface.tracker_thread = tracker_thread
         tracker_thread.start()
-
-        return False
-    
+        return None
+        
     def onClose(self):
         self.stream.release()
         
@@ -411,11 +408,17 @@ class Tracker():
 
 
 if __name__ == "__main__":
+    
+    import signal
+    from src.interface.main import Interface
 
     ap = argparse.ArgumentParser()
     ap.add_argument("-v", "--video")
     ap.add_argument("-c", "--camera", type = str, default = "opencv", help="Stream source")
     ap.add_argument("-g", "--gui",       type = str,                          help="tkinter/opencv")
     args = vars(ap.parse_args())
+
+    interface = Interface(track = True, camera = args["camera"], gui = args["gui"])
+    interface.control_c_handler()
     tracker = Tracker(interface = interface, video=args["video"])
     if not args["gui"]: tracker.run()
