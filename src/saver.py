@@ -13,14 +13,12 @@ from frets_utils import setup_logging
 setup_logging()
 
 # https://stackoverflow.com/questions/16740887/how-to-handle-incoming-real-time-data-with-python-pandas/17056022
-CACHE = {}
-STORE = 'store'   # Note: another option is to keep the actual file open
 max_len = 5000
 
 
 class Saver():
 
-    def __init__(self, store=STORE, cache = CACHE, init_time = None, name = None):
+    def __init__(self, store="store", cache = {}, init_time = None, name = None):
 
 
         self.store = None

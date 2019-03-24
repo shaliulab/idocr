@@ -316,7 +316,7 @@ class Tracker():
                                 "arena": arena.identity, "fly": fly.identity, "cx": fly.cx, "cy": fly.cy,
                                 "datetime": datetime.datetime.now()
                                 },
-                            key = "df",
+                            key = "data",
                             )
                     self.found_flies += 1
                     
@@ -376,6 +376,7 @@ class Tracker():
             self.merge_masks()
             self.interface.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
             self.status = self.track()
+            self.interface.exit.wait(1)
         
         if not self.interface.exit.is_set():
             self.interface.exit.set()

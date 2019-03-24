@@ -184,7 +184,7 @@ class ArduinoThread(threading.Thread):
                     "timestamp": self.lmd.interface.timestamp,
                     "datetime": datetime.datetime.now()
                     },
-                key = "df"
+                key = "metadata"
 
         )
   
