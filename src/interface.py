@@ -96,27 +96,26 @@ class TkinterGui(tk.Frame):
 
     def tkinter_update_widgets(self):
          
-        if self.track:
-            self.tkinter_update_widget(self.frame_color, 0, 0, gui_width = (self.gui_width + self.gui_pad) * 2)
-            #self.tkinter_update('main_mask', 0, 1)
-            self.tkinter_update_widget(self.gray_gui, 0, 2)
-            # status = self.interface.root.after(100, self.track)
-            # set a callback to handle when the window is closed
+        self.tkinter_update_widget(self.frame_color, 0, 0, gui_width = (self.gui_width + self.gui_pad) * 2)
+        #self.tkinter_update('main_mask', 0, 1)
+        self.tkinter_update_widget(self.gray_gui, 0, 2)
+        # status = self.interface.root.after(100, self.track)
+        # set a callback to handle when the window is closed
         
-            self.root.update_idletasks()
-            self.root.update()
-            time.sleep(.01)
+        if self.tkinter_init:
+            # # self.interface.tkinter_init = False
+            self.root.wm_title("Learning memory stream")
+            self.root.wm_protocol("WM_DELETE_WINDOW", self.onClose)
+            self.tkinter_init = False
+        
+        # if self.interface.timestamp % 1 == 0:
+
+        self.root.update_idletasks()
+        self.root.update()
+        time.sleep(.01)
 
 
-            if self.tkinter_init:
-                # # self.interface.tkinter_init = False
-                self.root.wm_title("Learning memory stream")
-                self.root.wm_protocol("WM_DELETE_WINDOW", self.onClose)
-                self.tkinter_init = False
-        
-            # if self.interface.timestamp % 1 == 0:
-        if self.arduino:
-            pass
+
     
     def cv2_update(self):
         pack = False
@@ -140,7 +139,7 @@ class TkinterGui(tk.Frame):
 # @mixedomatic
 class Interface(TkinterGui):
 
-    def __init__(self, arduino=False, track=False, mapping = None, program = None, port = None,
+    def __init__(self, arduino=False, track=False, mapping = None, program = None, blocks = None, port = None,
                  camera = None, video = None, reporting=False, config = "config.yaml",
                  duration = None, experimenter = None, gui = "tkinter"
                  ):
@@ -180,6 +179,7 @@ class Interface(TkinterGui):
         self.video = None
         self.mapping = None
         self.program = None
+        self.blocks = None
         self.port = None
         
         self.timestamp = None
@@ -197,8 +197,8 @@ class Interface(TkinterGui):
         
         self.init_time = datetime.datetime.now()
 
-        self.metadata_saver = Saver(store = self.cfg["arduino"]["store"], init_time = self.init_time, name = "metadata_saver")
         self.data_saver = Saver(store = self.cfg["tracker"]["store"], init_time = self.init_time, name = "data_saver")
+        self.metadata_saver = Saver(store = self.cfg["arduino"]["store"], init_time = self.init_time, name = "metadata_saver")
 
         self.threads = {}
         self.threads_finished = {}
@@ -208,6 +208,7 @@ class Interface(TkinterGui):
         self.video = video
         self.mapping = mapping
         self.program = program
+        self.blocks = blocks
         self.port = port
 
         self.timestamp = 0
@@ -253,7 +254,7 @@ class Interface(TkinterGui):
         ##########################
         if self.arduino:
 
-            device = LearningMemoryDevice(interface = self, mapping = self.mapping, program = self.program, port = self.port)
+            device = LearningMemoryDevice(interface = self, mapping = self.mapping, program = self.program, blocks = self.blocks, port = self.port)
             device.power_off_arduino(exit=False)
             device.prepare()
         else:

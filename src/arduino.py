@@ -16,20 +16,23 @@ import serial
 import yaml
 
 # Local application imports
-from pyfirmata import ArduinoMega as Arduino # import the right board but always call it Arduino
+from pyfirmata import ArduinoMega, Arduino
 from frets_utils import PDReader, setup_logging
 from arduino_threading import ArduinoThread
 
 # Set up package configurations
 setup_logging()
 
+
+boards = {"Arduino": Arduino, "ArduinoMega": ArduinoMega}
 class LearningMemoryDevice(PDReader):
 
-    def __init__(self, interface, mapping, program, port):
+    def __init__(self, interface, mapping, program, blocks, port):
 
         ## Initialization
         self.mapping = None
         self.program = None
+        self.blocks = None
         self.port = None
 
 
@@ -49,6 +52,7 @@ class LearningMemoryDevice(PDReader):
 
         self.mapping = mapping
         self.program = program
+        self.blocks = blocks
         self.port = port
 
         # Inherited from interface
@@ -59,7 +63,8 @@ class LearningMemoryDevice(PDReader):
         self.log = logging.getLogger(__name__)
 
         ###############################
-        PDReader.__init__(self, mapping, program)
+        PDReader.__init__(self, mapping, program, blocks)
+        self.program.to_csv(self.saver.store + "_complete.csv")
 
         # pin_names = self.mapping.index
         # self.pin_state = {p: 0 for p in pin_names}
@@ -67,28 +72,12 @@ class LearningMemoryDevice(PDReader):
         # Try loading the Arduino board with pyfirmata
         # Could fail if Arduino is not connected under port
         try:
-            self.board = Arduino(port)
+            self.board = boards[self.interface.cfg["arduino"]["board"]](port)
+            self.log.info("Loaded {} board".format(self.interface.cfg["arduino"]["board"]))
         except serial.serialutil.SerialException:
             self.log.error('Please provide the correct port')
             sys.exit(1)
     
-
-
-    # def check_do_run(self, d, max_sleep):
-    #     stop = False 
-    #     start_sleeping = datetime.datetime.now()
-    #     while ((datetime.datetime.now() - start_sleeping).total_seconds() < max_sleep):
-    #         stop_arduino = self.interface.exit.is_set()
-    #         stop_gui = getattr(self.interface.tracker, "stop", False)
-    #         if not stop_arduino and not stop_gui:
-    #             time.sleep(0.001)
-    #             if getattr(self.interface.tracker, "stop", False):
-    #                 self.log.info("Tracker signaled stop")
-    #         else:
-    #             stop = True
-    #             break
-    #     return stop 
-
     def prepare(self):
 
 
@@ -96,8 +85,8 @@ class LearningMemoryDevice(PDReader):
  
         # They are not run throughout the lifetime of the program, just at some interval and without intermitency
         
-        count = {p: 0 for p in self.program.index}
-        for p in self.program.index:
+        count = {p: 0 for p in self.program.index.get_level_values('pin_id')}
+        for p in self.program.index.get_level_values('pin_id'):
             d_pin_number = np.asscalar(self.mapping.loc[p]["pin_number"])
             x0 = count[p]
             x1 = count[p]+1
@@ -144,7 +133,7 @@ class LearningMemoryDevice(PDReader):
     def _run(self, threads):
 
         t = threading.currentThread()
-        self.log.info('Starting slave threads')
+        self.log.info('start()ing arduino threads')
         self.interface.arduino_start = datetime.datetime.now()
 
         for process in threads.values():

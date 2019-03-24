@@ -1,3 +1,6 @@
-pin_id,start,end,on,off
-# blink led 5 times for one second during 10 seconds
-ONBOARD_LED,0,20,1/60,1/60
+pin_id,start,end,on,off,block
+# pretrain
+ONBOARD_LED,0,10/60,0.5/60,0.5/60,pretrain
+# train
+ONBOARD_LED,0,50/60,0.1/60,0.1/60,train
+
