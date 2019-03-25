@@ -12,8 +12,7 @@ from interface import Interface
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--port",     type = str, default = "/dev/ttyACM0", help="Absolute path to the Arduino port. Usually '/dev/ttyACM0' in Linux and COM in Windows")
 ap.add_argument("-m", "--mapping", type = str,                            help="Absolute path to csv providing pin number-pin name mapping", )
-ap.add_argument("-s", "--sequence", type = str,                           help="Absolute path to csv providing the sequence of instructions to be sent to Arduino")
-ap.add_argument("-b", "--blocks", type = str,                             help="Absolute path to csv providing the Arduino blocks")
+ap.add_argument("--program", type = str,                                  help="Absolute path to csv providing the Arduino top level program")
 ap.add_argument("-v", "--video",    type = str, default = None,           help="location to the video file")
 ap.add_argument("-l", "--log_dir",  type = str, default = ".",            help="Absolute path to directory where log files will be stored")
 ap.add_argument("-d", "--duration", type = float, default = 200,          help="How long should it last? (minutes)")
@@ -41,8 +40,8 @@ log = logging.getLogger(__name__)
 
 
 interface = Interface(
-    arduino = args["arduino"], track = args["track"], blocks = args["blocks"],
-    mapping = args["mapping"], program = args["sequence"], port = args["port"],
+    arduino = args["arduino"], track = args["track"],
+    mapping = args["mapping"], program = args["program"], port = args["port"],
     camera = args["camera"], video = args["video"],
     reporting = args["reporting"], config = args["config"], duration = DURATION, gui = args["gui"]
 )

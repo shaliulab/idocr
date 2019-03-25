@@ -22,7 +22,11 @@ tracker:
 
 arduino:
     store: "metadata/store"
-    board: Arduino
+    board: ArduinoMega
+
+blocks:
+    folder: blocks/
+    pattern: '.csv'
 
 interface:
     duration: 200

@@ -61,6 +61,7 @@ class Saver():
             self.log.info(key)
             import ipdb; ipdb.set_trace()
             self.log.error("{} could not save cache to h5 file. Please investigate traceback".format(self.name))
+            self.log.info(df)
             self.log.exception(e)
             
         # save to csv

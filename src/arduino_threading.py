@@ -15,9 +15,9 @@ setup_logging()
 
 class ArduinoThread(threading.Thread):
 
-    def __init__(self, lmd, kwargs, name = None):
+    def __init__(self, device, kwargs, name = None):
 
-        self.lmd = lmd
+        self.device = device
         self.log = logging.getLogger(__name__)
         super(ArduinoThread, self).__init__(name = name, target = self.pin_thread, kwargs = kwargs)
 
@@ -67,15 +67,16 @@ class ArduinoThread(threading.Thread):
         # this is true for pins of type: CI, SI (intermitent)
         # i.e. threads where on is not NaN
         if n_iters != n_iters and on == on:
-            n_iters = max(0, (min(end, duration) - start) // (on + off)) # check if total time is accessible
+            n_iters = int(max(0, (min(end, duration) - start) / (on + off))) # check if total time is accessible
+            # better using int( / ) than // or np.floor_divide becuase 1 // 0.2 = 4 and not 5 
         if n_iters > 0:
             self.log.info("{} will cycle {} times: start {} end {} tt {}".format(d_name, n_iters, start, end, duration))
             
         
         # halt all threads until start_time + sync_time is reached
         # wait until all threads are ready to begin
-        sleep1 = (self.lmd.interface.init_time + datetime.timedelta(seconds=sync_time) - datetime.datetime.now()).total_seconds()
-        stop = self.lmd.interface.exit.wait(sleep1)
+        sleep1 = (self.device.interface.init_time + datetime.timedelta(seconds=sync_time) - datetime.datetime.now()).total_seconds()
+        stop = self.device.interface.exit.wait(sleep1)
         self.log.info('{} running'.format(d_name))
         if stop:
             self.toggle_pin(pin_number, 0)
@@ -87,7 +88,7 @@ class ArduinoThread(threading.Thread):
         # i.e. wait until it is time to turn on a pin
         sleep2 = (thread_start + datetime.timedelta(seconds=start) - datetime.datetime.now()).total_seconds()
         if sleep2 > 0:
-            stop = self.lmd.interface.exit.wait(sleep2)
+            stop = self.device.interface.exit.wait(sleep2)
             if stop:
                 self.log.debug("{} received exit".format(d_name))
                 self.toggle_pin(pin_number, 0)
@@ -110,7 +111,7 @@ class ArduinoThread(threading.Thread):
                     warnings.warn("Runtime: {}".format(runtime))
 
                 else:
-                    stop = self.lmd.interface.exit.wait(sleep_time)
+                    stop = self.device.interface.exit.wait(sleep_time)
                     if stop:
                         self.toggle_pin(pin_number, 0)
                         return 0
@@ -122,7 +123,7 @@ class ArduinoThread(threading.Thread):
                 if sleep_time < 0:
                     warnings.warn("Runtime: {}".format(runtime))
                 else:
-                    stop = self.lmd.interface.exit.wait(sleep_time)
+                    stop = self.device.interface.exit.wait(sleep_time)
                 if stop:
                     self.toggle_pin(pin_number, 0)
                     return 0
@@ -137,7 +138,7 @@ class ArduinoThread(threading.Thread):
                 sleep_time += sleep2
    
             #time.sleep(sleep_time)
-            stop = self.lmd.interface.exit.wait(sleep_time)
+            stop = self.device.interface.exit.wait(sleep_time)
             if stop:
                 self.toggle_pin(pin_number, 0)
                 return 0
@@ -147,26 +148,27 @@ class ArduinoThread(threading.Thread):
 
 
         # communicate to interface that current thread is finished
-        self.lmd.interface.threads_finished[d_name] = True
+        self.device.interface.threads_finished[d_name] = True
         # check if it was the last (in that case, the reduce method returns True)
-        arduino_done = np.bitwise_and.reduce(list(self.lmd.interface.threads_finished.values()))
+        arduino_done = np.bitwise_and.reduce(list(self.device.interface.threads_finished.values()))
         # if its the last, signal exit
         if arduino_done:
-            self.lmd.interface.exit.set()
-            self.lmd.interface.arduino_done = arduino_done
+            self.device.interface.exit.set()
+            self.device.interface.arduino_done = arduino_done
 
         return 1
     
-    def toggle_pin(self, pin_number, value):
+    def toggle_pin(self, pin_number, value, freq=None):
         """
         Updates the state of pin pin_number with value, while logging and caching this
         so user can confirm it. TODO. Finish show_circuit and use message
         """
 
         d = threading.currentThread()
+        p = self.device.mapping.query('pin_number == {}'.format(pin_number)).index[0]
         
         # Update state of pin (value = 1 or value = 0)
-        self.lmd.board.digital[pin_number].write(value)
+        self.device.board.digital[pin_number].write(value)
 
         # Update log with info severity level unless
         # on pin13, then use severity debug
@@ -177,11 +179,14 @@ class ArduinoThread(threading.Thread):
             value
         ))
 
+
+        self.device.pin_state[p] = value if not freq else freq
+
         # Create a new row in the metadata
-        self.lmd.saver.process_row(
+        self.device.saver.process_row(
                 d = {
                     "pin_number": pin_number, "value": value, "thread": d._kwargs["d_name"], 
-                    "timestamp": self.lmd.interface.timestamp,
+                    "timestamp": self.device.interface.timestamp,
                     "datetime": datetime.datetime.now()
                     },
                 key = "metadata"
@@ -200,9 +205,9 @@ class ArduinoThread(threading.Thread):
     #    #global pin_state
     #    pin_state_g = {p: "x" if v == 1 else "0" for p, v in self.pin_state.items()}
 
-    #    main_pins = self.lmd.mapping.query('pin_group == "main"').index.values[1:]
-    #    left_pins = self.lmd.mapping.query('pin_group == "left"').index.values
-    #    right_pins = self.lmd.mapping.query('pin_group == "right"').index.values
+    #    main_pins = self.device.mapping.query('pin_group == "main"').index.values[1:]
+    #    left_pins = self.device.mapping.query('pin_group == "left"').index.values
+    #    right_pins = self.device.mapping.query('pin_group == "right"').index.values
        
     #    show_data = [self.pin_id2n(p) for p in main_pins] + [pin_state_g[p] for p in main_pins]
     #    show_data2 = [self.left_pair(p, pin_state_g) for p in left_pins] 

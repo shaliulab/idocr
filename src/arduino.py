@@ -17,7 +17,8 @@ import yaml
 
 # Local application imports
 from pyfirmata import ArduinoMega, Arduino
-from frets_utils import PDReader, setup_logging
+from pdloader import PDLoader
+from frets_utils import setup_logging
 from arduino_threading import ArduinoThread
 
 # Set up package configurations
@@ -25,15 +26,15 @@ setup_logging()
 
 
 boards = {"Arduino": Arduino, "ArduinoMega": ArduinoMega}
-class LearningMemoryDevice(PDReader):
+class LearningMemoryDevice(PDLoader):
 
-    def __init__(self, interface, mapping, program, blocks, port):
+    def __init__(self, interface, mapping, program, port):
 
         ## Initialization
         self.mapping = None
         self.program = None
-        self.blocks = None
         self.port = None
+        self.pin_state = None
 
 
         self.init_time = None
@@ -52,7 +53,6 @@ class LearningMemoryDevice(PDReader):
 
         self.mapping = mapping
         self.program = program
-        self.blocks = blocks
         self.port = port
 
         # Inherited from interface
@@ -63,7 +63,10 @@ class LearningMemoryDevice(PDReader):
         self.log = logging.getLogger(__name__)
 
         ###############################
-        PDReader.__init__(self, mapping, program, blocks)
+        PDLoader.__init__(self, mapping, program)
+        self.pin_state = {k: 0 for k in self.mapping.index}
+
+
         self.program.to_csv(self.saver.store + "_complete.csv")
 
         # pin_names = self.mapping.index
@@ -110,7 +113,7 @@ class LearningMemoryDevice(PDReader):
 
             }
             d = ArduinoThread(
-                lmd = self,
+                device = self,
                 name=d_name,
                 kwargs = kwargs
             )
@@ -192,9 +195,6 @@ class LearningMemoryDevice(PDReader):
     
         if exit:
             return False
-
-
-
     ######################
     ## Enf of LearningMemoryDevice class
 

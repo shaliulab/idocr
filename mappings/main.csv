@@ -1,16 +1,16 @@
-pin_id,pin_number,pin_group
-ONBOARD_LED,13,main
-MAIN_VALVE,11,main
-VACUUM,12,main
-IRLED,2,main
-VIBRATOR,50,main
+pin_id,pin_number,pin_group,x,y
+ONBOARD_LED,13,NaN,NaN,NaN
+MAIN_VALVE,11,main,0,1
+VACUUM,12,main,0,2
+IRLED,2,main,0,0
+VIBRATOR,50,main,0,3
 
-ODOUR_A_OCT_LEFT,7,left
-ODOUR_B_MCH_LEFT,9,left
-ESHOCK_LEFT,5,left
-LED_R_LEFT,3,left
+ESHOCK_LEFT,5,left,1,0
+LED_R_LEFT,3,left,2,0
+ODOUR_A_OCT_LEFT,7,left,3,0
+ODOUR_B_MCH_LEFT,9,left,4,0
 
-ODOUR_A_OCT_RIGHT,8,right
-ODOUR_B_MCH_RIGHT,10,right
-ESHOCK_RIGHT,6,right
-LED_R_RIGHT,4,right
+ESHOCK_RIGHT,6,right,1,3
+LED_R_RIGHT,4,right,2,3
+ODOUR_A_OCT_RIGHT,8,right,3,3
+ODOUR_B_MCH_RIGHT,10,right,4,3
