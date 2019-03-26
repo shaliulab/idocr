@@ -64,10 +64,11 @@ class LearningMemoryDevice(PDLoader):
 
         ###############################
         PDLoader.__init__(self, mapping, program)
-        self.pin_state = {k: 0 for k in self.mapping.index}
+        
+        self.pin_state = {k: False for k in self.mapping.index}
 
 
-        self.program.to_csv(self.saver.store + "_complete.csv")
+        self.program.to_csv(self.saver.store + "_compiled.csv")
 
         # pin_names = self.mapping.index
         # self.pin_state = {p: 0 for p in pin_names}
@@ -85,20 +86,32 @@ class LearningMemoryDevice(PDLoader):
 
 
         threads = self.interface.threads
+        self.program["active"] = False
+        self.program["thread_name"] = None
+
+        self.active_block = {k: False for k in self.overview.index}
  
         # They are not run throughout the lifetime of the program, just at some interval and without intermitency
         
-        count = {p: 0 for p in self.program.index.get_level_values('pin_id')}
-        for p in self.program.index.get_level_values('pin_id'):
-            d_pin_number = np.asscalar(self.mapping.loc[p]["pin_number"])
-            x0 = count[p]
-            x1 = count[p]+1
+        events = self.program.index.get_level_values('pin_id')
+        count = {ev: 0 for ev in events}
+        for i, ev in enumerate(events):
+            d_pin_number = np.asscalar(self.mapping.loc[ev]["pin_number"])
+            x0 = count[ev]
+            x1 = count[ev]+1
 
-            d_start =      np.asscalar(self.program.loc[[p]].iloc[x0:x1,:]["start"])
-            d_end =        np.asscalar(self.program.loc[[p]].iloc[x0:x1,:]["end"])
-            d_on =         np.asscalar(self.program.loc[[p]].iloc[x0:x1,:]["on"])
-            d_off =        np.asscalar(self.program.loc[[p]].iloc[x0:x1,:]["off"])
-            d_name = 'thread-{}_{}'.format(p, count[p])
+            d_start =      np.asscalar(self.program.loc[[ev]].iloc[x0:x1,:]["start"])
+            d_end =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1,:]["end"])
+
+            if d_end <= d_start:
+                continue
+            d_on =         np.asscalar(self.program.loc[[ev]].iloc[x0:x1,:]["on"])
+            d_off =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1,:]["off"])
+            block =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1,:].index)
+
+            d_name = 'thread-{}-{}'.format(ev, count[ev])
+
+            self.program[i,"thread_name"] = d_name
 
             kwargs = {
                 "pin_number"   : d_pin_number,
@@ -109,9 +122,11 @@ class LearningMemoryDevice(PDLoader):
                 "duration"   : None,
                 "start_time": None,
                 "d_name"         : d_name, 
-                "board":         self.board
-
+                "board":         self.board,
+                "block"         : block,
+                "i"             : i
             }
+
             d = ArduinoThread(
                 device = self,
                 name=d_name,
@@ -120,9 +135,9 @@ class LearningMemoryDevice(PDLoader):
 
             d.setDaemon(False)
             d.do_run = True
-            threads[d_name]=d
+            threads[d_name] = d
             self.interface.threads_finished[d_name] = False
-            count[p] += 1
+            count[ev] += 1
 
         ################################
         ## Finished preparing/configuring the threads

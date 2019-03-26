@@ -81,6 +81,10 @@ class Arena():
         else:
             _, flies, _ = cv2.findContours(transform, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
+        if len(flies) == 0:
+            pass
+            # try the new method
+
         return flies
  
     

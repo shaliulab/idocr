@@ -19,6 +19,9 @@ class ArduinoThread(threading.Thread):
 
         self.device = device
         self.log = logging.getLogger(__name__)
+        self.pin_name =  name.split('-')[1]
+
+
         super(ArduinoThread, self).__init__(name = name, target = self.pin_thread, kwargs = kwargs)
 
 
@@ -32,7 +35,7 @@ class ArduinoThread(threading.Thread):
         super(ArduinoThread, self).start()
 
 
-    def pin_thread(self, pin_number, duration, start_time, start, end, on, off, n_iters=np.nan, d_name=None, board=None):
+    def pin_thread(self, pin_number, duration, start_time, start, end, on, off, block, i, n_iters=np.nan, d_name=None, board=None):
         """
         Run by every thread independently, this function replicates the program specified in the corresponding row
         of the program dataframe. Turns on a pin at a specific timepoint and after some waiting time, it turns it off
@@ -98,12 +101,18 @@ class ArduinoThread(threading.Thread):
     
         
         # pin_id = self.mapping.query('pin_number == "{}"'.format(pin_number)).index[0]
-    
+
+        ##############
+        # It's time to activate the Arduino    
+        self.device.program.iloc[i,:]["active"] = True
+
+        self.device.active_block[block] = True
+
         if n_iters == n_iters:    
             for _ in range(int(n_iters)):
 
                 start_time = datetime.datetime.now()
-                self.toggle_pin(pin_number, 1)
+                self.toggle_pin(pin_number, 1, 1/(on + off))
                 
                 runtime = datetime.datetime.now() - start_time
                 sleep_time = on - runtime.total_seconds()
@@ -117,7 +126,7 @@ class ArduinoThread(threading.Thread):
                         return 0
 
                 start_time = datetime.datetime.now()
-                self.toggle_pin(pin_number, 0)
+                self.toggle_pin(pin_number, 0, 1/(on + off))
                 runtime = datetime.datetime.now() - start_time
                 sleep_time = off - runtime.total_seconds()
                 if sleep_time < 0:
@@ -125,8 +134,9 @@ class ArduinoThread(threading.Thread):
                 else:
                     stop = self.device.interface.exit.wait(sleep_time)
                 if stop:
-                    self.toggle_pin(pin_number, 0)
+                    self.toggle_pin(pin_number, 0, 0)
                     return 0
+
        
 
         else:
@@ -143,8 +153,12 @@ class ArduinoThread(threading.Thread):
                 self.toggle_pin(pin_number, 0)
                 return 0
 
+        self.device.pin_state[self.pin_name] = False
         self.toggle_pin(pin_number, 0)
         self.log.info("{} stopped".format(d_name))
+
+        # Check if there's any thread from the current block that's still active
+        self.device.active_block[block] = np.any(self.device.program.query('block == "{}"'.format(block))["active"])
 
 
         # communicate to interface that current thread is finished
@@ -165,7 +179,6 @@ class ArduinoThread(threading.Thread):
         """
 
         d = threading.currentThread()
-        p = self.device.mapping.query('pin_number == {}'.format(pin_number)).index[0]
         
         # Update state of pin (value = 1 or value = 0)
         self.device.board.digital[pin_number].write(value)
@@ -180,7 +193,9 @@ class ArduinoThread(threading.Thread):
         ))
 
 
-        self.device.pin_state[p] = value if not freq else freq
+        x = bool(value) if not freq else freq
+        self.device.pin_state[self.pin_name] = x
+        print(self.device.pin_state)
 
         # Create a new row in the metadata
         self.device.saver.process_row(

@@ -73,6 +73,10 @@ class TkinterGui(ResizingCanvas):
         canvas = ResizingCanvas(root, width=800, height=800, highlightthickness=0, bd=0, relief='ridge')
         canvas.pack(fill=tk.BOTH, expand=tk.YES, anchor = tk.NW)
         canvas.bind("<Button-1>", self.callback)
+
+
+
+
         
 
 
@@ -178,6 +182,8 @@ class Interface(TkinterGui):
         self.duration = None
         self.experimenter = None
 
+        self.statusbar = None
+
         ## Assignment of attributes
         self.gui = gui
         self.arduino = arduino
@@ -206,6 +212,12 @@ class Interface(TkinterGui):
         self.timestamp = 0
         self.duration = duration if duration else self.cfg["interface"]["duration"]
         self.experimenter = experimenter if experimenter else self.cfg["tracker"]["experimenter"]
+
+
+        statusbar = tk.Label(self.root, text="Welcome to FReTs", relief=tk.SUNKEN, anchor=tk.W)
+        statusbar.pack(side=tk.BOTTOM, fill=tk.X)
+        self.statusbar = statusbar
+
 
         if self.gui == "tkinter":
             self.panel = {}
@@ -240,11 +252,14 @@ class Interface(TkinterGui):
 
     
     def tkinter_update_monitor(self, mapping):
+        
+        filtered_mapping = mapping
+        # filtered_mapping = mapping.loc[~mapping.index.isin(['ONBOARD_LED'])]
+
         if self.tkinter_init:
 
-            self.filtered_mappings = mapping.loc[~mapping.index.isin(['ONBOARD_LED'])]
-
-            for i, pin in enumerate(self.filtered_mappings.itertuples()):
+        
+            for i, pin in enumerate(filtered_mapping.itertuples()):
                 
                 label = tk.Label(self.canvas, text = pin.Index, fg = 'white', bg = 'black')
                 y = 500 + pin.x * 50
@@ -257,11 +272,44 @@ class Interface(TkinterGui):
 
         
         else:
-            for i, pin in enumerate(self.filtered_mappings.itertuples()):
+            for i, pin in enumerate(filtered_mapping.itertuples()):
                 
                 state = self.device.pin_state[pin.Index]
-                color = 'red' if state == 0 else 'yellow'
+                # print(state)
+                # print(self.device.pin_state)
+                # print(pin.Index)
+                if type(state) is bool:
+                    # print('{} is boolean'.format(state))
+                    color = 'yellow' if state else 'red'
+                else:
+                    color = 'blue'
                 self.canvas.itemconfig(i+1, fill = color)
+
+    def tkinter_update_status(self):
+
+        c1 = self.device.overview['start'] < self.timestamp
+        c2 = self.device.overview['end'] > self.timestamp
+        selected_rows = c1 & c2
+        active_blocks = self.device.overview.index[selected_rows].tolist()
+        main_block = active_blocks[-1]
+
+        passed = self.timestamp - self.device.overview.loc[main_block]['start']
+        left = self.device.overview.loc[main_block]['end'] - self.timestamp
+        time_position = np.round(np.array([passed, left]) / 60, 3)
+
+
+        text = 'Running ' + ' and '.join(active_blocks) + ' blocks'
+        text += ' {}m passed, {}m left'.format(*time_position)
+        self.statusbar['text'] = text
+
+
+
+        
+        # import ipdb; ipdb.set_trace()
+
+        # [self.device.program.query('block = "{}"'.format(b)) for b in self.device.block_names]
+
+
 
 
 
@@ -273,6 +321,7 @@ class Interface(TkinterGui):
         self.tkinter_update_widget(img=self.gray_gui, name='gray_gui')
         # self.tkinter_update_widget(img=self.monitor, y=self.gui_pad * 2 + * (self.gui_width + self.gui_pad), x=self.gui_pad * 2 + * (self.gui_width + self.gui_pad), preprocess=False)
         self.tkinter_update_monitor(self.device.mapping)
+        self.tkinter_update_status()
 
         if self.tkinter_init:
             # # self.interface.tkinter_init = False

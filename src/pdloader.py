@@ -24,6 +24,9 @@ class PDLoader():
 
     def __init__(self, mapping, program):
         self.loaded = False
+        self.block_names = None
+        self.overview = None
+
         self.index_col = 'pin_id'
 
         mapping = pd.read_csv(mapping, skip_blank_lines=True, comment="#")
@@ -37,12 +40,32 @@ class PDLoader():
         self.mapping = mapping
 
         program = pd.read_csv(program)
-        program = self.format(program, 'block')        
-        program = self.compile(program, blocks)
+        self.block_names = program['block']
+
+        program = self.format(program, 'block')
+        program = self.complete_nan(program)  
+        program["end"] = program["start"] + program["duration"] * program["times"]
+
+        self.overview = program
+        program = self.compile(blocks)
         self.program = program
-        
         self.loaded = True
         self.log = logging.getLogger(__name__)
+
+    def complete_nan(self, program):
+        overview = program
+        old_start = 0
+        for i, row in enumerate(program.itertuples()):
+            print(i)
+             # Compute what is the start if row.start != row.start (i.e. row.start is np.nan)
+            # based on the start, duration and times of the previous (old) block
+            start = row.start if row.start == row.start else (old_start+row.duration*row.times)
+            overview.loc[overview.index[i], 'start'] = start
+            old_start = start
+            
+        
+        return overview
+
     
     def format(self, df, index):
         df.set_index(index, inplace=True)
@@ -57,15 +80,16 @@ class PDLoader():
         block = self.format(block, 'pin_id')
         return block
 
-    def compile(self, program, blocks):
+    def compile(self, blocks):
 
-        new_program = [None,] * program.shape[0]
-        j = 0
-        start = 0
-        for row in program.itertuples():
+        new_program = [None,] * self.overview.shape[0]
+        for i, row in enumerate(self.overview.itertuples()):
+            print(row)
 
             block = row.Index
-            start = row.start if row.start == row.start else (start + duration*times)
+            # Compute what is the start if row.start != row.start (i.e. row.start is np.nan)
+            # based on the start, duration and times of the previous (old) block
+            start = row.start
             times = row.times
             duration = row.duration
 
@@ -79,13 +103,20 @@ class PDLoader():
             block_table_repeat.loc[:, "end"] += start
 
             block_table_repeat["start"] = block_table_repeat["start"] + block_table_repeat["iterations"] * duration
-            block_table_repeat["end"] = block_table_repeat["end"] + (1 + block_table_repeat["iterations"]) * duration
+            end = (block_table_repeat["end"] + (1 + block_table_repeat["iterations"]) * duration).values
+            
+            row_end = np.array([row.end], np.float64)
+            end = min(row_end, end)
 
-            block_table_repeat["block"] = block
+            
+            block_table_repeat.loc[:, "end"] = end
+            block_table_repeat.loc[:, "block"] = block
+
 
                 
-            new_program[j] = block_table_repeat
-            j += 1
+            new_program[i] = block_table_repeat
 
         compiled_program = pd.concat(new_program)
+        
+        print(compiled_program)
         return compiled_program

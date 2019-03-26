@@ -292,6 +292,7 @@ class Tracker():
                 ## Find flies in this arena
                 gray_masked = cv2.bitwise_and(self.transform, mask)
                 fly_contours = arena.find_flies(gray_masked, self.kernel)
+
                 #print('There are {} potential flies found in arena {}'.format(len(fly_contours), arena.identity))
 
                 # Initialize a fly identity that will be increased with 1
