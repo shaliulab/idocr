@@ -185,8 +185,7 @@ class LearningMemoryDevice(PDLoader):
 
         self.power_off_arduino()
         self.log.info('{} storing and cleaning cache'.format(t.name))
-        for k, lst in self.saver.cache.items():
-            self.saver.store_and_clear(lst, k)
+        self.saver.store_and_clear(self.saver.cache['metadata'], 'metadata')
 
         self.interface.arduino_done = True
         if not self.interface.exit.is_set(): self.interface.onClose()

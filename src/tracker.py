@@ -400,9 +400,8 @@ class Tracker():
         
     def onClose(self):
         self.stream.release()
-        
-        for k, lst in self.saver.cache.items():
-            self.saver.store_and_clear(lst, k)
+                
+        self.saver.store_and_clear(self.saver.cache['data'], 'data')
 
         self.log.info("Tracking stopped")
         self.log.info("{} frames analyzed".format(self.frame_count))
