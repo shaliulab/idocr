@@ -120,7 +120,11 @@ class Interface():
         
         self.log.info("Start time: {}".format(self.init_time.strftime("%H%M%S-%d%m%Y")))
 
-
+        self.pause = False
+        self.stop = False
+        self.play_event = threading.Event()
+        self.stop_event = threading.Event()
+        self.interface_initialized = False
     
    
     def cv2_update(self):
@@ -192,10 +196,17 @@ class Interface():
         signals = ('TERM', 'HUP', 'INT')
         for sig in signals:
             signal.signal(getattr(signal, 'SIG' + sig), self.onClose)
+        
     
-
     def play(self):
-        print('Play')
+        
+        self.play_event.set()
+        self.pause = False
+        self.stop = False
+
+        if self.interface_initialized:
+            return None
+
         self.control_c_handler()
 
         if self.arduino:
@@ -206,6 +217,7 @@ class Interface():
                 self.log.exception('Could not run Arduino board')
                 self.log.exception(e)
         
+
         if self.track:
             try:
                 self.log.info("Running tracker")
@@ -213,10 +225,22 @@ class Interface():
             except Exception as e:
                 self.log.exception('Could not run tracker')
                 self.log.exception(e)
+        
+        self.interface_initialized = True
 
         if not self.track and not self.gui and self.arduino:
             self.log.debug("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
             self.exit.wait(self.duration)
+
+    def pause(self):
+        self.pause = True
+        self.play_event = threading.Event()
+    
+    def stop(self):
+        self.stop = True
+        self.play_event = threading.Event()
+        self.stop_event.set()
+
     
     def start(self):
         """

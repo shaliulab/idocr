@@ -20,8 +20,6 @@ class ArduinoThread(threading.Thread):
         self.device = device
         self.log = logging.getLogger(__name__)
         self.pin_name =  name.split('-')[1]
-
-
         super(ArduinoThread, self).__init__(name = name, target = self.pin_thread, kwargs = kwargs)
 
 
@@ -33,6 +31,11 @@ class ArduinoThread(threading.Thread):
         self._kwargs["start_time"] = start_time
         self._kwargs["duration"] = duration 
         super(ArduinoThread, self).start()
+    
+    def wait(self, waiting_time, event_name='exit'):
+        event = getattr(self.device.interface, event_name)
+        event.wait(waiting_time)
+        self.device.interface.play_event.wait()
 
 
     def pin_thread(self, pin_number, duration, start_time, start, end, on, off, block, i, n_iters=np.nan, d_name=None, board=None):
@@ -79,7 +82,7 @@ class ArduinoThread(threading.Thread):
         # halt all threads until start_time + sync_time is reached
         # wait until all threads are ready to begin
         sleep1 = (self.device.interface.init_time + datetime.timedelta(seconds=sync_time) - datetime.datetime.now()).total_seconds()
-        stop = self.device.interface.exit.wait(sleep1)
+        stop = self.wait(sleep1)
         self.log.info('{} running'.format(d_name))
         if stop:
             self.toggle_pin(pin_number, 0)
@@ -91,7 +94,7 @@ class ArduinoThread(threading.Thread):
         # i.e. wait until it is time to turn on a pin
         sleep2 = (thread_start + datetime.timedelta(seconds=start) - datetime.datetime.now()).total_seconds()
         if sleep2 > 0:
-            stop = self.device.interface.exit.wait(sleep2)
+            stop = self.wait(sleep2)
             if stop:
                 self.log.debug("{} received exit".format(d_name))
                 self.toggle_pin(pin_number, 0)
@@ -120,7 +123,7 @@ class ArduinoThread(threading.Thread):
                     warnings.warn("Runtime: {}".format(runtime))
 
                 else:
-                    stop = self.device.interface.exit.wait(sleep_time)
+                    stop = self.wait(sleep_time)
                     if stop:
                         self.toggle_pin(pin_number, 0)
                         return 0
@@ -132,7 +135,7 @@ class ArduinoThread(threading.Thread):
                 if sleep_time < 0:
                     warnings.warn("Runtime: {}".format(runtime))
                 else:
-                    stop = self.device.interface.exit.wait(sleep_time)
+                    stop = self.wait(sleep_time)
                 if stop:
                     self.toggle_pin(pin_number, 0, 0)
                     return 0
@@ -148,7 +151,7 @@ class ArduinoThread(threading.Thread):
                 sleep_time += sleep2
    
             #time.sleep(sleep_time)
-            stop = self.device.interface.exit.wait(sleep_time)
+            stop = self.wait(sleep_time)
             if stop:
                 self.toggle_pin(pin_number, 0)
                 return 0

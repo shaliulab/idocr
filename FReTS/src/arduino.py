@@ -84,7 +84,6 @@ class LearningMemoryDevice(PDLoader):
     
     def prepare(self):
 
-
         threads = self.interface.threads
         self.program["active"] = False
         self.program["thread_name"] = None

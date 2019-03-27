@@ -375,12 +375,17 @@ class Tracker():
 
         self.status = self.track()
 
-        while self.status and not self.interface.exit.is_set():
+        while self.status and not self.interface.exit.is_set() and self.interface.stop_event.is_set():
 
-            self.merge_masks()
-            self.interface.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
-            self.status = self.track()
-            self.interface.exit.wait(1)
+            if self.interface.pause:
+                self.interface.exit.wait(0.1)
+                
+            else:
+
+                self.merge_masks()
+                self.interface.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
+                self.status = self.track()
+                self.interface.exit.wait(1)
         
         if not self.interface.exit.is_set():
             self.interface.exit.set()
@@ -408,7 +413,6 @@ class Tracker():
         self.log.info("{} frames analyzed".format(self.frame_count))
 
         if not self.interface.exit.is_set(): self.interface.onClose()
-
 
     def merge_masks(self):
     
