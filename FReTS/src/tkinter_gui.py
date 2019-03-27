@@ -140,31 +140,33 @@ class TkinterGui():
         Update the arduino monitor
         '''
         
-        filtered_mapping = mapping
-        # filtered_mapping = mapping.loc[~mapping.index.isin(['ONBOARD_LED'])]
-        if self.tkinter_init:
-        
-            for i, pin in enumerate(filtered_mapping.itertuples()):
-                
-                label = tk.Label(self.canvas, text = pin.Index, fg = 'white', bg = 'black')
-                y = 500 + pin.x * 50
-                x = 50 + pin.y * 100
-                label.place(x=x-15, y=y-30)
-                self.panel[i] = label
-                # circle is an integer indicating the index of the shape
-                # i.e. the first cirlce returns 1, the second 2 and so forth
-                circle = self.canvas.create_circle(x, y, 12, fill = "red")
-        
-        else:
-            for i, pin in enumerate(filtered_mapping.itertuples()):
-                
-                state = self.interface.device.pin_state[pin.Index]
+        # check that the mapping is loaded (i.e. is not None)
+        if mapping is not None:
 
-                if type(state) is bool:
-                    color = 'yellow' if state else 'red'
-                else:
-                    color = 'blue'
-                self.canvas.itemconfig(i+1, fill = color)
+            if self.tkinter_init:
+            
+                for i, pin in enumerate(mapping.itertuples()):
+                    
+                    label = tk.Label(self.canvas, text = pin.Index, fg = 'white', bg = 'black')
+                    y = 500 + pin.x * 50
+                    x = 50 + pin.y * 100
+                    label.place(x=x-15, y=y-30)
+                    self.panel[i] = label
+                    # circle is an integer indicating the index of the shape
+                    # i.e. the first cirlce returns 1, the second 2 and so forth
+                    circle = self.canvas.create_circle(x, y, 12, fill = "red")
+            
+            else:
+                for i, pin in enumerate(mapping.itertuples()):
+                    
+                    state = self.interface.device.pin_state[pin.Index]
+    
+                    if type(state) is bool:
+                        color = 'yellow' if state else 'red'
+                    else:
+                        color = 'blue'
+                    self.canvas.itemconfig(i+1, fill = color)
+
     
     def tkinter_update_statusbar(self):
         '''
@@ -198,11 +200,13 @@ class TkinterGui():
          
         ## TODO rewrite to make less verbose
         ####################################
-        self.tkinter_update_widget(img=self.interface.frame_color, name='frame_color')
-        # self.tkinter_update_widget(img=self.interface.gray_gui, name='gray_gui')
-        # self.tkinter_update_widget(img=self.monitor, y=self.gui_pad * 2 + * (self.gui_width + self.gui_pad), x=self.gui_pad * 2 + * (self.gui_width + self.gui_pad), preprocess=False)
-        self.tkinter_update_monitor(self.interface.device.mapping)
-        self.tkinter_update_statusbar()
+        if self.interface.track:
+            self.tkinter_update_widget(img=self.interface.frame_color, name='frame_color')
+            self.tkinter_update_widget(img=self.interface.gray_gui, name='gray_gui')
+
+        if self.interface.device:
+            self.tkinter_update_monitor(self.interface.device.mapping)
+            self.tkinter_update_status()
 
         if self.tkinter_init:
             # # self.interface.tkinter_init = False
