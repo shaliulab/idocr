@@ -19,6 +19,7 @@ tracker:
     crop: 1
     store: "data/store"
     N: 10
+    fail: 'failed_arenas/'
 
 arduino:
     store: "metadata/store"

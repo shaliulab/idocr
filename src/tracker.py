@@ -336,8 +336,11 @@ class Tracker():
                
                 # If still 0, it means that none of the fly contours detected
                 # were validated, a fly was not found in this arena!
-                if id_fly == 0:
+                if id_fly == 1:
                     self.missing_fly += 1
+                    fname = Path(self.interface.cfg['tracker']['fail'], '{}_{}.tiff'. format(self.frame_count, arena.identity)).__str__()
+                    gray_crop = gray[arena.y0:arena.y1, arena.x0:arena.x1]
+                    cv2.imwrite(fname, gray_crop)
 
 
                 # Update the id_arena to account for one more arena detected

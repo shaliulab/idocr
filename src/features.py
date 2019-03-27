@@ -57,6 +57,7 @@ class Arena():
         x0 = self.x - padding
         x1 = self.x + self.w + padding
         mask[y0:y1, x0:x1] = 255
+        self.x0, self.y0, self.x1, self.y1 = x0, y0, x1, y1
         self.mask = mask
         return mask
         #self.mask = np.full(gray.shape, 255, dtype=np.uint8)
