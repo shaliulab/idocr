@@ -221,6 +221,5 @@ class Interface():
 
         while not self.exit.is_set() and self.gui is not None:
             
-            if self.device.loaded:
-                # print(type(self.device.mapping))
-                self.gui.update()
+            # print(type(self.device.mapping))
+            self.gui.update()

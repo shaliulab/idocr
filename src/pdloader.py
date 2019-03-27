@@ -26,45 +26,54 @@ class PDLoader():
         self.loaded = False
         self.block_names = None
         self.overview = None
-
         self.index_col = 'pin_id'
-
-        mapping = pd.read_csv(mapping, skip_blank_lines=True, comment="#")
-
         self.blocks_folder = self.interface.cfg["blocks"]["folder"]
-        pattern = self.interface.cfg["blocks"]["pattern"]
+        self.pattern = self.interface.cfg["blocks"]["pattern"]
         
-        blocks = {f.split(".")[0]: f for f in os.listdir(self.blocks_folder) if f.endswith(pattern)}
-
+        # Read mapping table (pin coordinates and names)
+        mapping = pd.read_csv(mapping, skip_blank_lines=True, comment="#")
         mapping.set_index(self.index_col, inplace = True)
         self.mapping = mapping
 
-        program = pd.read_csv(program)
-        self.block_names = program['block']
+        # Fetch blocks available in the folder
+        # A block is an ensemble of events with a practical function (testing, training, etc)
+        blocks = {f.split(".")[0]: f for f in os.listdir(self.blocks_folder) if f.endswith(self.pattern)}
+        self.blocks = blocks
 
+        
+        # Read program table
+        program = pd.read_csv(program)
+        # Make numeric and divide by 60
         program = self.format(program, 'block')
+        # Autocomplete start NaNs based on previous block
         program = self.complete_nan(program)  
+        # Compute the end for each block
         program["end"] = program["start"] + program["duration"] * program["times"]
 
-        self.overview = program
-        program = self.compile(blocks)
+        # Take a snapshot of the program and save it in overview
+        overview = program
+        block_names = overview.index #  commment
+
+        
+        program = self.compile(program, blocks)
+        self.overview = overview
         self.program = program
+        self.block_names = block_names
+
         self.loaded = True
         self.log = logging.getLogger(__name__)
 
     def complete_nan(self, program):
-        overview = program
+
         old_start = 0
         for i, row in enumerate(program.itertuples()):
-            print(i)
-             # Compute what is the start if row.start != row.start (i.e. row.start is np.nan)
+            # Compute what is the start if row.start != row.start (i.e. row.start is np.nan)
             # based on the start, duration and times of the previous (old) block
             start = row.start if row.start == row.start else (old_start+row.duration*row.times)
-            overview.loc[overview.index[i], 'start'] = start
+            program.loc[program.index[i], 'start'] = start
             old_start = start
-            
-        
-        return overview
+
+        return program
 
     
     def format(self, df, index):
@@ -75,48 +84,70 @@ class PDLoader():
                 df[field] = df[field].apply(convert) * 60
         return df
 
-    def read_block(self, filename):
-        block = pd.read_csv(Path(self.blocks_folder, filename), skip_blank_lines=True, comment="#")
+    def read_block(self, block_name):
+        block = pd.read_csv(Path(self.blocks_folder, self.blocks[block_name]), skip_blank_lines=True, comment="#")
         block = self.format(block, 'pin_id')
         return block
 
-    def compile(self, blocks):
+    def compile(self, program, blocks):
+        '''
+        Put all the blocks together in a single data frame
+        taking into account block repetitions
+        Takes the event dataframe contained in the block file
+        and the program (block coordinator) contained in the program
+        and returns an event dataframe reflecting thestructure in the block coordinator 
+        '''
 
-        new_program = [None,] * self.overview.shape[0]
-        for i, row in enumerate(self.overview.itertuples()):
-            print(row)
+        new_program = [None,] * program.shape[0]
+        # For every row in the program file (i.e. every block)
+        for i, row in enumerate(program.itertuples()):
 
-            block = row.Index
-            # Compute what is the start if row.start != row.start (i.e. row.start is np.nan)
-            # based on the start, duration and times of the previous (old) block
+            
+            # Fetch the fields
+            block_name = row.Index
             start = row.start
             times = row.times
             duration = row.duration
+            # Read the block and format it the same way the program file was
+            block = self.read_block(block_name)
 
-            block_table = self.read_block(blocks[block])
+            # Copy the block times times (as instructed in the program csv file)
+            block_repeat = pd.concat([block for t in range(times)])
+            # Create an itereations column that will contain for each event
+            # the iteration of the block it corresponds to 
+            iter_column = np.concatenate([np.repeat(t, block.shape[0]) for t in range(times)])
+            block_repeat["iterations"] = iter_column
+            # If the block is repeated once, then all the events will get 0 in the iterations field
+            # If the block is repeated twice, then all the events will be duplicated
+            # (first one batch and then the other)
+            # and the second batch will have 1 in iterations, and so forth
 
-            iter_column = np.concatenate([np.repeat(t, block_table.shape[0]) for t in range(times)])
-            block_table_repeat = pd.concat([block_table for t in range(times)])
-            block_table_repeat["iterations"] = iter_column
-
-            block_table_repeat.loc[:, "start"] += start
-            block_table_repeat.loc[:, "end"] += start
-
-            block_table_repeat["start"] = block_table_repeat["start"] + block_table_repeat["iterations"] * duration
-            end = (block_table_repeat["end"] + (1 + block_table_repeat["iterations"]) * duration).values
+            # Add block start to all the events in the block
+            # as their time is relative to the block start
+            # and not the program i.e. actual start 
+            block_repeat.loc[:, "start"] += start
+            block_repeat.loc[:, "end"] += start
             
-            row_end = np.array([row.end], np.float64)
-            end = min(row_end, end)
+            # Add a new column stating what block this events come from
+            block_repeat.loc[:, "block"] = block_name                
 
-            
-            block_table_repeat.loc[:, "end"] = end
-            block_table_repeat.loc[:, "block"] = block
+            # Finally, if there are iterations, we need to add the duration of 1 iterations
+            # to the 2nd iteration, 2 durations to the 3rd iteration, and so forth
+            block_repeat["start"] = block_repeat["start"] + block_repeat["iterations"] * duration
 
+            # End will be either the one that would correspond based on the number of iterations and the duration
+            # unless the block stops earlier than that i.e. the maximum is row.end so we need
+            # to take the element-wise minimum of the event ends (end) and the block end (row.end)
+            end = (block_repeat["end"] + block_repeat["iterations"] * duration).values
+            row_end = np.array([row.end])
 
-                
-            new_program[i] = block_table_repeat
+            end = np.minimum(row.end, end)
+            block_repeat.loc[:, "end"] = end
 
+            # Add the dataframe to the corrresponding position of the dfs list
+            new_program[i] = block_repeat
+
+        # Concat all the dataframes in the list and return it
         compiled_program = pd.concat(new_program)
         
-        print(compiled_program)
         return compiled_program

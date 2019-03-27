@@ -24,8 +24,8 @@ from arduino_threading import ArduinoThread
 # Set up package configurations
 setup_logging()
 
-
 boards = {"Arduino": Arduino, "ArduinoMega": ArduinoMega}
+
 class LearningMemoryDevice(PDLoader):
 
     def __init__(self, interface, mapping, program, port):
