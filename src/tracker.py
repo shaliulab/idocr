@@ -368,7 +368,6 @@ class Tracker():
 
         else:
             #self.save_prompt()
-            self.log.info("Number of frames that fly is not detected in is {}".format(self.missing_fly))
             return None
         
     def _run(self):
@@ -382,8 +381,11 @@ class Tracker():
             self.status = self.track()
             self.interface.exit.wait(1)
         
+        self.onClose()
+
         if not self.interface.exit.is_set():
             self.interface.exit.set()
+            
 
     def run(self):
 
@@ -400,11 +402,10 @@ class Tracker():
         
     def onClose(self):
         self.stream.release()
-                
-        self.saver.store_and_clear(self.saver.cache['data'], 'data')
-
         self.log.info("Tracking stopped")
         self.log.info("{} frames analyzed".format(self.frame_count))
+        self.log.info("Number of frames that fly is not detected in is {}".format(self.missing_fly))
+        self.saver.store_and_clear(self.saver.lst, 'data')
 
         if not self.interface.exit.is_set(): self.interface.onClose()
 
