@@ -192,11 +192,10 @@ class Interface():
         signals = ('TERM', 'HUP', 'INT')
         for sig in signals:
             signal.signal(getattr(signal, 'SIG' + sig), self.onClose)
+    
 
-    def start(self):
-        """
-        """
-
+    def play(self):
+        print('Play')
         self.control_c_handler()
 
         if self.arduino:
@@ -218,7 +217,10 @@ class Interface():
         if not self.track and not self.gui and self.arduino:
             self.log.debug("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
             self.exit.wait(self.duration)
-
+    
+    def start(self):
+        """
+        """        
         while not self.exit.is_set() and self.gui is not None:
             
             if self.device.loaded:

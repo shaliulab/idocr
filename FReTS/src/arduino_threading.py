@@ -195,7 +195,6 @@ class ArduinoThread(threading.Thread):
 
         x = bool(value) if not freq else freq
         self.device.pin_state[self.pin_name] = x
-        print(self.device.pin_state)
 
         # Create a new row in the metadata
         self.device.saver.process_row(

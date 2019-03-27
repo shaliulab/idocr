@@ -2,6 +2,7 @@
 import datetime
 import logging
 import os.path
+from pathlib import Path
 import sys
 import time
 import tkinter as tk
@@ -14,33 +15,40 @@ from PIL import ImageTk, Image
 
 # Local application imports
 from frets_utils import setup_logging
+from FReTS import ROOT_DIR
+
 setup_logging()
 
-class ResizingCanvas(tk.Canvas):
-    def __init__(self,parent,**kwargs):
 
-        tk.Canvas.__init__(self,parent,**kwargs)
-        self.bind("<Configure>", self.on_resize)
-        self.height = self.winfo_reqheight()
-        self.width = self.winfo_reqwidth()
+# class ResizingCanvas(tk.Canvas):
+#     def __init__(self,parent,**kwargs):
 
-    def on_resize(self,event):
-        # determine the ratio of old width/height to new width/height
-        wscale = float(event.width)/self.width
-        hscale = float(event.height)/self.height
-        self.width = event.width
-        self.height = event.height
-        # resize the canvas 
-        self.config(width=self.width, height=self.height)
-        # rescale all the objects tagged with the "all" tag
-        # self.scale("all",0,0,wscale,hscale)
+#         tk.Canvas.__init__(self,parent,**kwargs)
+#         self.bind("<Configure>", self.on_resize)
+#         self.height = self.winfo_reqheight()
+#         self.width = self.winfo_reqwidth()
 
-    # https://stackoverflow.com/questions/17985216/draw-circle-in-tkinter-python
-    def create_circle(self, x, y, r, **kwargs):
-        return self.create_oval(x-r, y-r, x+r, y+r, **kwargs)
+#     def on_resize(self,event):
+#         # determine the ratio of old width/height to new width/height
+#         wscale = float(event.width)/self.width
+#         hscale = float(event.height)/self.height
+#         self.width = event.width
+#         self.height = event.height
+#         # resize the canvas 
+#         self.config(width=self.width, height=self.height)
+#         # rescale all the objects tagged with the "all" tag
+#         # self.scale("all",0,0,wscale,hscale)
+
+#     # https://stackoverflow.com/questions/17985216/draw-circle-in-tkinter-python
+#     def create_circle(self, x, y, r, **kwargs):
+#         return self.create_oval(x-r, y-r, x+r, y+r, **kwargs)
+
+def _create_circle(self, x, y, r, **kwargs):
+    return self.create_oval(x-r, y-r, x+r, y+r, **kwargs)
+tk.Canvas.create_circle = _create_circle
 
 
-class TkinterGui(ResizingCanvas):
+class TkinterGui():
 
     def __init__(self, interface):
 
@@ -56,31 +64,47 @@ class TkinterGui(ResizingCanvas):
         # set initial size of window (800x800 and 500 pixels up)
         root.geometry("800x800+0-500")
         self.root = root
+        self.interface = interface
 
-        # frame = tk.Frame(root)
-        # frame.pack(fill=tk.BOTH, expand=tk.YES)
-        
-        
-        canvas = ResizingCanvas(self.root, width=800, height=800, highlightthickness=0, bd=0, relief='ridge')
-        canvas.pack(fill=tk.BOTH, expand=tk.YES, anchor = tk.NW)
+        tracker_frame = tk.Frame(root, relief = tk.SUNKEN)
+        tracker_frame.grid(row = 0, column = 0)
+        self.tracker_frame = tracker_frame
+
+        canvas = tk.Canvas(root, highlightthickness=0, bd=0, relief='ridge')
+        canvas.grid(row = 0, column = 5)
         canvas.bind("<Button-1>", self.callback)
+        self.canvas = canvas
+
+        button_frame = tk.Frame(root, relief = tk.SUNKEN)
+        button_frame.grid(row = 5, column = 0)
+        self.button_frame = button_frame
+
+        statusbar_frame = tk.Frame(root, relief = tk.SUNKEN)
+        statusbar_frame.grid(row = 10, column = 0)
+        self.statusbar_frame = statusbar_frame
         
-        statusbar = tk.Label(self.root, text="Welcome to FReTs", relief=tk.SUNKEN, anchor=tk.W)
+
+        # Initialize statusbar
+        statusbar = tk.Label(self.statusbar_frame, text="Welcome to FReTs", relief=tk.SUNKEN, anchor=tk.W)
         statusbar.pack(side=tk.BOTTOM, fill=tk.X)
         self.statusbar = statusbar
 
-        # canvas.grid()
-        # self.frame = frame
-        self.canvas = canvas
+        # Initialize play button
+        fname = Path(ROOT_DIR, 'static', 'fly.png').__str__()
+        # print(fname)
+        flyPhoto = tk.PhotoImage(file=fname)
+        playButton = tk.Button(self.button_frame, image=flyPhoto, command=self.interface.play)
+        playButton.pack(fill=tk.X)
+        self.playButton = playButton
+
 
         # based on https://www.pyimagesearch.com/2016/05/30/displaying-a-video-feed-with-opencv-and-tkinter/
-        self.gui_width = 250
+        self.gui_width = 500
         self.gui_pad = 20
         self.tkinter_init = True
         self.video_height = None
         self.video_width = None
         
-        self.interface = interface
         self.log = logging.getLogger(__name__)
 
     def callback(self, event):
@@ -94,14 +118,16 @@ class TkinterGui(ResizingCanvas):
         return image
 
     def tkinter_update_widget(self, img, name = "", preprocess=True):
+        '''
+        Update images/frames
+        '''
 
-   
         if preprocess:
             image = self.tkinter_preprocess(img)
 
         if self.tkinter_init:
-            label = tk.Label(self.canvas, image=image)
-            label.pack(side=tk.LEFT, anchor=tk.N)
+            label = tk.Label(self.tracker_frame, image=image)
+            label.pack(side=tk.LEFT, anchor=tk.W)
             self.panel[name] = label
 
         else:
@@ -110,6 +136,9 @@ class TkinterGui(ResizingCanvas):
 
     
     def tkinter_update_monitor(self, mapping):
+        '''
+        Update the arduino monitor
+        '''
         
         filtered_mapping = mapping
         # filtered_mapping = mapping.loc[~mapping.index.isin(['ONBOARD_LED'])]
@@ -137,13 +166,23 @@ class TkinterGui(ResizingCanvas):
                     color = 'blue'
                 self.canvas.itemconfig(i+1, fill = color)
     
-    def tkinter_update_status(self):
+    def tkinter_update_statusbar(self):
+        '''
+        Update statusbar
+        '''
 
         c1 = self.interface.device.overview['start'] < self.interface.timestamp
         c2 = self.interface.device.overview['end'] > self.interface.timestamp
         selected_rows = c1 & c2
         active_blocks = self.interface.device.overview.index[selected_rows].tolist()
-        main_block = active_blocks[-1]
+        text = 'Welcome to FReTs'
+        if active_blocks:
+            main_block = active_blocks[-1]
+        else:
+            self.statusbar['text'] = text
+            return 0
+
+
 
         passed = self.interface.timestamp - self.interface.device.overview.loc[main_block]['start']
         left = self.interface.device.overview.loc[main_block]['end'] - self.interface.timestamp
@@ -160,10 +199,10 @@ class TkinterGui(ResizingCanvas):
         ## TODO rewrite to make less verbose
         ####################################
         self.tkinter_update_widget(img=self.interface.frame_color, name='frame_color')
-        self.tkinter_update_widget(img=self.interface.gray_gui, name='gray_gui')
+        # self.tkinter_update_widget(img=self.interface.gray_gui, name='gray_gui')
         # self.tkinter_update_widget(img=self.monitor, y=self.gui_pad * 2 + * (self.gui_width + self.gui_pad), x=self.gui_pad * 2 + * (self.gui_width + self.gui_pad), preprocess=False)
         self.tkinter_update_monitor(self.interface.device.mapping)
-        self.tkinter_update_status()
+        self.tkinter_update_statusbar()
 
         if self.tkinter_init:
             # # self.interface.tkinter_init = False

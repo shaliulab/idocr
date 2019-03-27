@@ -5,6 +5,8 @@
 import argparse
 import logging
 import coloredlogs
+import sys
+print(sys.path)
 from frets_utils import setup_logging
 from interface import Interface
 
@@ -48,6 +50,5 @@ interface = Interface(
 
 interface.prepare()
 interface.start()
-
 
 
