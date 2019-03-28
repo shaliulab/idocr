@@ -15,7 +15,7 @@ from PIL import ImageTk, Image
 
 # Local application imports
 from frets_utils import setup_logging
-from FReTS import ROOT_DIR
+from FReTS import ROOT_DIR, STATIC_DIR
 
 setup_logging()
 
@@ -59,6 +59,10 @@ class TkinterGui():
         self.width = 800
 
         root.geometry("{}x{}+0-500".format(self.width, self.height))
+        icon_path = Path(ROOT_DIR, STATIC_DIR, 'fly.png').__str__()
+        # root.iconbitmap(icon_path)
+        root.tk.call('wm', 'iconphoto', root._w, tk.PhotoImage(file=icon_path))
+
         self.root = root
         
         self.interface = interface
@@ -83,8 +87,9 @@ class TkinterGui():
         button_frame.grid(row=1, column=0, columnspan=2)
         statusbar_frame.grid(row=2, column=0, columnspan=2, sticky='ew')
         
-        main_frame.grid_rowconfigure(1, weight=1)
+        main_frame.grid_rowconfigure(0, weight=1)
         main_frame.grid_columnconfigure(0, weight=1)
+        main_frame.grid_columnconfigure(1, weight=1)
 
 
         # main_frame.pack(side="top", fill="both", expand=True)
@@ -94,6 +99,7 @@ class TkinterGui():
         # statusbar_frame.pack(side="bottom", fill="x", expand=True)
         
         # Add to instance
+        self.main_frame = main_frame
         self.tracker_frame = tracker_frame
         self.arduino_frame = arduino_frame
         self.button_frame = button_frame
@@ -140,7 +146,6 @@ class TkinterGui():
         self.canvas.width = event.width
         self.canvas.height = event.height
         # resize the canvas
-        print(wscale)
         self.canvas.scale("all",0,0,wscale,hscale)
         # rescale all the objects tagged with the "all" tag
 
@@ -148,10 +153,11 @@ class TkinterGui():
     def callback(self, event):
         print("clicked at", event.x, event.y)
 
-    def tkinter_preprocess(self, img):
+    def tkinter_preprocess(self, img, width):
+
         # print(self.width//2)
         image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        image = imutils.resize(image, width=self.width//2)
+        image = imutils.resize(image, width=width)
         # print(image.shape)
         image = Image.fromarray(image)
         image = ImageTk.PhotoImage(image)
@@ -163,7 +169,12 @@ class TkinterGui():
         '''
 
         if preprocess:
-            image = self.tkinter_preprocess(img)
+            
+            width = self.main_frame.winfo_width() // 2
+            # self.log.debug('Main frame width is {}'.format(width))
+            if width <= 1: width = self.width // 2
+
+            image = self.tkinter_preprocess(img, width = width)
 
         if self.tkinter_init:
             label = tk.Label(self.tracker_frame, image=image)
@@ -184,17 +195,17 @@ class TkinterGui():
         if mapping is not None:
 
             if self.tkinter_init:
-            
+                
                 for i, pin in enumerate(mapping.itertuples()):
                     
                     label = tk.Label(self.canvas, text = pin.Index, fg = 'white', bg = 'black')
-                    y = self.width//2 + pin.x*50
-                    x = 50 + pin.y * 100
+                    y = pin.x*60
+                    x = 30 + pin.y * 60
                     label.place(x=x-15, y=y-30)
                     self.panel[i] = label
                     # circle is an integer indicating the index of the shape
                     # i.e. the first cirlce returns 1, the second 2 and so forth
-                    circle = self.canvas.create_circle(x, y, 12, fill = "red")
+                    circle = self.canvas.create_circle(x, y, 6, fill = "red")
                 
                 self.canvas.addtag_all("all")
 
@@ -242,22 +253,25 @@ class TkinterGui():
          
         ## TODO rewrite to make less verbose
         ####################################
-        if self.interface.track:
-            self.tkinter_update_widget(img=self.interface.frame_color, name='frame_color')
-            # self.tkinter_update_widget(img=self.interface.gray_gui, name='gray_gui')
+        ## TODO Separate initialization from update
+        ####################################
+        if self.interface.play_event.is_set() or True:
+            if self.interface.track:
+                self.tkinter_update_widget(img=self.interface.frame_color, name='frame_color')
+                # self.tkinter_update_widget(img=self.interface.gray_gui, name='gray_gui')
 
-        if self.interface.device:
-            self.tkinter_update_monitor(self.interface.device.mapping)
-            self.tkinter_update_statusbar()
-
-        if self.tkinter_init:
-            # # self.interface.tkinter_init = False
-            self.root.wm_title("Learning memory stream")
-            self.root.wm_protocol("WM_DELETE_WINDOW", self.onClose)
-            self.canvas.addtag_all("all")
-            self.tkinter_init = False
-            self.tkinter_finished = True
-        # if self.interface.timestamp % 1 == 0:
+            if self.interface.device:
+                self.tkinter_update_monitor(self.interface.device.mapping)
+                self.tkinter_update_statusbar()
+    
+            if self.tkinter_init:
+                # # self.interface.tkinter_init = False
+                self.root.wm_title("Learning memory stream")
+                self.root.wm_protocol("WM_DELETE_WINDOW", self.onClose)
+                self.canvas.addtag_all("all")
+                self.tkinter_init = False
+                self.tkinter_finished = True
+            # if self.interface.timestamp % 1 == 0:
 
         self.root.update_idletasks()
         # needed to close the window with X
