@@ -30,6 +30,7 @@ class Arena():
         # except:
 
         self.x, self.y, self.w, self.h = cv2.boundingRect(self.contour)
+        self.center = (self.x + self.w//2, self.y + self.h // 2)
         M0 = cv2.moments(self.contour)
         if M0['m00'] != 0 and M0['m10']:
             self.cx = int(M0['m10']/M0['m00'])
@@ -125,6 +126,8 @@ class Fly():
             # used in the validation step
             self.cx = int(M1['m10']/M1['m00'])
             self.cy = int(M1['m01']/M1['m00'])
+            self.x_corrected = self.cx - self.arena.center[0]
+            self.y_corrected = self.cy - self.arena.center[1]
         else:
             # handle what happens when the if above is not true
             pass

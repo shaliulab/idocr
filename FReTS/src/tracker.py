@@ -314,7 +314,8 @@ class Tracker():
                     self.saver.process_row(
                             d = {
                                 "frame": self.frame_count, "timestamp": self.interface.timestamp,
-                                "arena": arena.identity, "fly": fly.identity, "cx": fly.cx, "cy": fly.cy,
+                                "arena": arena.identity, "fly": fly.identity,
+                                "cx": fly.x_corrected, "cy": fly.y_corrected,
                                 "datetime": datetime.datetime.now()
                                 },
                             key = "data",
