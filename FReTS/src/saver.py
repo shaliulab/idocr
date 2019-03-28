@@ -30,6 +30,7 @@ class Saver():
         self.init_time = init_time
         self.store = "{}_{}".format(store, init_time.strftime("%H%M%S-%d%m%Y"))
         self.log = logging.getLogger(__name__)
+        self.lst = []
         
     def process_row(self, d, key, max_len = 5000):
         """
@@ -40,10 +41,11 @@ class Saver():
     
         """
         # keep the rows for each key separate.
-        lst = self.cache.setdefault(key, [])
-        if len(lst) >= max_len:
-            self.store_and_clear(lst, key)
-        lst.append(d)
+        # lst = self.cache.setdefault(key, [])
+        
+        if len(self.lst) >= max_len:
+            self.store_and_clear(self.lst, key)
+        self.lst.append(d)
         self.log.debug("Adding new datapoint to cache")
     
     def store_and_clear(self, lst, key):
