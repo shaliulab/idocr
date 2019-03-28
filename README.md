@@ -32,7 +32,7 @@ Enter the downloaded folder and run
 ```
 This will trigger the opening of the following window
 
-![](/home/antortjim/MEGA/FlySleepLab/FReTS/static/readme/startup.png) 
+![](static/readme/startup.png) 
 
 loaded with the following settings:
 
