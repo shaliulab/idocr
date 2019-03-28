@@ -1,6 +1,7 @@
 # Standard library imports
 import datetime
 import logging
+import sys
 import threading
 import warnings
 
@@ -34,8 +35,14 @@ class ArduinoThread(threading.Thread):
     
     def wait(self, waiting_time, event_name='exit'):
         event = getattr(self.device.interface, event_name)
-        event.wait(waiting_time)
-        self.device.interface.play_event.wait()
+        if not event.is_set():
+            event.wait(waiting_time)
+        else:
+            sys.exit(0)
+
+        if self.device.interface.pause:
+            self.log.info('Waiting for play button press')
+            self.device.interface.play_event.wait()
 
 
     def pin_thread(self, pin_number, duration, start_time, start, end, on, off, block, i, n_iters=np.nan, d_name=None, board=None):

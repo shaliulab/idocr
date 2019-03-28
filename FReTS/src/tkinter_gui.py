@@ -27,20 +27,15 @@ tk.Canvas.create_circle = _create_circle
 class BetterButton(tk.Button):
     def __init__(self, parent, event_name, command, index, **kwargs):
         self.index = index
-        # photoimage = self.generate_image(event_name)
-        fname = Path(ROOT_DIR, 'static', '{}.png'.format('fly')).__str__()
-        print(fname)
-        image = Image.open(fname)
-        photoimage = ImageTk.PhotoImage(image)
-
+        photoimage = self.generate_image(event_name)
+        # fname = Path(ROOT_DIR, 'static', '{}.png'.format('fly')).__str__()
+        # photoimage = ImageTk.PhotoImage(file = fname)
         tk.Button.__init__(self, parent, image = photoimage, command = command, **kwargs)
+        self.image = photoimage
                 
     def generate_image(self, event_name):
         fname = Path(ROOT_DIR, 'static', '{}.png'.format(event_name)).__str__()
-        print(fname)
-
-        image = Image.open(fname)
-        photoimage = ImageTk.PhotoImage(image)
+        photoimage = ImageTk.PhotoImage(file = fname)
         return photoimage
 
     def push(self):

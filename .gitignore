@@ -110,6 +110,7 @@ data/*
 metadata/*
 src/utils/check_video.py
 src/utils/make_video.py
+failed_arenas/*
 src/utils/record_me.py
 src/utils/test1.py
 src/utils/tk-img2video.py

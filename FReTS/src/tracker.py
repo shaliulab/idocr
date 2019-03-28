@@ -375,7 +375,7 @@ class Tracker():
 
         self.status = self.track()
 
-        while self.status and not self.interface.exit.is_set() and self.interface.stop_event.is_set():
+        while self.status and not self.interface.exit.is_set():
 
             if self.interface.pause:
                 self.interface.exit.wait(0.1)
@@ -386,9 +386,11 @@ class Tracker():
                 self.interface.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
                 self.status = self.track()
                 self.interface.exit.wait(1)
+
+            if self.interface.stop_event.is_set():
+                self.interface.interface_initialized = False
+                self.interface.play_event.wait()
         
-        if not self.interface.exit.is_set():
-            self.interface.exit.set()
 
     def run(self):
 
