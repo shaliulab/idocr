@@ -1,0 +1,2 @@
+pin_id,start,end,on,off
+ONBOARD_LED,0,999,0.5/60,0.5/60
