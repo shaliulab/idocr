@@ -28,7 +28,7 @@ class Saver():
         self.cache = cache
         self.name = name
         self.init_time = init_time
-        self.store = "{}_{}".format(store, init_time.strftime("%H%M%S-%d%m%Y"))
+        self.store = "{}_{}".format(store, init_time.strftime("%Y%m%d-%H%M%S"))
         self.log = logging.getLogger(__name__)
         self.lst = []
         

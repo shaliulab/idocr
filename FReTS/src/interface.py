@@ -118,7 +118,7 @@ class Interface():
         self.experimenter = experimenter if experimenter else self.cfg["tracker"]["experimenter"]
         self.log = logging.getLogger(__name__)
         
-        self.log.info("Start time: {}".format(self.init_time.strftime("%H%M%S-%d%m%Y")))
+        self.log.info("Start time: {}".format(self.init_time.strftime("%Y%m%d-%H%M%S")))
 
         self.pause = False
         self.stop = False
