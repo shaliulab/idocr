@@ -5,98 +5,52 @@ Developing Fly Real-time Transcription Scope
 ## Introduction
 **FReTS** (**F**ly **Re**al-time **T**ranscription **S**cope) is an interdisciplinary platform which utilizes the real-time tracking system to interact with the animals' transcription activity hence possible behaviors via closed-loop control system, combined with external interferences, such as laser/light stimulation, odour delivery, electric shock, etc.
 
-## Instructions
 
-1 **Connect the camera to the computer via LAN** 
-2 **Run the open_camera.sh script to put it under the IP address that pylon expects**
- 
-
-```
-bash /home/luna.kuleuven.be/u0127714/VIBFlySleepLab/FReTS/src/open_camera.sh
-```
-3 Run the python program to track flies and control the Arduino board
-
-
-  3.1 **Go to the directory where the software is**
- 
-For now you will access Antonio's version of the program
-and also Antonio's python environment, which has all required libraries installed :)
-
-Do that by opening a terminal (Control + Alt + T *at the same time*) and paste the command below
-```
-cd /home/luna.kuleuven.be/u0127714/VIBFlySleepLab/FReTS
-```
-
-   3.2** Run the program!!**
-
-## How to run
-
-In the same terminal, paste the commands below:
-
-### Without Arduino
-
-Usually for debugging purposes
-
-* Open the pylon camera and track flies (does not run Arduino)
-```
-cd /home/luna.kuleuven.be/u0127714/VIBFlySleepLab/FReTS # repeat of the command before
-/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python main.py --track --camera pylon 
-```
-
-### With Arduino
-
-Before running with Arduino, we need to double check where is the Arduino board mounted (kind of similar to what happened with the IP camera). Make sure it is actually connected!
-By default it is mounted in `/dev/` with name `ttyACM0`. However, it could have another name, like `ttyACM1`. You can easily check by running
-
-```
-ls /dev/ttyACM0
-```
-
-if the output you get is a green line that says `/dev/ttyACM0`, good to go! Otherwise, write it down and pass it with the `--port` flag in the commands below i.e. put at the end of  the command the following: `--port theOutputOfLs`
-
-
-* Open the pylon camera, track flies and run the Arduino program encoded in program.csv assuming the pin mappings in pins_mapping.csv
-```
-cd /home/luna.kuleuven.be/u0127714/VIBFlySleepLab/FReTS
-
-/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python main.py --track --camera pylon --arduino --mappings mappings/main.csv --sequence programs/learn.csv
-```
-
-* Open the pylon camera, track flies and run the Arduino program encoded in program.csv assuming the pin mappings in pins_mapping.csv and set the fps to 10
-```
-/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python main.py --track --camera pylon --arduino--mappings Arduino/mappings/main.csv --sequence Arduino/program/main.csv --fps 10
-```
-
-## Troubleshooting
-
+## Run the program
 Please make sure the environment is using
 
 * Python3.6 (ideally python3.6.3)
-* Opencv 3.4.5 or Opencv 4.0.0
+* Opencv 4.0.0 
 
-Otherwise, it might not work.
-
-### Check OpenCV works properly
-
-If OpenCV is capable of making videos, running the command below will create `test_video.mp4` and `test_video.avi` under `videos/`
+A python environment containing this and al the required packages is available under:
 ```
- /home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python tests/tk-img2video.py -p "images/frame*tiff" -o videos/test_video
+/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python
 ```
 
-If OpenCV is capable of reading this videos, running any of this commands should return:
-```
-/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python tests/check_video.py -v videos/test_video.avi
-/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python tests/check_video.py -v videos/test_video.mp4
-```
-```
-True
-(1024, 1280, 3)
-```
+If you have not downloaded the software yet:
 
-If instead you get:
+1- Open a terminal and run
 ```
-False
-None
+git clone https://github.com/VIBFlySleepLab/FReTS
 ```
+this will download the Python code
 
-your OpenCV installation is broken
+Enter the downloaded folder and run
+
+```
+/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python -m FReTS --track --camera pylon --arduino --mapping mappings/main.csv --program programs/test_28_march.csv --duration 120
+```
+This will trigger the opening of the following window
+
+![](/home/antortjim/MEGA/FlySleepLab/FReTS/static/readme/startup.png) 
+
+loaded with the following settings:
+
+* Use the pylon camera to track flies
+* Run the program contained in test_28_march.csv
+* Close in 2 hours (120 minutes)
+
+Pressing the play button will start the tracking and the arduino events
+You can pause and play it again for whatever reason.
+The program can be closed by clicking on the top right x or pressing Control C on the terminal window that was used to launch the program 
+
+## Use the output data
+
+By default tracking and arduino events data are recorded to .csv files `data/` and `metadata/` respectively. The filenames are the same and follow the pattern:
+
+*prefix* _ *date* _ *time*
+
+* prefix is set in the config.yaml file (look at the **store** subentry in the arduino and tracker entries. Default is **store** for both. It can be changed at will!
+* date follows the format year-month-day.
+* time follows the format hour-minute-second.
+
