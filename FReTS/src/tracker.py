@@ -340,7 +340,7 @@ class Tracker():
                 if id_fly == 1:
                     self.missing_fly += 1
                     fname = Path(self.interface.cfg['tracker']['fail'], '{}_{}.tiff'. format(self.frame_count, arena.identity)).__str__()
-                    gray_crop = gray[arena.y0:arena.y1, arena.x0:arena.x1]
+                    gray_crop = gray[arena.tl_corner[1]:arena.br_corner[1], arena.tl_corner[0]:arena.br_corner[0]]
                     cv2.imwrite(fname, gray_crop)
 
 

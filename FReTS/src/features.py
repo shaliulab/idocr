@@ -23,18 +23,31 @@ class Arena():
         self.contour = contour
         self.identity = identity
         self.min_arena_area = self.tracker.interface.cfg["arena"]["min_area"] 
+        self.area = None
+        self.mask = None
+        self.box = None
+        self.tl_corner = None
+        self.dilation_kernel = np.ones((5,5),np.uint8)
         
     def compute(self):
         # try:
         self.area = cv2.contourArea(self.contour)
         # except:
 
-        self.x, self.y, self.w, self.h = cv2.boundingRect(self.contour)
-        self.center = (self.x + self.w//2, self.y + self.h // 2)
+        #self.x, self.y, self.w, self.h = cv2.boundingRect(self.contour)
+        rect = cv2.minAreaRect(self.contour)
+        box = cv2.boxPoints(rect)
+        box = np.int0(box)
+        self.box = box
+        self.tl_corner = np.min(box, axis = 0)
+        self.br_corner = np.min(box, axis = 1)
+
+        #self.center = (self.x + self.w//2, self.y + self.h // 2)
         M0 = cv2.moments(self.contour)
         if M0['m00'] != 0 and M0['m10']:
             self.cx = int(M0['m10']/M0['m00'])
             self.cy = int(M0['m01']/M0['m00'])
+            self.center = (self.cx, self.cy)
         else:
             pass
             # handle what happens when the if above is not true 
@@ -49,29 +62,25 @@ class Arena():
     def make_mask(self, shape):
 
         mask = np.full(shape, 0, dtype = np.uint8)
-        ## TODO:
-        ## Give some room for cases where the fly might be by the edges. Expand the arena a few pixels!
-        padding = 0
-        y0 = self.y - padding
-        y1 = self.y + self.h + padding
-
-        x0 = self.x - padding
-        x1 = self.x + self.w + padding
-        mask[y0:y1, x0:x1] = 255
-        self.x0, self.y0, self.x1, self.y1 = x0, y0, x1, y1
+        cv2.drawContours(mask, [self.box], 0, white, -1)
+        cv2.dilate(mask, self.dilation_kernel, iterations = 1)
         self.mask = mask
         return mask
-        #self.mask = np.full(gray.shape, 255, dtype=np.uint8)
 
     def draw(self, img):
         """Draw the arena
         """
       
         self.tracker.log.debug('Arena {} has an area of {}'.format(self.identity, self.area))
-        cv2.putText(img, 'Arena '+ str(self.identity), (self.x - 50, self.y - 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
+        cv2.putText(img, str(self.identity), (self.tl_corner[0] - 50, self.tl_corner[1] - 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
+
+        # Draw the actual contour
         cv2.drawContours(img, [self.contour], 0, red, 1)
-        cv2.rectangle(img, (self.x, self.y), (self.x + self.w, self.y + self.h), (0,255,255), 2)
-        cv2.circle(img, (self.cx, self.cy), 2, blue, -1)
+        #cv2.rectangle(img, (self.x, self.y), (self.x + self.w, self.y + self.h), (0,255,255), 2)
+
+        # Draw the detected box
+        cv2.drawContours(img,[self.box], 0, yellow, 2)
+        #cv2.circle(img, (self.cx, self.cy), 2, blue, -1)
         
         return img
 
@@ -85,7 +94,7 @@ class Arena():
 
         if len(flies) == 0:
             pass
-            # try the new method
+            # try the edge insensitive method
 
         return flies
  
