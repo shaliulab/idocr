@@ -1,4 +1,7 @@
 import logging
+import os
+import sys
+
 from pypylon import pylon
 from pypylon import genicam
 import cv2
@@ -6,6 +9,8 @@ import coloredlogs
 
 from frets_utils import setup_logging
 from decorators import export 
+
+ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 setup_logging()
 
@@ -21,8 +26,12 @@ class PylonStream():
         try:
             cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
         except genicam._genicam.RuntimeException:
-            log.exception('Camera could not be loaded. Looks like the computer cannot access it')
-            exit(1)
+            os.system("sudo bash {}/src/utils/open_camera.sh".format(ROOT_DIR))
+            try:
+                cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+            except genicam._genicam.RuntimeException:
+                log.exception('Camera could not be loaded. Looks like the computer cannot access it')
+                sys.exit(1)
             
 
         # Print the model name of the camera.
