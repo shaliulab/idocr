@@ -27,7 +27,12 @@ class Arena():
         self.mask = None
         self.box = None
         self.tl_corner = None
+        self.br_corner 
         self.dilation_kernel = np.ones((5,5),np.uint8)
+        fly = None
+
+    def __repr__(self):
+        print("Arena(tracker = self, contour = arena_contour, identity = {})".format(self.identity))
         
     def compute(self):
         # try:
@@ -39,8 +44,11 @@ class Arena():
         box = cv2.boxPoints(rect)
         box = np.int0(box)
         self.box = box
-        self.tl_corner = np.min(box, axis = 0)
-        self.br_corner = np.min(box, axis = 1)
+        tl_corner = np.min(box, axis = 0)
+        br_corner = np.min(box, axis = 1)
+
+        self.tl_corner = tl_corner 
+        self.br_corner = br_corner 
 
         #self.center = (self.x + self.w//2, self.y + self.h // 2)
         M0 = cv2.moments(self.contour)
@@ -50,7 +58,9 @@ class Arena():
             self.center = (self.cx, self.cy)
         else:
             pass
-            # handle what happens when the if above is not true 
+            # handle what happens when the if above is not true
+        
+        return np.array([tl_corner, br_corner])
     
     def validate(self):
         
@@ -119,6 +129,14 @@ class Fly():
         self.max_object_area =  self.tracker.interface.cfg["fly"]["max_area"]
         self.min_object_area =  self.tracker.interface.cfg["fly"]["min_area"]
         self.min_intensity =  self.tracker.interface.cfg["fly"]["min_intensity"]
+
+        self.x = None
+        self.y = None
+        self.w = None
+        self.h = None
+        self.diagonal = None
+        self.arena_distance_x = None
+        self.arena_distance_y = None
     
     def compute(self):
         # compute area of the fly contour
@@ -126,6 +144,10 @@ class Fly():
         # compute the coordinates of the bounding box around the contour
         # https://docs.opencv.org/3.1.0/dd/d49/tutorial_py_contour_features.html
         self.x, self.y, self.w, self.h = cv2.boundingRect(self.contour)
+
+        self.arena_distance_x = self.x - self.arena.tl_corner[0]
+        self.arena_distance_y = self.y - self.arena.tl_corner[1]
+
         # compute the length of the diagonal line between opposite corners of the bounding box
         self.diagonal = np.sqrt(self.w ** 2 + self.h ** 2) 
 
@@ -170,16 +192,17 @@ class Fly():
             fly_passed_5 = cv2.pointPolygonTest(self.arena.contour, (self.cx, self.cy), True) > self.min_obj_arena_dist
             return fly_passed_5 
         
-         
-    
-    def draw(self, img, frame_count):
+    def draw(self, img, frame_count, relative_to_arena=False):
         """Draw fly
         """
         
         if self.identity > 1:
-            cv2.putText(img, 'Error: more than one object found per arena', (25,40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, white, 1)
+            self.tracker.log.warning('Error: more than one object found per arena')
 
-        cv2.rectangle(img, (self.x, self.y), (self.x + self.w, self.y + self.h), blue, 2)
+        if relative_to_arena:
+            cv2.rectangle(img, (self.arena_distance_x, self.arena_distance_y), (self.arena_distance_x + self.w, self.arena_distance_y + self.h), blue, 2)
+        else:
+            cv2.rectangle(img, (self.x, self.y), (self.x + self.w, self.y + self.h), blue, 2)
         self.tracker.log.debug("tl: {},{}. br: {},{}".format(self.x, self.y, self.x + self.w, self.y + self. h))
 
         return img

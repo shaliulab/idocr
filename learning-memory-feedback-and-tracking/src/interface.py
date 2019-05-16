@@ -66,8 +66,10 @@ class Interface():
         self.threads = None
         self.threads_finished = None
         
+        self.gray_color = None
         self.frame_color = None
         self.gray_gui = None
+        self.stacked_arenas = None
 
         self.reporting = None
         self.camera = None

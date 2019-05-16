@@ -159,7 +159,9 @@ class Tracker():
         self.gray_masked = np.zeros((self.interface.video_height, self.interface.video_width), np.uint8)
 
         self.interface.frame_color = np.zeros((self.interface.video_height, self.interface.video_width, 3), np.uint8)
+        self.interface.gray_color = np.zeros((self.interface.video_height, self.interface.video_width, 3), np.uint8)
         self.interface.gray_gui = np.zeros((self.interface.video_height, self.interface.video_width), np.uint8)
+        self.interface.stacked_arenas = np.zeros((self.interface.video_height, self.interface.video_width), np.uint8)
 
 
 
@@ -234,13 +236,13 @@ class Tracker():
             # Make single channel i.e. grayscale
             if len(frame.shape) == 3:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                frame_color = frame  
+                gray_color = frame  
             else:
                 gray = frame.copy()
-                frame_color = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+                gray_color = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
             # Annotate frame
-            frame_color = self.annotate_frame(frame_color)
+            frame_color = self.annotate_frame(gray_color)
             
             # Find arenas for the first N frames
             if self.frame_count < self.N and self.frame_count > 0:
@@ -255,6 +257,9 @@ class Tracker():
             transform = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.block_size, self.param1)
             self.transform = transform
 
+
+            arenas_dict = {}
+
                
             # Initialize an arena identity that will be increased with 1
             # for every validated arena i.e. not on every loop iteration!
@@ -267,7 +272,7 @@ class Tracker():
                 
                 arena = Arena(tracker = self, contour = arena_contour, identity = id_arena)
                 # and compute parameters used in validation and drawing
-                arena.compute()
+                corners = arena.compute()
                 # Validate the arena
                 # If not validated, move on the next arena contour
                 # i.e. ignore the current arena
@@ -275,6 +280,8 @@ class Tracker():
                    # move on to next i.e. continue to the next iteration
                    # continue means we actually WON'T continue with the current arena
                    continue
+
+                arenas_dict[id_arena] = arena
                
                 # If validated, keep analyzing the current arena
                 frame_color = arena.draw(frame_color)
@@ -324,6 +331,9 @@ class Tracker():
                     
                     # Draw the fly
                     frame_color = fly.draw(frame_color, self.frame_count)
+
+                    # Add the fly to the arena
+                    arena.fly = fly
                   
                     # Update the id_fly to account for one more fly detected
                     id_fly += 1
@@ -351,7 +361,17 @@ class Tracker():
                 ## End for loop over all putative arenas
 
             self.frame_count +=1
+
+            # Update GUI graphics
             self.interface.frame_color = frame_color
+
+            # TODO: Make into utils function
+            self.interface.stacked_arenas = self.stack_arenas(arenas_dict)
+            import ipdb; ipdb.set_trace()
+            
+            
+
+
             if self.frame_count % 100 == 0:
                 self.log.info("Frame #{}".format(self.frame_count))
 
@@ -370,6 +390,25 @@ class Tracker():
         else:
             #self.save_prompt()
             return None
+
+
+       
+    def stack_arenas(self, arenas):
+
+        gray_color = self.interface.gray_color
+
+        hhwws = np.array([a.corners[1,:] - a.corners[0,:] for key, a in arenas.items()])
+        max_h, max_w = np.max(hhwws, axis = 0)
+        def draw_stacked(a):
+            ROI = gray_color[a.corners[0][0]:max_h, a.corners[0][1]:max_w]
+            arena_crop = a.fly.draw(ROI, relative_to_arena = True)
+            cv2.rectangle(arena_crop, (0, 0), arena_crop.shape, green, 2)
+            return arena_crop
+
+        stacked_arenas = [draw_stacked(a) for key, a in arenas.items()]
+        stacked_arenas = np.stack(stacked_arenas, axis=0).reshape((10, 2))
+        return stacked_arenas
+
         
     def _run(self):
 
