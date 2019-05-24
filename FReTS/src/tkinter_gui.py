@@ -257,8 +257,8 @@ class TkinterGui():
         ####################################
         if self.interface.play_event.is_set() or True:
             if self.interface.track:
-                self.tkinter_update_widget(img=self.interface.stacked_arenas, name='stacked_arenas')
-                # self.tkinter_update_widget(img=self.interface.frame_color, name='frame_color')
+                #self.tkinter_update_widget(img=self.interface.stacked_arenas, name='stacked_arenas')
+                self.tkinter_update_widget(img=self.interface.frame_color, name='frame_color')
                 # self.tkinter_update_widget(img=self.interface.gray_gui, name='gray_gui')
 
             if self.interface.device:

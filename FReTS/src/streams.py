@@ -26,7 +26,7 @@ class PylonStream():
         try:
             cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
         except genicam._genicam.RuntimeException:
-            os.system("sudo bash {}/src/utils/open_camera.sh".format(ROOT_DIR))
+            os.system("sudo bash {}/utils/open_camera.sh".format(ROOT_DIR))
             try:
                 cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
             except genicam._genicam.RuntimeException:
@@ -76,6 +76,7 @@ class PylonStream():
 
     def read_frame(self):
         # Wait for an image and then retrieve it. A timeout of 5000 ms is used.
+        log.info('Reading frame')
         grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
         self.grabResult = grabResult
         # Image grabbed successfully?

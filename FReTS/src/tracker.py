@@ -33,6 +33,9 @@ def crop_stream(img, crop):
         img = img[:,y0:(y0+fw)]
     return img
 
+
+
+
 @export
 class Tracker():
    
@@ -281,7 +284,6 @@ class Tracker():
                    # continue means we actually WON'T continue with the current arena
                    continue
 
-                arenas_dict[id_arena] = arena
                
                 # If validated, keep analyzing the current arena
                 frame_color = arena.draw(frame_color)
@@ -354,8 +356,10 @@ class Tracker():
                     cv2.imwrite(fname, gray_crop)
 
 
+                arenas_dict[id_arena] = arena
                 # Update the id_arena to account for one more arena detected
                 id_arena += 1
+
 
                 ########################################
                 ## End for loop over all putative arenas
@@ -366,8 +370,7 @@ class Tracker():
             self.interface.frame_color = frame_color
 
             # TODO: Make into utils function
-            self.interface.stacked_arenas = self.stack_arenas(arenas_dict)
-            import ipdb; ipdb.set_trace()
+            #self.interface.stacked_arenas = self.stack_arenas(arenas_dict)
             
             
 
@@ -392,22 +395,36 @@ class Tracker():
             return None
 
 
-       
+
+     
     def stack_arenas(self, arenas):
 
         gray_color = self.interface.gray_color
 
-        hhwws = np.array([a.corners[1,:] - a.corners[0,:] for key, a in arenas.items()])
-        max_h, max_w = np.max(hhwws, axis = 0)
+        
         def draw_stacked(a):
+            print(a.corners)
+            hhwws = np.array([a.corners[1,:] - a.corners[0,:] for key, a in arenas.items()])
+            max_h, max_w = np.max(hhwws, axis = 0)
+
             ROI = gray_color[a.corners[0][0]:max_h, a.corners[0][1]:max_w]
-            arena_crop = a.fly.draw(ROI, relative_to_arena = True)
-            cv2.rectangle(arena_crop, (0, 0), arena_crop.shape, green, 2)
+            if a.fly:
+                arena_crop = a.fly.draw(ROI, relative_to_arena = True)
+            else:
+                arena_crop = ROI
+            cv2.rectangle(arena_crop, (0, 0), arena_crop.shape, 128, 2)
             return arena_crop
 
         stacked_arenas = [draw_stacked(a) for key, a in arenas.items()]
         stacked_arenas = np.stack(stacked_arenas, axis=0).reshape((10, 2))
         return stacked_arenas
+
+        
+        # try: 
+        #     
+        # except:
+        #     self.log.debug(a.corners.shape)
+        #     
 
         
     def _run(self):

@@ -26,8 +26,10 @@ class Arena():
         self.area = None
         self.mask = None
         self.box = None
+        self.fly = None
         self.tl_corner = None
-        self.br_corner 
+        self.br_corner  = None
+        self.corners = None
         self.dilation_kernel = np.ones((5,5),np.uint8)
         fly = None
 
@@ -45,7 +47,7 @@ class Arena():
         box = np.int0(box)
         self.box = box
         tl_corner = np.min(box, axis = 0)
-        br_corner = np.min(box, axis = 1)
+        br_corner = np.max(box, axis = 0)
 
         self.tl_corner = tl_corner 
         self.br_corner = br_corner 
@@ -60,8 +62,9 @@ class Arena():
             pass
             # handle what happens when the if above is not true
         
-        return np.array([tl_corner, br_corner])
-    
+        self.corners = np.array([tl_corner, br_corner])
+        return self.corners
+
     def validate(self):
         
         if self.area < self.min_arena_area:
