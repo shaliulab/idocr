@@ -148,6 +148,6 @@ class PDLoader():
             new_program[i] = block_repeat
 
         # Concat all the dataframes in the list and return it
-        compiled_program = pd.concat(new_program)
+        compiled_program = pd.concat(new_program, sort=True)
         
         return compiled_program

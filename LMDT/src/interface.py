@@ -242,16 +242,18 @@ class Interface():
         Start recording image data and runs arduino paradigm if any
         """
 
+        self.record_event.set()
+        self.log.info("Starting recording. Savers will cache data and save it to csv files")
+
         if not self.arduino:
             self.log.warning("No arduino program is loaded. Are you sure it is ok?")
             self.control_c_handler()
             # set the event so the savers actually save the data and not just ignore it
-            self.record_event.set()
-            self.log.info("Starting recording. Savers will cache data and save it to csv files")
             
         else:
             print(self.device.program)
-            ok = input("Is the program OK? (y/n):")
+            # ok = input("Is the program OK? (y/n):")
+            ok = 'y'
             if ok == "y":
             # if self.interface_initialized:
             #     return None            

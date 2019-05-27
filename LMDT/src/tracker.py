@@ -256,7 +256,7 @@ class Tracker():
                 self.arena_contours = self.find_arenas(gray)
 
             if self.arena_contours is None or len(self.arena_contours) == 0:
-                self.log.warning("Frame #{} no arenas".format(self.frame_count))
+                self.log.debug("Frame #{} no arenas".format(self.frame_count))
                 self.frame_count += 1
                 status = self.track()
                 return status
@@ -345,7 +345,7 @@ class Tracker():
                     id_fly += 1
 
                     if id_fly > 1:
-                        self.log.warning("Arena {} in frame {}. Multiple flies found".format(arena.identity, self.frame_count))
+                        self.log.debug("Arena {} in frame {}. Multiple flies found".format(arena.identity, self.frame_count))
 
                     ############################################
                     ## End for loop over all putative flies

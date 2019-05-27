@@ -200,7 +200,7 @@ class Fly():
         """
         
         if self.identity > 1:
-            self.tracker.log.warning('Error: more than one object found per arena')
+            self.tracker.log.debug('Error: more than one object found per arena')
 
         if relative_to_arena:
             cv2.rectangle(img, (self.arena_distance_x, self.arena_distance_y), (self.arena_distance_x + self.w, self.arena_distance_y + self.h), blue, 2)

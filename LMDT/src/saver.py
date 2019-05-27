@@ -48,14 +48,19 @@ class Saver():
             self.store_and_clear(self.lst, key)
         if self.record_event.is_set():
             self.lst.append(d)
-            self.log.debug("Adding new datapoint to cache")
-    
+            self.log.debug("Adding new datapoint to cache")      
+
+
     def store_and_clear(self, lst, key):
         """
         Convert key's cache list to a DataFrame and append that to HDF5.
         """
-        self.log.info("Saving cache to {}".format(self.store))
         df = pd.DataFrame(lst)
+
+        # check the dataframe is not empty
+        # could be empty if user closes before recording anything
+           
+        self.log.info("Saving cache to {}".format(self.store))
 
         # try saving to hdf5
         try:

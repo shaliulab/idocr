@@ -40,9 +40,9 @@ class ArduinoThread(threading.Thread):
         else:
             sys.exit(0)
 
-        if self.device.interface.pause:
-            self.log.info('Waiting for play button press')
-            self.device.interface.play_event.wait()
+        # if self.device.interface.pause:
+            # self.log.info('Waiting for play button press')
+            # self.device.interface.play_event.wait()
 
 
     def pin_thread(self, pin_number, duration, start_time, start, end, on, off, block, i, n_iters=np.nan, d_name=None, board=None):
