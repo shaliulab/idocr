@@ -14,7 +14,7 @@ class ReadConfigMixin():
     def __init__(self, *args, **kwargs):
 
         with open(self.interface.config, 'r') as ymlfile:
-            cfg = yaml.load(ymlfile)
+            cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
         self.cfg = cfg
         #super().__init__(*args, **kwargs)

@@ -18,7 +18,7 @@ max_len = 5000
 
 class Saver():
 
-    def __init__(self, store="store", cache = {}, init_time = None, name = None):
+    def __init__(self, store="store", cache = {}, init_time = None, name = None, record_event = None):
 
 
         self.store = None
@@ -31,6 +31,7 @@ class Saver():
         self.store = "{}_{}".format(store, init_time.strftime("%Y%m%d-%H%M%S"))
         self.log = logging.getLogger(__name__)
         self.lst = []
+        self.record_event = record_event
         
     def process_row(self, d, key, max_len = 5000):
         """
@@ -45,14 +46,15 @@ class Saver():
         
         if len(self.lst) >= max_len:
             self.store_and_clear(self.lst, key)
-        self.lst.append(d)
-        self.log.debug("Adding new datapoint to cache")
+        if self.record_event.is_set():
+            self.lst.append(d)
+            self.log.debug("Adding new datapoint to cache")
     
     def store_and_clear(self, lst, key):
         """
         Convert key's cache list to a DataFrame and append that to HDF5.
         """
-        self.log.info("Cleaning cache")
+        self.log.info("Saving cache to {}".format(self.store))
         df = pd.DataFrame(lst)
 
         # try saving to hdf5

@@ -42,7 +42,6 @@ class LearningMemoryDevice(PDLoader):
         self.reporting = None
 
         self.log = None
-    
              
         ## Assignment
         self.interface = interface
@@ -83,6 +82,10 @@ class LearningMemoryDevice(PDLoader):
             sys.exit(1)
     
     def prepare(self):
+        """
+        Transform the dataframe of events into a dictionary of Thread() objects that
+        can drive arduino pins independently
+        """
 
         threads = self.interface.threads
         self.program["active"] = False

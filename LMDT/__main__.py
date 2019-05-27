@@ -6,7 +6,6 @@ import argparse
 import logging
 import coloredlogs
 import sys
-print(sys.path)
 from lmdt_utils import setup_logging
 from interface import Interface
 

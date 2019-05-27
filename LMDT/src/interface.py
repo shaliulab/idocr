@@ -38,7 +38,7 @@ class Interface():
                  ):
 
         with open(config, 'r') as ymlfile:
-            self.cfg = yaml.load(ymlfile)
+            self.cfg = yaml.load(ymlfile,  Loader=yaml.FullLoader)
 
 
         ## Initialization of attributes
@@ -93,15 +93,26 @@ class Interface():
         self.gui = gui
         self.arduino = arduino
         self.track = track
+        self.init_time = datetime.datetime.now()
 
         self.arduino_done = True
         self.arduino_stopped = True
         self.exit = threading.Event()
         
-        self.init_time = datetime.datetime.now()
+        self.stop = False
+        self.play_event = threading.Event()
+        self.stop_event = threading.Event()
+        self.record_event = threading.Event()
+        self.arena_ok_event = threading.Event()
 
-        self.data_saver = Saver(store = self.cfg["tracker"]["store"], init_time = self.init_time, name = "data_saver")
-        self.metadata_saver = Saver(store = self.cfg["arduino"]["store"], init_time = self.init_time, name = "metadata_saver")
+        self.data_saver = Saver(
+            store=self.cfg["tracker"]["store"], init_time=self.init_time,
+            name="data_saver", record_event=self.record_event
+            )
+        self.metadata_saver = Saver(
+            store=self.cfg["arduino"]["store"], init_time=self.init_time,
+            name="metadata_saver", record_event=self.record_event
+            )
 
         self.threads = {}
         self.threads_finished = {}
@@ -122,10 +133,7 @@ class Interface():
         
         self.log.info("Start time: {}".format(self.init_time.strftime("%Y%m%d-%H%M%S")))
 
-        self.pause = False
-        self.stop = False
-        self.play_event = threading.Event()
-        self.stop_event = threading.Event()
+
         self.interface_initialized = False
     
    
@@ -168,10 +176,13 @@ class Interface():
 
     def prepare(self):
         """
+        Initialize the camera tracking and the arduino controls
         """
 
+        # Setup camera tracking
+        ###########################
         if self.track:
-            tracker = Tracker(interface = self, camera = self.camera, video = self.video)
+            tracker = Tracker(interface=self, camera=self.camera, video=self.video)
         else:
             tracker = None
         self.tracker = tracker
@@ -179,9 +190,11 @@ class Interface():
         # Setup Arduino controls
         ##########################
         if self.arduino:
-
-            device = LearningMemoryDevice(interface = self, mapping = self.mapping_path, program = self.program_path, port = self.port)
+            # initialize board
+            device = LearningMemoryDevice(interface=self, mapping=self.mapping_path, program=self.program_path, port=self.port)
+            # power off any pins if any
             device.power_off_arduino(exit=False)
+            # prepare the arduino parallel threads
             device.prepare()
         else:
             device = None
@@ -198,16 +211,43 @@ class Interface():
         signals = ('TERM', 'HUP', 'INT')
         for sig in signals:
             signal.signal(getattr(signal, 'SIG' + sig), self.onClose)
-        
-    
-    def play(self):
-        
-        self.play_event.set()
-        self.pause = False
-        self.stop = False
 
-        if self.interface_initialized:
-            return None
+    def play(self):
+        """
+        Initialize arduino and camera. Run frames for an undefinite time.
+        Turn on and off Arduino pins. This way, the user can test the device
+        prior to any experiment 
+        """
+        self.play_event.set()
+
+        if self.track:
+            try:
+                self.log.info("Running tracker")
+                self.tracker.run()
+            except Exception as e:
+                self.log.exception('Could not run tracker')
+                self.log.exception(e)
+
+        
+        self.interface_initialized = True
+
+        if not self.track and not self.gui and self.arduino:
+            self.log.debug("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
+            self.exit.wait(self.duration)
+
+        
+        
+    def record(self):
+        """
+        Start recording image data and runs arduino paradigm if any
+        """
+        
+        # set the event so the savers actually save the data and not just ignore it
+        self.record_event.set()
+        self.log.info("Starting recording. Savers will cache data and save it to csv files")
+        
+        # if self.interface_initialized:
+        #     return None
 
         self.control_c_handler()
 
@@ -218,26 +258,13 @@ class Interface():
             except Exception as e:
                 self.log.exception('Could not run Arduino board')
                 self.log.exception(e)
-        
 
-        if self.track:
-            try:
-                self.log.info("Running tracker")
-                self.tracker.run()
-            except Exception as e:
-                self.log.exception('Could not run tracker')
-                self.log.exception(e)
-        
-        self.interface_initialized = True
-
-        if not self.track and not self.gui and self.arduino:
-            self.log.debug("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
-            self.exit.wait(self.duration)
-
-    def pause(self):
-        self.pause = True
-        self.play_event = threading.Event()
     
+    def ok_arena(self):
+        self.arena_ok_event.set()
+        self.log.info("Stopping detection of arenas")
+        
+ 
     def stop(self):
         self.stop = True
         self.play_event = threading.Event()
@@ -246,6 +273,7 @@ class Interface():
     
     def start(self):
         """
+        Launch the tkinter gui and update it accordingly
         """        
         while not self.exit.is_set() and self.gui is not None:
             

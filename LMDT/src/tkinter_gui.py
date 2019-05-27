@@ -18,6 +18,7 @@ from lmdt_utils import setup_logging
 from LMDT import ROOT_DIR, STATIC_DIR
 
 setup_logging()
+log = logging.getLogger(__name__)
 
 def _create_circle(self, x, y, r, **kwargs):
     return self.create_oval(x-r, y-r, x+r, y+r, **kwargs)
@@ -35,7 +36,13 @@ class BetterButton(tk.Button):
                 
     def generate_image(self, event_name):
         fname = Path(ROOT_DIR, 'static', '{}.png'.format(event_name)).__str__()
-        photoimage = ImageTk.PhotoImage(file = fname)
+        log.debug("Reading image on path {}".format(fname))
+        if not os.path.isfile(fname):
+            log.warning('Could not find {}. Are you sure it is in /static?'.format(fname))
+            fname = Path(ROOT_DIR, 'static', 'question.png').__str__()
+            photoimage = ImageTk.PhotoImage(file=fname)
+        else:
+            photoimage = ImageTk.PhotoImage(file=fname)
         return photoimage
 
     def push(self):
@@ -85,7 +92,7 @@ class TkinterGui():
 
         tracker_frame.grid(row=0, column=0, sticky="ew")
         arduino_frame.grid(row=0, column=1, sticky="nsew")
-        button_frame.grid(row=1, column=0, columnspan=2)
+        button_frame.grid(row=1, column=0, columnspan=3)
         statusbar_frame.grid(row=2, column=0, columnspan=2, sticky='ew')
         
         main_frame.grid_rowconfigure(0, weight=1)
@@ -104,7 +111,7 @@ class TkinterGui():
         self.tracker_frame = tracker_frame
         self.arduino_frame = arduino_frame
         self.button_frame = button_frame
-        self.statusbar_frame = statusbar_frame      
+        self.statusbar_frame = statusbar_frame
 
         # Initialize statusbar
         self.statusbar_text = "Welcome to LMDT"
@@ -112,12 +119,13 @@ class TkinterGui():
         statusbar.pack(side=tk.LEFT, fill=tk.X, expand = tk.YES)
         self.statusbar = statusbar
 
-        # Initialize play button
-        print(getattr(self.interface, 'play'))
-
+        # Initialize buttons
         playButton = BetterButton(self.button_frame, 'play', self.interface.play, 0)
-        pauseButton = BetterButton(self.button_frame, 'pause', self.interface.pause, 1)
-        buttons = [playButton, pauseButton]
+        #pauseButton = BetterButton(self.button_frame, 'pause', self.interface.pause, 1)
+        okButton = BetterButton(self.button_frame, 'ok_arena', self.interface.ok_arena, 1)
+        recordButton = BetterButton(self.button_frame, 'record', self.interface.record, 2)
+        
+        buttons = [playButton, okButton, recordButton]
 
         # buttons = [BetterButton(self.button_frame, event_name, getattr(self.interface, event_name), index) for index, event_name in enumerate(['play', 'pause'])]
         [b.push() for b in buttons]
@@ -138,7 +146,7 @@ class TkinterGui():
         self.video_width = None
         self.tkinter_finished = False
 
-        self.log = logging.getLogger(__name__)
+        self.log = log
 
     def on_resize(self,event):
         

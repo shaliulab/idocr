@@ -200,8 +200,12 @@ class Tracker():
         """
 
         # assign the grayscale to the ith frame in accuImage
-        self.accuImage[:,:,self.frame_count] = gray     
-        avgImage = np.average(self.accuImage[:,:,:self.frame_count], 2).astype('uint8')
+        self.accuImage[:,:,self.frame_count % self.N] = gray
+        if self.frame_count > 1:   
+            avgImage = np.average(self.accuImage[:,:,:self.frame_count], 2).astype('uint8')
+        else:
+            avgImage = self.accuImage[:,:,self.frame_count].astype('uint8')
+
         image_blur = cv2.GaussianBlur(avgImage, (self.kernel_factor, self.kernel_factor), 0)
         _, image1 = cv2.threshold(image_blur, RangeLow1, RangeUp1, cv2.THRESH_BINARY+cv2.THRESH_OTSU) 
         arena_opening = cv2.morphologyEx(image1, cv2.MORPH_OPEN, self.kernel, iterations = 2)
@@ -248,7 +252,7 @@ class Tracker():
             frame_color = self.annotate_frame(gray_color)
             
             # Find arenas for the first N frames
-            if self.frame_count < self.N and self.frame_count > 0:
+            if self.frame_count < self.N and self.frame_count > 0 or not self.interface.arena_ok_event.is_set():
                 self.arena_contours = self.find_arenas(gray)
 
             if self.arena_contours is None or len(self.arena_contours) == 0:
@@ -403,7 +407,7 @@ class Tracker():
 
         
         def draw_stacked(a):
-            print(a.corners)
+            # print(a.corners)
             hhwws = np.array([a.corners[1,:] - a.corners[0,:] for key, a in arenas.items()])
             max_h, max_w = np.max(hhwws, axis = 0)
 
@@ -431,21 +435,11 @@ class Tracker():
 
         self.status = self.track()
 
-        while self.status and not self.interface.exit.is_set():
-
-            if self.interface.pause:
-                self.interface.exit.wait(0.1)
-                
-            else:
-
-                self.merge_masks()
-                self.interface.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
-                self.status = self.track()
-                self.interface.exit.wait(1)
-
-            if self.interface.stop_event.is_set():
-                self.interface.interface_initialized = False
-                self.interface.play_event.wait()
+        while self.status and not self.interface.exit.is_set():                
+            self.merge_masks()
+            self.interface.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
+            self.status = self.track()
+            self.interface.exit.wait(.2)
         
         self.onClose()
 
