@@ -18,7 +18,7 @@ import yaml
 # Local application imports
 from pyfirmata import ArduinoMega, Arduino
 from pdloader import PDLoader
-from frets_utils import setup_logging
+from lmdt_utils import setup_logging
 from arduino_threading import ArduinoThread
 
 # Set up package configurations

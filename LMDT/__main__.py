@@ -7,7 +7,7 @@ import logging
 import coloredlogs
 import sys
 print(sys.path)
-from frets_utils import setup_logging
+from lmdt_utils import setup_logging
 from interface import Interface
 
 # Arguments to follow the command, adding video, etc options

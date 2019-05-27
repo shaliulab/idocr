@@ -61,8 +61,8 @@ class Saver():
                 store.append(key, df)
         except Exception as e:
             self.log.info(key)
-            import ipdb; ipdb.set_trace()
-            self.log.error("{} could not save cache to h5 file. Please investigate traceback".format(self.name))
+            self.log.error("{} could not save cache to h5 file. Please investigate traceback. Is pytables available?".format(self.name))
+
             self.log.info(df)
             self.log.exception(e)
             

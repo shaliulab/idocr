@@ -5,7 +5,7 @@
 import argparse
 import logging
 import coloredlogs
-from frets_utils import setup_logging
+from lmdt_utils import setup_logging
 from interface import Interface
 
 # Arguments to follow the command, adding video, etc options

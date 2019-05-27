@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 
-from frets_utils import setup_logging
+from lmdt_utils import setup_logging
 
 white = (255, 255, 255)
 yellow = (0, 255, 255)
