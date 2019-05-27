@@ -2,7 +2,7 @@
 library("readr")
 library("ggplot2")
 library("dplyr")
-base_dir <- "/home/antortjim/MEGA/FlySleepLab/FReTS/data"
+base_dir <- "/home/antortjim/MEGA/FlySleepLab/LMDT/data"
 
 dt <- read.csv(file.path(base_dir, "store_144649-28032019.csv"))
 

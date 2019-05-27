@@ -241,30 +241,32 @@ class Interface():
         """
         Start recording image data and runs arduino paradigm if any
         """
-        
-        # set the event so the savers actually save the data and not just ignore it
-        self.record_event.set()
-        self.log.info("Starting recording. Savers will cache data and save it to csv files")
-        
-        # if self.interface_initialized:
-        #     return None
 
-        self.control_c_handler()
-
-        if self.arduino:
-            try:
-                self.log.info("Running Arduino")
-                self.device.run(threads=self.threads)
-            except Exception as e:
-                self.log.exception('Could not run Arduino board')
-                self.log.exception(e)
+        if not self.arduino:
+            self.log.warning("No arduino program is loaded. Are you sure it is ok?")
+            self.control_c_handler()
+            # set the event so the savers actually save the data and not just ignore it
+            self.record_event.set()
+            self.log.info("Starting recording. Savers will cache data and save it to csv files")
+            
+        else:
+            print(self.device.program)
+            ok = input("Is the program OK? (y/n):")
+            if ok == "y":
+            # if self.interface_initialized:
+            #     return None            
+                try:
+                    self.log.info("Running Arduino")
+                    self.device.run(threads=self.threads)
+                except Exception as e:
+                    self.log.exception('Could not run Arduino board')
+                    self.log.exception(e)
 
     
     def ok_arena(self):
-        self.arena_ok_event.set()
         self.log.info("Stopping detection of arenas")
-        
- 
+        self.arena_ok_event.set()
+    
     def stop(self):
         self.stop = True
         self.play_event = threading.Event()
