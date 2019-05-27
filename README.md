@@ -1,6 +1,5 @@
-# FReTS
-Developing Fly Real-time Transcription Scope
-
+# LMDT
+Learning Memory Device and Tracking
 
  * [Introduction](#introduction)
  * [Documentation](#documentation)
@@ -12,7 +11,7 @@ Developing Fly Real-time Transcription Scope
     
  
 ## Introduction
-**FReTS** (**F**ly **Re**al-time **T**ranscription **S**cope) is an interdisciplinary platform which utilizes the real-time tracking system to interact with the animals' transcription activity hence possible behaviors via closed-loop control system, combined with external interferences, such as laser/light stimulation, odour delivery, electric shock, etc.
+**LMDT** (**L**earning **M**emory **D**evice and **T**racking)
 
 
 ## Documentation
@@ -31,7 +30,7 @@ If you have not downloaded the software yet:
 #### Download
 Run in a terminal (only once) :)
 ```
-git clone https://github.com/VIBFlySleepLab/FReTS
+git clone https://gitlab.com/flysleeplab/learning-memory-feedback-and-tracking
 ```
 this will download the Python code
 
@@ -39,7 +38,7 @@ this will download the Python code
 Type this after entering the folder you have downloaded (with `cd`)
 
 ```
-/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python -m FReTS --track --camera pylon --arduino --mapping mappings/main.csv --program programs/test_28_march.csv --duration 120
+/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python -m LMDT --track --camera pylon --arduino --mapping mappings/main.csv --program programs/test_28_march.csv --duration 120
 ```
 This will trigger the opening of the following window
 
@@ -71,6 +70,6 @@ By default tracking and arduino events data are recorded to .csv files `data/` a
 ## Enhancements
 
 
-You are very welcome to push your ideas for improvements to the repo's issue page in https://github.com/VIBFlySleepLab/FReTS/issues . Open a new issue and describe it with your best words.
+You are very welcome to push your ideas for improvements to the repo's issue page in https://gitlab.com/flysleeplab/learning-memory-feedback-and-tracking/issues . Open a new issue and describe it with your best words.
  
 

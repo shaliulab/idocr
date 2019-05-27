@@ -15,7 +15,7 @@ from pathlib import Path
 # Local application imports
 from features import Arena, Fly
 from streams import PylonStream, StandardStream, streams_dict
-from frets_utils import setup_logging
+from lmdt_utils import setup_logging
 from decorators import export
 
 # Set up package configurations

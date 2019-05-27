@@ -8,7 +8,7 @@ import yaml
 import numpy as np
 import pandas as pd
 
-from frets_utils import setup_logging
+from lmdt_utils import setup_logging
 
 setup_logging()
 

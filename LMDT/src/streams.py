@@ -7,7 +7,7 @@ from pypylon import genicam
 import cv2
 import coloredlogs
 
-from frets_utils import setup_logging
+from lmdt_utils import setup_logging
 from decorators import export 
 
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))

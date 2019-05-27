@@ -14,8 +14,8 @@ import numpy as np
 from PIL import ImageTk, Image
 
 # Local application imports
-from frets_utils import setup_logging
-from FReTS import ROOT_DIR, STATIC_DIR
+from lmdt_utils import setup_logging
+from LMDT import ROOT_DIR, STATIC_DIR
 
 setup_logging()
 
@@ -52,6 +52,7 @@ class TkinterGui():
         self.canvas = None
         self.interface = None
         self.panel = {}
+        self.statusbar_text = None
 
         root = tk.Tk()
         # set initial size of window (800x800 and 500 pixels up)
@@ -106,7 +107,8 @@ class TkinterGui():
         self.statusbar_frame = statusbar_frame      
 
         # Initialize statusbar
-        statusbar = tk.Label(self.statusbar_frame, text="Welcome to FReTs", relief=tk.SUNKEN, anchor=tk.W)
+        self.statusbar_text = "Welcome to LMDT"
+        statusbar = tk.Label(self.statusbar_frame, text=self.statusbar_text, relief=tk.SUNKEN, anchor=tk.W)
         statusbar.pack(side=tk.LEFT, fill=tk.X, expand = tk.YES)
         self.statusbar = statusbar
 
@@ -231,11 +233,10 @@ class TkinterGui():
         c2 = self.interface.device.overview['end'] > self.interface.timestamp
         selected_rows = c1 & c2
         active_blocks = self.interface.device.overview.index[selected_rows].tolist()
-        text = 'Welcome to FReTs'
         if active_blocks:
             main_block = active_blocks[-1]
         else:
-            self.statusbar['text'] = text
+            self.statusbar['text'] = self.statusbar_text
             return 0
 
 

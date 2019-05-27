@@ -14,7 +14,7 @@ import numpy as np
 import yaml
 
 # Local application imports
-from frets_utils import setup_logging
+from lmdt_utils import setup_logging
 from saver import Saver
 from tracker import Tracker
 from arduino import LearningMemoryDevice

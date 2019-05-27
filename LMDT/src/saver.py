@@ -7,7 +7,7 @@ import datetime
 import pandas as pd
 
 # Local application imports
-from frets_utils import setup_logging
+from lmdt_utils import setup_logging
 
 # Set up package configurations
 setup_logging()
