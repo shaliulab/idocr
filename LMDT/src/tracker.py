@@ -57,8 +57,8 @@ class Tracker():
         self.camera = None
         self.video = None
 
-        self.found_flies = None
         self.frame_count = None
+        self.record_frame_count = None
         self.old_found = None
         self.missing_fly = None
 
@@ -93,9 +93,16 @@ class Tracker():
 
 
         # Results variables
+        # how many flies are found in the whole experiment
+        # in a perfect recording, it should be nframes x nflies/frame
         self.found_flies = 0
+        # frames recorded since pressing play
         self.frame_count = 0
+        # frames recorded since pressing record
+        self.record_frame_count = 0
+        # flies detected in the last frame
         self.old_found = 0
+        # number of arenas where no fly was detected
         self.missing_fly = 0
 
 
@@ -179,8 +186,8 @@ class Tracker():
 
         ## TODO Dont make coordinates of text hardcoded
         ###################################################
-        cv2.putText(img,'Frame: '+ str(self.frame_count),   (25,25),    cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
-        cv2.putText(img,'Time: '+  str(self.interface.timestamp), (1000,25),  cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
+        cv2.putText(img,'Frame: '+ str(self.record_frame_count),   (25,25),    cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
+        cv2.putText(img,'Time: '+  str(int(self.interface.timestamp)), (1000,25),  cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
         cv2.putText(img,'LEFT',                        (25,525),   cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
         cv2.putText(img,'RIGHT',                       (1100,525), cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
         return img
@@ -370,24 +377,20 @@ class Tracker():
                 ########################################
                 ## End for loop over all putative arenas
 
-            self.frame_count +=1
 
             # Update GUI graphics
             self.interface.frame_color = frame_color
 
             # TODO: Make into utils function
             #self.interface.stacked_arenas = self.stack_arenas(arenas_dict)
-            
-            
 
-
-            if self.frame_count % 100 == 0:
-                self.log.info("Frame #{}".format(self.frame_count))
-
+            # Print warning if number of flies in new frame is not the same as in previous
             if self.old_found != self.found_flies:
-                self.log.debug("Found {} flies in frame {}".format(self.found_flies, self.frame_count))
+                self.log.warning("Found {} flies in frame {}".format(self.found_flies, self.frame_count))
             self.old_found = self.found_flies
             self.found_flies = 0
+
+            self.update_counts()
 
 
             return True
@@ -399,6 +402,18 @@ class Tracker():
         else:
             #self.save_prompt()
             return None
+        
+    def update_counts(self):
+        self.frame_count += 1
+        
+        if self.interface.record_event.is_set():
+                self.record_frame_count += 1
+        
+        if self.frame_count % 100 == 0:
+            self.log.info("Frame #{}".format(self.frame_count))
+
+
+
 
 
 

@@ -33,7 +33,7 @@ class Saver():
         self.lst = []
         self.record_event = record_event
         
-    def process_row(self, d, key, max_len = 5000):
+    def process_row(self, d, key, max_len = 5):
         """
         Append row d to the store 'key'.
     

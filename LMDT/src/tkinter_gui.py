@@ -236,26 +236,36 @@ class TkinterGui():
         '''
         Update statusbar
         '''
-
-        c1 = self.interface.device.overview['start'] < self.interface.timestamp
-        c2 = self.interface.device.overview['end'] > self.interface.timestamp
-        selected_rows = c1 & c2
-        active_blocks = self.interface.device.overview.index[selected_rows].tolist()
-        if active_blocks:
-            main_block = active_blocks[-1]
-        else:
-            self.statusbar['text'] = self.statusbar_text
-            return 0
+        ## Improve messages in the statusbar
+        ## It should warn when the next event is coming
 
 
-        passed = self.interface.timestamp - self.interface.device.overview.loc[main_block]['start']
-        left = self.interface.device.overview.loc[main_block]['end'] - self.interface.timestamp
-        time_position = np.round(np.array([passed, left]) / 60, 3)
+        if self.interface.play_event.is_set():
+            self.statusbar['text'] = 'Running tracker'
+
+        if self.interface.arena_ok_event.is_set():
+            self.statusbar['text'] = "Fixing arena contours and stopping further detection"
+
+        if self.interface.device:
+            c1 = self.interface.device.overview['start'] < self.interface.timestamp
+            c2 = self.interface.device.overview['end'] > self.interface.timestamp
+            selected_rows = c1 & c2
+            active_blocks = self.interface.device.overview.index[selected_rows].tolist()
+            if active_blocks:
+                main_block = active_blocks[-1]
+                passed = self.interface.timestamp - self.interface.device.overview.loc[main_block]['start']
+                left = self.interface.device.overview.loc[main_block]['end'] - self.interface.timestamp
+                time_position = np.round(np.array([passed, left]) / 60, 3)
 
 
-        text = 'Running ' + ' and '.join(active_blocks) + ' blocks'
-        text += ' {}m passed, {}m left'.format(*time_position)
-        self.statusbar['text'] = text
+                text = 'Running ' + ' and '.join(active_blocks) + ' blocks'
+                text += ' {}m passed, {}m left'.format(*time_position)
+                self.statusbar['text'] = text
+
+            else:
+                self.statusbar['text'] = self.statusbar_text
+        elif self.interface.record_event.is_set():
+            self.statusbar['text'] = 'Recording without Arduino paradigm for {} seconds'.format(int(self.interface.timestamp))
 
 
     def update(self):
@@ -268,7 +278,10 @@ class TkinterGui():
         ## TODO Separate initialization from update
         ####################################
         if True:   
-            
+
+            self.tkinter_update_statusbar()
+
+
             # if self.interface.timestamp % 1 == 0:
             if self.interface.track:
                 #self.tkinter_update_widget(img=self.interface.stacked_arenas, name='stacked_arenas')
@@ -277,7 +290,6 @@ class TkinterGui():
 
             if self.interface.device:
                 self.tkinter_update_monitor(self.interface.device.mapping)
-                self.tkinter_update_statusbar()
 
             if self.tkinter_init:
                 self.log.info('Initializing graphical interface')

@@ -273,7 +273,7 @@ class Interface():
 
     
     def ok_arena(self):
-        self.log.info("Stopping detection of arenas")
+        self.log.info("Fixing arena contours and stopping further detection")
         self.arena_ok_event.set()
     
     def stop(self):
@@ -286,7 +286,6 @@ class Interface():
         """
         Launch the tkinter gui and update it accordingly
         """        
-        print(self.exit.is_set())
         while not self.exit.is_set() and self.gui is not None:
             # print(type(self.device.mapping))
             self.gui.update()
