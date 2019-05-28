@@ -60,6 +60,7 @@ class LearningMemoryDevice(PDLoader):
         self.reporting = self.interface.reporting
 
         self.log = logging.getLogger(__name__)
+        self.log.debug('Loaded paradigm in {}'.format(self.program))
 
         ###############################
         PDLoader.__init__(self, mapping, program)
@@ -67,7 +68,7 @@ class LearningMemoryDevice(PDLoader):
         self.pin_state = {k: False for k in self.mapping.index}
 
 
-        self.program.to_csv(self.saver.store + "_compiled.csv")
+        self.program.to_csv(self.saver.store + "_paradigm.csv")
 
         # pin_names = self.mapping.index
         # self.pin_state = {p: 0 for p in pin_names}

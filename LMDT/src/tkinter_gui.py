@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import time
 import tkinter as tk
+from tkinter import filedialog
 
 # Third party imports   
 import cv2
@@ -78,7 +79,24 @@ class TkinterGui():
         # Initialize
         bd = 1
 
-        main_frame = tk.Frame(root, background="bisque")
+
+        # creating a menu instance
+        self.menu = tk.Menu(self.root)
+        self.root.config(menu=self.menu)
+        # create the file object)
+        file_menu = tk.Menu(self.menu)
+        
+        # adds a command to the menu option, calling it exit, and the
+        # command it runs on event is client_exit
+        file_menu.add_command(label="Program", command=self.ask_program)
+        file_menu.add_command(label="Mapping", command=self.ask_mapping)
+
+
+        #added "file" to our menu
+        self.menu.add_cascade(label="File", menu=file_menu)
+
+
+        main_frame = tk.Frame(root)
         tracker_frame = tk.Frame(main_frame, relief = tk.RIDGE, bd = bd)
         arduino_frame = tk.Frame(main_frame, relief = tk.RIDGE, bd = bd)
         button_frame = tk.Frame(main_frame, relief = tk.RIDGE, bd = bd)
@@ -147,6 +165,26 @@ class TkinterGui():
         self.tkinter_finished = False
 
         self.log = log
+        print(self.log)
+
+    
+    def ask_program(self, filetype='program'):
+        initialdir = Path(ROOT_DIR, filetype+'s').__str__()
+        self.interface.program_path = tk.filedialog.askopenfilename(
+            initialdir = initialdir,title = "Select {} file".format(filetype),
+            filetypes = (("csv files","*.csv"),("all files","*.*"))
+            )
+        self.log.info('Loading program {}'.format(self.interface.program_path))
+
+    def ask_mapping(self):
+        initialdir = Path(ROOT_DIR, 'mappings').__str__()
+        self.interface.mapping_path = tk.filedialog.askopenfilename(
+            initialdir = initialdir,title = "Select mapping file",
+            filetypes = (("csv files","*.csv"),("all files","*.*"))
+            )
+        self.log.info('Loading mapping {}'.format(self.interface.mapping_path))
+
+
 
     def on_resize(self,event):
         
@@ -297,6 +335,8 @@ class TkinterGui():
                 self.root.wm_title("Learning memory stream")
                 self.root.wm_protocol("WM_DELETE_WINDOW", self.onClose)
                 self.canvas.addtag_all("all")
+
+
                 self.tkinter_init = False
     
             self.tkinter_finished = True

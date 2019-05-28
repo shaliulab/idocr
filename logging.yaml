@@ -38,6 +38,10 @@ loggers:
     handlers: [console, file_arduino]
     level: DEBUG
     propagate: no
+  tkinter_gui:
+    handlers: [console]
+    level: DEBUG
+    propagate: no
   interface:
     handlers: [console]
     level: DEBUG

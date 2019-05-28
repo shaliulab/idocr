@@ -1,11 +1,13 @@
 import logging
 import os
 import sys
+import time
 
 from pypylon import pylon
 from pypylon import genicam
 import cv2
 import coloredlogs
+import psutil
 
 from lmdt_utils import setup_logging
 from decorators import export 
@@ -14,30 +16,40 @@ ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 setup_logging()
 
-log = logging.getLogger(__name__)
 
 @export
 class PylonStream():
     def __init__(self, video=None):
-        log.info("Starting pylon camera!")
+        self.log = logging.getLogger(__name__)
+        self.log.info("Starting pylon camera!")
 
         ## TODO
         ## Check camera is visible!
         try:
             cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-        except genicam._genicam.RuntimeException:
+        except genicam._genicam.RuntimeException as e:
+            self.log.warning(e)
+            self.log.info('Opening Pylon camera')
             os.system("sudo bash {}/utils/open_camera.sh".format(ROOT_DIR))
             try:
                 cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
             except genicam._genicam.RuntimeException:
-                log.exception('Camera could not be loaded. Looks like the computer cannot access it')
+                self.log.exception('Camera could not be loaded. Looks like the computer cannot access it')
                 sys.exit(1)
+        except genicam._genicam.AccessException as e:
+            self.log.warning('An exception has occurred. Camera could not be opened')
+            self.log.critical(e)
+            self.status = 0
+            return 0
+        finally:
+            pass
+
             
 
         # Print the model name of the camera.
         device_info = cap.GetDeviceInfo()
-        log.info("Using device {}".format(device_info.GetModelName()))
-        log.info(device_info.GetFullName())
+        self.log.info("Using device {}".format(device_info.GetModelName()))
+        self.log.info(device_info.GetFullName())
         # print(device_info.GetPropertyAvailable())
         
     
@@ -49,7 +61,22 @@ class PylonStream():
         # Start the grabbing of c_countOfImagesToGrab images.
         # The camera device is parameterized with a default configuration which
         # sets up free-running continuous acquisition.
-        cap.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
+        try:
+            cap.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
+        except Exception as e:
+            process = [p for p in psutil.process_iter() if 'Pylon' in p.name()]
+            if len(process) != 0:
+                self.log.warning('A running instance of PylonViewerApp was detected')
+                self.log.warning('Closing as Python will not be able to access the camera then')
+                [p.kill() for p in process]
+                time.sleep(3)
+                cap.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
+            else:             
+                self.log.error('Camera could not grab frames. This is likely to be caused by the camera being already in use')
+                self.log.error('This can happen if the program has recently been closed')
+                self.log.error('Try again in a few seconds')
+                self.log.debug(e)
+
 
         #width = cap.Width.GetValue() // 3
         #offset_x = width
@@ -76,7 +103,7 @@ class PylonStream():
 
     def read_frame(self):
         # Wait for an image and then retrieve it. A timeout of 5000 ms is used.
-        log.info('Reading frame')
+        self.log.debug('Reading frame')
         grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
         self.grabResult = grabResult
         # Image grabbed successfully?
@@ -85,12 +112,12 @@ class PylonStream():
         ret = grabResult.GrabSucceeded()
         while not ret and count < 10:
             count += 1
-            log.warning("Pylon could not fetch next frame. Trial no {}".format(count))
+            self.log.warning("Pylon could not fetch next frame. Trial no {}".format(count))
             grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
             self.grabResult = grabResult
             ret = grabResult.GrabSucceeded()
         if count == 10:
-            log.error("Tried reading next frame 10 times and none worked. Exiting :(")
+            self.log.error("Tried reading next frame 10 times and none worked. Exiting :(")
             sys.exit(1)
         #print(ret)
         if ret:
@@ -109,10 +136,10 @@ class StandardStream():
 
     def __init__(self, video=None):
         if video == 0:
-            log.info("Capturing stream!")
+            self.log.info("Capturing stream!")
             self.cap = cv2.VideoCapture(video)
         elif video != 0:
-            log.info("Opening {}!".format(video))
+            self.log.info("Opening {}!".format(video))
             self.cap = cv2.VideoCapture(video.__str__())
 
     def get_fps(self):
@@ -135,7 +162,7 @@ class StandardStream():
 
     def set_fps(self, fps):
         if self.get_fps() != fps:
-            log.info("Settting fps to {}".format(fps))
+            self.log.info("Settting fps to {}".format(fps))
             self.cap.set(5, fps)
 
  #   def set_width(self, width):

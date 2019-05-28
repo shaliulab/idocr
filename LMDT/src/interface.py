@@ -53,7 +53,12 @@ class Interface():
         # Boolean flags indicating if arduino and or track are active
         self.arduino = None
         self.track = None
+
+
+        # Tracker and Device objects
         self.tracker = None
+        self.device = None
+
 
         self.arduino_done = None    # becomes true if all events are complete
         self.arduino_stopped = None # becomes true if user stops the arduino controls prematurily with Control C       
@@ -75,9 +80,10 @@ class Interface():
         self.camera = None
         self.video = None
 
-        self.mapping_path = None
         self.filtered_mappings = None
         self.program_path = None
+        self.mapping_path = None
+
 
         self.blocks = None
         self.port = None
@@ -86,7 +92,6 @@ class Interface():
         self.duration = None
         self.experimenter = None
         self.log = None
-
         self.statusbar = None
 
         ## Assignment of attributes
@@ -108,6 +113,8 @@ class Interface():
         self.play_start = None
         self.record_start = None
 
+        
+
         self.data_saver = Saver(
             store=self.cfg["tracker"]["store"], init_time=self.init_time,
             name="data_saver", record_event=self.record_event
@@ -125,6 +132,7 @@ class Interface():
         self.video = video
         self.mapping_path = mapping
         self.program_path = program
+
         self.blocks = blocks
         self.port = port
         self.gui = guis[gui](interface = self)
@@ -176,7 +184,7 @@ class Interface():
         # else:
             # cv2.destroyAllWindows()
 
-    def prepare(self):
+    def load_tracker(self):
         """
         Initialize the camera tracking and the arduino controls
         """
@@ -189,6 +197,8 @@ class Interface():
         else:
             tracker = None
         self.tracker = tracker
+
+    def load_device(self):
 
         # Setup Arduino controls
         ##########################
@@ -225,6 +235,8 @@ class Interface():
         """
         self.play_event.set()
         self.play_start = datetime.datetime.now()
+        print(self.mapping_path)
+        self.load_device()
 
         if self.track:
             try:
@@ -240,8 +252,6 @@ class Interface():
         if not self.track and not self.gui and self.arduino:
             self.log.debug("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
             self.exit.wait(self.duration)
-
-        
         
     def record(self):
         """
@@ -285,7 +295,8 @@ class Interface():
     def start(self):
         """
         Launch the tkinter gui and update it accordingly
-        """        
+        """
+
         while not self.exit.is_set() and self.gui is not None:
             # print(type(self.device.mapping))
             self.gui.update()

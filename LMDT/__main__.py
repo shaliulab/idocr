@@ -5,7 +5,6 @@
 import argparse
 import logging
 import coloredlogs
-import sys
 from lmdt_utils import setup_logging
 from interface import Interface
 
@@ -47,7 +46,7 @@ interface = Interface(
     reporting = args["reporting"], config = args["config"], duration = DURATION, gui = args["gui"]
 )
 
-interface.prepare()
+interface.load_tracker()
 interface.start()
 
 
