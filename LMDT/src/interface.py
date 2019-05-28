@@ -105,6 +105,9 @@ class Interface():
         self.record_event = threading.Event()
         self.arena_ok_event = threading.Event()
 
+        self.play_start = None
+        self.record_start = None
+
         self.data_saver = Saver(
             store=self.cfg["tracker"]["store"], init_time=self.init_time,
             name="data_saver", record_event=self.record_event
@@ -132,9 +135,8 @@ class Interface():
         self.log = logging.getLogger(__name__)
         
         self.log.info("Start time: {}".format(self.init_time.strftime("%Y%m%d-%H%M%S")))
-
-
         self.interface_initialized = False
+        self.log.info('Interface has been initialized')
     
    
     def cv2_update(self):
@@ -182,6 +184,7 @@ class Interface():
         # Setup camera tracking
         ###########################
         if self.track:
+            self.log.info("Initializing tracker")
             tracker = Tracker(interface=self, camera=self.camera, video=self.video)
         else:
             tracker = None
@@ -191,10 +194,12 @@ class Interface():
         ##########################
         if self.arduino:
             # initialize board
+            self.log.info("Initializing Arduino board controls")
             device = LearningMemoryDevice(interface=self, mapping=self.mapping_path, program=self.program_path, port=self.port)
             # power off any pins if any
             device.power_off_arduino(exit=False)
             # prepare the arduino parallel threads
+            self.log.info('Loading program')
             device.prepare()
         else:
             device = None
@@ -219,6 +224,7 @@ class Interface():
         prior to any experiment 
         """
         self.play_event.set()
+        self.play_start = datetime.datetime.now()
 
         if self.track:
             try:
@@ -241,8 +247,9 @@ class Interface():
         """
         Start recording image data and runs arduino paradigm if any
         """
-
+        
         self.record_event.set()
+        self.record_start = datetime.datetime.now()
         self.log.info("Starting recording. Savers will cache data and save it to csv files")
 
         if not self.arduino:
@@ -261,7 +268,7 @@ class Interface():
                     self.log.info("Running Arduino")
                     self.device.run(threads=self.threads)
                 except Exception as e:
-                    self.log.exception('Could not run Arduino board')
+                    self.log.exception('Could not run Arduino board. Check exception')
                     self.log.exception(e)
 
     
@@ -279,7 +286,7 @@ class Interface():
         """
         Launch the tkinter gui and update it accordingly
         """        
+        print(self.exit.is_set())
         while not self.exit.is_set() and self.gui is not None:
-            
             # print(type(self.device.mapping))
             self.gui.update()

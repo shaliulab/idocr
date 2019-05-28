@@ -109,7 +109,6 @@ class Tracker():
         self.N = self.interface.cfg["tracker"]["N"] 
 
         self.log = logging.getLogger(__name__)
-        self.log.info("Starting video ...")
 
         self.saver = self.interface.data_saver
         
@@ -226,7 +225,10 @@ class Tracker():
                 return False
 
             # How much time has passed since we started tracking?
-            self.interface.timestamp = (datetime.datetime.now() - self.interface.tracking_start).total_seconds()
+            if self.interface.record_start:
+                self.interface.timestamp = (datetime.datetime.now() - self.interface.record_start).total_seconds()
+            else:
+                self.interface.timestamp = 0
 
             # Read a new frame
             ret, frame = self.stream.read_frame()
@@ -351,7 +353,7 @@ class Tracker():
                     ## End for loop over all putative flies
                     ##
                
-                # If still 0, it means that none of the fly contours detected
+                # If still 1, it means that none of the fly contours detected
                 # were validated, a fly was not found in this arena!
                 if id_fly == 1:
                     self.missing_fly += 1
@@ -449,8 +451,6 @@ class Tracker():
 
     def run(self):
 
-        self.interface.tracking_start = datetime.datetime.now()
-
         tracker_thread = threading.Thread(
             name = "tracker_thread",
             target = self._run
@@ -463,8 +463,8 @@ class Tracker():
     def onClose(self):
         self.stream.release()
         self.log.info("Tracking stopped")
-        self.log.info("{} frames analyzed".format(self.frame_count))
-        self.log.info("Number of frames that fly is not detected in is {}".format(self.missing_fly))
+        self.log.info("{} arenas in {} frames analyzed".format(20 * self.frame_count, self.frame_count))
+        self.log.info("Number of arenas that fly is not detected in is {}".format(self.missing_fly))
         self.saver.store_and_clear(self.saver.lst, 'data')
 
         if not self.interface.exit.is_set(): self.interface.onClose()

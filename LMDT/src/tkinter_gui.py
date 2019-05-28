@@ -259,12 +259,17 @@ class TkinterGui():
 
 
     def update(self):
+        '''
+
+        '''
          
         ## TODO rewrite to make less verbose
         ####################################
         ## TODO Separate initialization from update
         ####################################
-        if self.interface.play_event.is_set() or True:
+        if True:   
+            
+            # if self.interface.timestamp % 1 == 0:
             if self.interface.track:
                 #self.tkinter_update_widget(img=self.interface.stacked_arenas, name='stacked_arenas')
                 self.tkinter_update_widget(img=self.interface.frame_color, name='frame_color')
@@ -273,15 +278,18 @@ class TkinterGui():
             if self.interface.device:
                 self.tkinter_update_monitor(self.interface.device.mapping)
                 self.tkinter_update_statusbar()
-    
+
             if self.tkinter_init:
+                self.log.info('Initializing graphical interface')
                 # # self.interface.tkinter_init = False
                 self.root.wm_title("Learning memory stream")
                 self.root.wm_protocol("WM_DELETE_WINDOW", self.onClose)
                 self.canvas.addtag_all("all")
                 self.tkinter_init = False
-                self.tkinter_finished = True
-            # if self.interface.timestamp % 1 == 0:
+    
+            self.tkinter_finished = True
+                
+
 
         self.root.update_idletasks()
         # needed to close the window with X
