@@ -138,10 +138,11 @@ class TkinterGui():
         self.statusbar = statusbar
 
         # Initialize buttons
-        playButton = BetterButton(self.button_frame, 'play', self.interface.play, 0)
+        #irButton = BetterButton(self.button_frame, 'ir', self.interface.turnon_ir, 0)
+        playButton = BetterButton(self.button_frame, 'play', self.interface.play, 1)
         #pauseButton = BetterButton(self.button_frame, 'pause', self.interface.pause, 1)
-        okButton = BetterButton(self.button_frame, 'ok_arena', self.interface.ok_arena, 1)
-        recordButton = BetterButton(self.button_frame, 'record', self.interface.record, 2)
+        okButton = BetterButton(self.button_frame, 'ok_arena', self.interface.ok_arena, 2)
+        recordButton = BetterButton(self.button_frame, 'record', self.interface.record, 3)
         
         buttons = [playButton, okButton, recordButton]
 
@@ -165,16 +166,21 @@ class TkinterGui():
         self.tkinter_finished = False
 
         self.log = log
-        print(self.log)
 
     
     def ask_program(self, filetype='program'):
         initialdir = Path(ROOT_DIR, filetype+'s').__str__()
-        self.interface.program_path = tk.filedialog.askopenfilename(
+        program_path = tk.filedialog.askopenfilename(
             initialdir = initialdir,title = "Select {} file".format(filetype),
             filetypes = (("csv files","*.csv"),("all files","*.*"))
             )
-        self.log.info('Loading program {}'.format(self.interface.program_path))
+        if program_path != ():
+            self.interface.load_program_event.set()
+            self.interface.program_path = program_path
+            self.interface.prepare_device('exit')
+            self.log.info('Loading program {}'.format(self.interface.program_path))
+
+
 
     def ask_mapping(self):
         initialdir = Path(ROOT_DIR, 'mappings').__str__()
@@ -199,7 +205,7 @@ class TkinterGui():
 
 
     def callback(self, event):
-        print("clicked at", event.x, event.y)
+        self.log.info("clicked at {} {}".format(event.x, event.y))
 
     def tkinter_preprocess(self, img, width):
 

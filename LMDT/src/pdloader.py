@@ -19,10 +19,13 @@ def convert(s):
         num, denom = s.split('/')
         return np.float(num) / np.float(denom)
 
+log = logging.getLogger(__name__)
 
 class PDLoader():
 
-    def __init__(self, mapping, program):
+    def __init__(self, mapping_path, program_path):
+
+
         self.loaded = False
         self.block_names = None
         self.overview = None
@@ -31,7 +34,7 @@ class PDLoader():
         self.pattern = self.interface.cfg["blocks"]["pattern"]
         
         # Read mapping table (pin coordinates and names)
-        mapping = pd.read_csv(mapping, skip_blank_lines=True, comment="#")
+        mapping = pd.read_csv(mapping_path, skip_blank_lines=True, comment="#")
         mapping.set_index(self.index_col, inplace = True)
         self.mapping = mapping
 
@@ -42,7 +45,10 @@ class PDLoader():
 
         
         # Read program table
-        program = pd.read_csv(program)
+        program = pd.read_csv(program_path)
+        # print('Ayyy')
+        # print(program_path)
+
         # Make numeric and divide by 60
         program = self.format(program, 'block')
         # Autocomplete start NaNs based on previous block
@@ -54,14 +60,12 @@ class PDLoader():
         overview = program
         block_names = overview.index #  commment
 
-        
         program = self.compile(program, blocks)
         self.overview = overview
         self.program = program
         self.block_names = block_names
-
         self.loaded = True
-        self.log = logging.getLogger(__name__)
+        log.info('Paradigm is read into Python')
 
     def complete_nan(self, program):
 

@@ -55,7 +55,12 @@ class Saver():
         """
         Convert key's cache list to a DataFrame and append that to HDF5.
         """
-        df = pd.DataFrame(lst)
+        try:
+            df = pd.DataFrame(lst)
+        except Exception as e:
+            self.log.error('There was an error saving the {}'.format(key))
+            print(lst)
+            self.log.error(e) 
 
         # check the dataframe is not empty
         # could be empty if user closes before recording anything

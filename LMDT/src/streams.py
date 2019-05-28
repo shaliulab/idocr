@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 import os
 import sys
 import time
@@ -9,10 +10,9 @@ import cv2
 import coloredlogs
 import psutil
 
-from lmdt_utils import setup_logging
 from decorators import export 
-
-ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
+from lmdt_utils import setup_logging
+from LMDT import ROOT_DIR
 
 setup_logging()
 
@@ -30,7 +30,8 @@ class PylonStream():
         except genicam._genicam.RuntimeException as e:
             self.log.warning(e)
             self.log.info('Opening Pylon camera')
-            os.system("sudo bash {}/utils/open_camera.sh".format(ROOT_DIR))
+            script_path = Path(ROOT_DIR, 'src', 'utils', 'open_camera.sh').__str__() 
+            os.system("sudo bash {}".format(script_path))
             try:
                 cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
             except genicam._genicam.RuntimeException:

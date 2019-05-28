@@ -22,6 +22,7 @@ ap.add_argument("-a", "--arduino", action = 'store_true',                 help="
 ap.add_argument("-t", "--track", action = 'store_true',                   help="Shall I track flies?")
 ap.add_argument("-r", "--reporting", action = 'store_true')
 ap.add_argument("-g", "--gui",       type = str,  default = "tkinter", choices=['opencv', 'tkinter'], help="tkinter/opencv")
+ap.add_argument("-i", "--ir",       action = 'store_true',                help='Shall I attempt to turn on the IR upon pressing play?')
 ap.add_argument("-c", "--camera", type = str, default = "opencv", choices = ["opencv", "pylon"], help="Stream source")
 ap.add_argument("--config", type = str, default = "config.yaml", help="Path to config file")
 ap.add_argument("-f", "--fps", type = int, help="Frames per second in the opened stream. Default as stated in the __init__ method in Tracker, is set to 2")
@@ -43,7 +44,7 @@ interface = Interface(
     arduino = args["arduino"], track = args["track"],
     mapping = args["mapping"], program = args["program"], port = args["port"],
     camera = args["camera"], video = args["video"],
-    reporting = args["reporting"], config = args["config"], duration = DURATION, gui = args["gui"]
+    reporting = args["reporting"], config = args["config"], duration = DURATION, gui = args["gui"], ir = args["ir"]
 )
 
 interface.load_tracker()

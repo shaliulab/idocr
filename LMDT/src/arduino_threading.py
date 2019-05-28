@@ -16,11 +16,12 @@ setup_logging()
 
 class ArduinoThread(threading.Thread):
 
-    def __init__(self, device, kwargs, name = None):
+    def __init__(self, device, kwargs, name = None, stop_event_name = 'exit'):
 
         self.device = device
         self.log = logging.getLogger(__name__)
         self.pin_name =  name.split('-')[1]
+        self.stop_event_name = stop_event_name
         super(ArduinoThread, self).__init__(name = name, target = self.pin_thread, kwargs = kwargs)
 
 
@@ -33,8 +34,8 @@ class ArduinoThread(threading.Thread):
         self._kwargs["duration"] = duration 
         super(ArduinoThread, self).start()
     
-    def wait(self, waiting_time, event_name='exit'):
-        event = getattr(self.device.interface, event_name)
+    def wait(self, waiting_time):
+        event = getattr(self.device.interface, self.stop_event_name)
         if not event.is_set():
             event.wait(waiting_time)
         else:

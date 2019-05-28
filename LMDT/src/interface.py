@@ -2,6 +2,7 @@
 import argparse
 import datetime
 import logging
+from pathlib import Path
 import os.path
 import sys
 import threading
@@ -14,17 +15,18 @@ import numpy as np
 import yaml
 
 # Local application imports
-from lmdt_utils import setup_logging
-from saver import Saver
-from tracker import Tracker
 from arduino import LearningMemoryDevice
+from lmdt_utils import setup_logging
+from orevent import OrEvent
+from saver import Saver
 from tkinter_gui import TkinterGui
+from tracker import Tracker
 
 DjangoGui = None
 
 # Set up package configurations
 setup_logging()
-ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
+from LMDT import ROOT_DIR
 
 guis = {'django': DjangoGui, 'tkinter': TkinterGui}
 
@@ -34,7 +36,7 @@ class Interface():
 
     def __init__(self, arduino=False, track=False, mapping = None, program = None, blocks = None, port = None,
                  camera = None, video = None, reporting=False, config = "config.yaml",
-                 duration = None, experimenter = None, gui = "tkinter"
+                 duration = None, experimenter = None, gui = "tkinter", ir = True
                  ):
 
         with open(config, 'r') as ymlfile:
@@ -85,6 +87,7 @@ class Interface():
         self.mapping_path = None
 
 
+
         self.blocks = None
         self.port = None
         
@@ -102,16 +105,21 @@ class Interface():
 
         self.arduino_done = True
         self.arduino_stopped = True
-        self.exit = threading.Event()
         
         self.stop = False
         self.play_event = threading.Event()
         self.stop_event = threading.Event()
         self.record_event = threading.Event()
         self.arena_ok_event = threading.Event()
+        self.load_program_event = threading.Event()
+
+        self.exit = threading.Event()
+
+        self.exit_or_record = OrEvent(self.exit, self.record_event)
 
         self.play_start = None
         self.record_start = None
+        self.ir = ir
 
         
 
@@ -130,8 +138,9 @@ class Interface():
         self.reporting = reporting
         self.camera = camera
         self.video = video
-        self.mapping_path = mapping
+        self.mapping_path = Path(ROOT_DIR, 'mappings', 'main.csv').__str__() if mapping is None else mapping
         self.program_path = program
+        self.ir_path = Path(ROOT_DIR, "programs", 'ir.csv')
 
         self.blocks = blocks
         self.port = port
@@ -198,23 +207,42 @@ class Interface():
             tracker = None
         self.tracker = tracker
 
-    def load_device(self):
+    def load_device(self, stop_event_name='exit'):
 
-        # Setup Arduino controls
-        ##########################
-        if self.arduino:
-            # initialize board
+        program_path = self.ir_path if self.program_path is None else self.program_path
+
+        self.device = LearningMemoryDevice(
+            interface=self,
+            mapping_path=self.mapping_path,
+            program_path=program_path,
+            port=self.port
+        )
+
+        self.prepare_device(stop_event_name)
+        if self.ir:
+            self.device.run(threads=self.threads)
+        self.log.info('Turning IR on')
+        
+
+            
+    def prepare_device(self, stop_event_name):
+
+    # Setup Arduino controls
+    ##########################
+        # initialize board
+        if self.ir and not self.load_program_event.is_set():
             self.log.info("Initializing Arduino board controls")
-            device = LearningMemoryDevice(interface=self, mapping=self.mapping_path, program=self.program_path, port=self.port)
-            # power off any pins if any
-            device.power_off_arduino(exit=False)
-            # prepare the arduino parallel threads
-            self.log.info('Loading program')
-            device.prepare()
-        else:
-            device = None
-        self.device = device
+        if self.load_program_event.is_set():
+            print('Reloading program')
+            self.log.debug('Reloading program')
+            self.device.load_program(program_path = self.program_path, reload=True)
 
+        # power off any pins if any
+        self.device.power_off_arduino(exit=False, log=False)
+        # prepare the arduino parallel threads
+        self.device.prepare(stop_event_name=stop_event_name)
+
+        
     def control_c_handler(self):
         """
         Make the main thread run quit when signaled to stop
@@ -235,8 +263,8 @@ class Interface():
         """
         self.play_event.set()
         self.play_start = datetime.datetime.now()
-        print(self.mapping_path)
-        self.load_device()
+        if self.ir:
+            self.load_device('exit_or_record')
 
         if self.track:
             try:
@@ -268,18 +296,14 @@ class Interface():
             # set the event so the savers actually save the data and not just ignore it
             
         else:
-            print(self.device.program)
-            # ok = input("Is the program OK? (y/n):")
-            ok = 'y'
-            if ok == "y":
             # if self.interface_initialized:
             #     return None            
-                try:
-                    self.log.info("Running Arduino")
-                    self.device.run(threads=self.threads)
-                except Exception as e:
-                    self.log.exception('Could not run Arduino board. Check exception')
-                    self.log.exception(e)
+            try:
+                self.log.info("Running Arduino")
+                self.device.run(threads=self.threads)
+            except Exception as e:
+                self.log.exception('Could not run Arduino board. Check exception')
+                self.log.exception(e)
 
     
     def ok_arena(self):

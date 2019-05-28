@@ -28,13 +28,14 @@ boards = {"Arduino": Arduino, "ArduinoMega": ArduinoMega}
 
 class LearningMemoryDevice(PDLoader):
 
-    def __init__(self, interface, mapping, program, port):
+    def __init__(self, interface, mapping_path, program_path, port):
 
         ## Initialization
         self.mapping = None
         self.program = None
         self.port = None
         self.pin_state = None
+        self.stop_event_name = None
 
 
         self.init_time = None
@@ -50,8 +51,8 @@ class LearningMemoryDevice(PDLoader):
         self.interface.arduino_stopped = False
 
 
-        self.mapping = mapping
-        self.program = program
+        self.mapping_path = mapping_path
+        self.program_path = program_path
         self.port = port
 
         # Inherited from interface
@@ -63,7 +64,7 @@ class LearningMemoryDevice(PDLoader):
         self.log.debug('Loaded paradigm in {}'.format(self.program))
 
         ###############################
-        PDLoader.__init__(self, mapping, program)
+        self.load_program()
         
         self.pin_state = {k: False for k in self.mapping.index}
 
@@ -81,14 +82,28 @@ class LearningMemoryDevice(PDLoader):
         except serial.serialutil.SerialException:
             self.log.error('Please provide the correct port')
             sys.exit(1)
+
     
-    def prepare(self):
+    def load_program(self, mapping_path=None, program_path=None, reload = False):
+        mapping_path = self.mapping_path if mapping_path is None else mapping_path
+        if not reload:
+            program_path = self.program_path if program_path is None else program_path
+        print(program_path)
+     
+        PDLoader.__init__(self, mapping_path, program_path)
+        print('After reloading')
+        print(self.program)
+
+    
+    def prepare(self, stop_event_name = 'exit'):
         """
         Transform the dataframe of events into a dictionary of Thread() objects that
         can drive arduino pins independently
         """
 
-        threads = self.interface.threads
+        self.stop_event_name = stop_event_name
+
+        threads = {}
         self.program["active"] = False
         self.program["thread_name"] = None
 
@@ -148,6 +163,8 @@ class LearningMemoryDevice(PDLoader):
         
          
         self.interface.threads = threads
+        print(self.interface.threads)
+
         return threads
 
     
@@ -170,6 +187,8 @@ class LearningMemoryDevice(PDLoader):
 
     def run(self, threads):
 
+        print(threads)
+
         arduino_thread = threading.Thread(
             name = 'SUPER_ARDUINO',
             target = self._run,
@@ -191,7 +210,7 @@ class LearningMemoryDevice(PDLoader):
         self.saver.store_and_clear(self.saver.lst, 'metadata')
 
         self.interface.arduino_done = True
-        if not self.interface.exit.is_set(): self.interface.onClose()
+        if not self.interface.exit.is_set() and self.stop_event_name == 'exit': self.interface.onClose()
         return True
  
 
@@ -202,13 +221,18 @@ class LearningMemoryDevice(PDLoader):
         return [self.pin_id2n(p), pin_state_g[p]]
 
 
-    def power_off_arduino(self, exit=True):
+    def power_off_arduino(self, exit=True, ir=False, log=True):
+
+
         # stop all the threads
-        if self.interface.threads:
+        if self.interface.threads and log:
             self.log.info("Quitting program")
 
+        # power everything off except if ir is False.
+        # In that case the IR light is kept
         for p in self.mapping.pin_number:
-            self.board.digital[p].write(0)
+            if self.mapping.loc[self.mapping.index.values == 'IRLED', 'pin_number'].values != p or ir:
+                self.board.digital[p].write(0)
     
         if exit:
             return False
