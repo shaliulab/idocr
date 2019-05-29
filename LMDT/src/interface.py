@@ -19,7 +19,7 @@ from arduino import LearningMemoryDevice
 from lmdt_utils import setup_logging
 from orevent import OrEvent
 from saver import Saver
-from tkinter_gui import TkinterGui
+from gui.tkinter import TkinterGui
 from tracker import Tracker
 
 DjangoGui = None
