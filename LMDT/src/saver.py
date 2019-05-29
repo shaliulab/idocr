@@ -33,7 +33,7 @@ class Saver():
         self.lst = []
         self.record_event = record_event
         
-    def process_row(self, d, key, max_len = 5):
+    def process_row(self, d, key, max_len = 100):
         """
         Append row d to the store 'key'.
     
@@ -51,16 +51,20 @@ class Saver():
             self.log.debug("Adding new datapoint to cache")      
 
 
-    def store_and_clear(self, lst, key):
+    def store_and_clear(self, key):
         """
         Convert key's cache list to a DataFrame and append that to HDF5.
         """
         try:
-            df = pd.DataFrame(lst)
+            df = pd.DataFrame.from_records(self.lst)
         except Exception as e:
             self.log.error('There was an error saving the {}'.format(key))
-            print(lst)
-            self.log.error(e) 
+            print(self.lst)
+            self.log.error(e)
+            return 0 
+        else:
+            self.lst.clear()
+
 
         # check the dataframe is not empty
         # could be empty if user closes before recording anything
@@ -85,4 +89,3 @@ class Saver():
             
 
 
-        lst.clear()

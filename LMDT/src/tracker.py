@@ -480,7 +480,7 @@ class Tracker():
         self.log.info("Tracking stopped")
         self.log.info("{} arenas in {} frames analyzed".format(20 * self.frame_count, self.frame_count))
         self.log.info("Number of arenas that fly is not detected in is {}".format(self.missing_fly))
-        self.saver.store_and_clear(self.saver.lst, 'data')
+        self.saver.store_and_clear('data')
 
         if not self.interface.exit.is_set(): self.interface.onClose()
 
