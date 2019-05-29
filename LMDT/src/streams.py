@@ -136,6 +136,9 @@ class PylonStream():
 class StandardStream():
 
     def __init__(self, video=None):
+
+        self.log = logging.getLogger(__name__)
+
         if video == 0:
             self.log.info("Capturing stream!")
             self.cap = cv2.VideoCapture(video)
