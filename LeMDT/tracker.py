@@ -17,6 +17,7 @@ from features import Arena, Fly
 from streams import PylonStream, StandardStream, STREAMS
 from lmdt_utils import setup_logging
 from decorators import export
+from saver import Saver
 
 # Set up package configurations
 cv2_version = cv2.__version__
@@ -119,8 +120,14 @@ class Tracker():
 
         self.log = logging.getLogger(__name__)
 
-        self.saver = self.interface.data_saver
-        
+        saver = Saver(
+            init_time=self.interface.init_time, record_event=self.interface.record_event
+        )
+
+        saver.set_store(self.interface.cfg)
+        self.saver = saver        
+
+
         ## TODO
         ## Find a way to get camera.Width.SetValue(whatever) to work
         ## Currently returns error: the node is not writable
@@ -157,7 +164,7 @@ class Tracker():
         else:
             self.stream = STREAMS[self.camera](0)
 
-        self.stream.get_dimensions()
+        self.video_width, self.video_height = self.stream.get_dimensions()
         self.log.info("Stream has shape w:{} h:{}".format(self.video_width, self.video_height))
         return True
 
@@ -350,6 +357,12 @@ class Tracker():
                     self.log.debug("Fly {} in arena {} validated with area {} and length {}".format(fly.identity, fly.arena.identity, fly.area, fly.diagonal))
                     self.saver.process_row(
                             d = {
+                                "oct_left" : self.interface.device.pin_state["ODOUR_A_OCT_LEFT"],
+                                "oct_right" : self.interface.device.pin_state["ODOUR_A_OCT_RIGHT"],
+                                "mch_left" : self.interface.device.pin_state["ODOUR_B_MCH_LEFT"],
+                                "mch_right" : self.interface.device.pin_state["ODOUR_B_MCH_LEFT"],
+                                "eshock_left" : self.interface.device.pin_state["ESHOCK_LEFT"],
+                                "eshock_right" : self.interface.device.pin_state["ESHOCK_RIGHT"],
                                 "frame": self.frame_count, "timestamp": self.interface.timestamp,
                                 "arena": arena.identity, "fly": fly.identity,
                                 "cx": fly.x_corrected, "cy": fly.y_corrected,

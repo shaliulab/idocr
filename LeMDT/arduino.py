@@ -28,19 +28,17 @@ BOARDS = {"Arduino": Arduino, "ArduinoMega": ArduinoMega}
 
 class LearningMemoryDevice(PDLoader):
 
-    def __init__(self, interface, mapping_path, program_path, port):
+    def __init__(self, interface, mapping_path, program_path):
 
         ## Initialization
         self.mapping = None
         self.program = None
-        self.port = None
         self.pin_state = None
         self.stop_event_name = None
         self.threads_finished = None
 
 
         self.init_time = None
-        self.saver = None
         self.reporting = None
 
         self.log = None
@@ -54,11 +52,9 @@ class LearningMemoryDevice(PDLoader):
 
         self.mapping_path = mapping_path
         self.program_path = program_path
-        self.port = port
 
         # Inherited from interface
         self.init_time = self.interface.init_time
-        self.saver = self.interface.metadata_saver
         self.reporting = self.interface.reporting
 
         self.log = logging.getLogger(__name__)
@@ -67,7 +63,6 @@ class LearningMemoryDevice(PDLoader):
         self.threads = {"exit_or_record": {}, "exit" : {}}
         self.threads_finished = {}
 
-        self.connect_arduino_board(self.port)
 
     def connect_arduino_board(self, port):
         """
@@ -97,12 +92,19 @@ class LearningMemoryDevice(PDLoader):
         PDLoader.__init__(self, mapping_path, program_path)
 
 
+    def init_pin_state(self):
+        """
+        Initialize a dictionary storing the state of each pin. Default False
+        """
+        self.pin_state = {k: False for k in self.mapping.index}
+
+
+
     def prepare(self, stop_event_name):
         """
         Load the Arduino paradigm into LeMFT
         Power off all pins
         Create the threads dictionary
-        Initialize a dictionary storing the state of each pin. Default False
         """
 
         self.log.debug('Loading program')
@@ -112,7 +114,7 @@ class LearningMemoryDevice(PDLoader):
         self.power_pins_off(shutdown=False, log=False, ir=True)
         # prepare the arduino parallel threads
         self.create_threads(stop_event_name=stop_event_name)
-        self.pin_state = {k: False for k in self.mapping.index}
+        self.init_pin_state()
 
 
     def create_threads(self, stop_event_name='exit'):
@@ -234,9 +236,7 @@ class LearningMemoryDevice(PDLoader):
 
         # power off every pin
         self.power_pins_off()
-        self.log.info('{} storing and cleaning cache'.format(t.name))
-        # save the cache to a file
-        self.saver.store_and_clear('metadata')
+
 
         # NEEDED?
         self.interface.arduino_done = True

@@ -20,8 +20,7 @@ setup_logging()
 class StandardStream():
 
     def get_dimensions(self):
-        self.video_width = self.get_width()
-        self.video_height = self.get_height()
+        return self.get_width(), self.get_height()
 
 
 @export

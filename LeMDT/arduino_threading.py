@@ -207,16 +207,6 @@ class ArduinoThread(threading.Thread):
         x = bool(value) if not freq else freq
         self.device.pin_state[self.pin_name] = x
 
-        # Create a new row in the metadata
-        self.device.saver.process_row(
-                d = {
-                    "pin_number": pin_number, "value": value, "thread": d._kwargs["d_name"], 
-                    "timestamp": self.device.interface.timestamp,
-                    "datetime": datetime.datetime.now()
-                    },
-                key = "metadata"
-
-        )
   
         #self.show_circuit(
         #            #pin_state,

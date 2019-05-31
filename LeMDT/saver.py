@@ -2,36 +2,47 @@
 import logging
 import os.path
 import datetime
+from pathlib import Path
 
 # Third party imports
 import pandas as pd
 
 # Local application imports
 from lmdt_utils import setup_logging
-
+from LeMDT import PROJECT_DIR
 # Set up package configurations
 setup_logging()
 
 # https://stackoverflow.com/questions/16740887/how-to-handle-incoming-real-time-data-with-python-pandas/17056022
-max_len = 5000
+max_len = 50
 
 
 class Saver():
 
-    def __init__(self, store="store", cache = {}, init_time = None, name = None, record_event = None):
+    def __init__(self, cache = {}, init_time = None, record_event = None):
 
 
-        self.store = None
-        self.cache = None
-        self.name = None
         self.init_time = None
         self.cache = cache
-        self.name = name
         self.init_time = init_time
-        self.store = "{}_{}".format(store, init_time.strftime("%Y%m%d-%H%M%S"))
+        
         self.log = logging.getLogger(__name__)
         self.lst = []
         self.record_event = record_event
+
+    def set_store(self, cfg):
+        """
+        Set the absolute path to the output file (without extension)
+        """
+        now = self.init_time.strftime("%Y-%m-%d_%H-%M-%S")
+        output_dir = Path(PROJECT_DIR, cfg["saver"]["path"], now)
+        filename = now+"_"+cfg["interface"]["machine_id"]
+        self.store = Path(output_dir, filename).__str__()
+        # create the directory structure, if it does not exist yet
+        output_dir.mkdir(parents=True, exist_ok=True) 
+
+
+
         
     def process_row(self, d, key, max_len = 100):
         """

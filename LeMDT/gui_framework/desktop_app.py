@@ -42,7 +42,7 @@ class BetterButton(tk.Button):
         return a PhotoImage object of this image
         """
 
-        fname = Path(ROOT_DIR, 'static', '{}.png'.format(filename)).__str__()
+        fname = Path(STATIC_DIR,  filename+'.png').__str__()
         log.debug("Reading image on path {}".format(fname))
         if not os.path.isfile(fname):
             log.warning('Could not find {}. Are you sure it is in /static?'.format(fname))
@@ -75,7 +75,6 @@ class TkinterGui():
 
         root.geometry("{}x{}+200+200".format(self.width, self.height))
         icon_path = Path(STATIC_DIR, 'fly.png').__str__()
-        print(icon_path)
         # root.iconbitmap(icon_path)
         root.tk.call('wm', 'iconphoto', root._w, tk.PhotoImage(file=icon_path))
         

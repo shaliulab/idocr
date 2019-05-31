@@ -35,7 +35,7 @@ class PDLoader():
         
         # Read mapping table (pin coordinates and names)
         mapping = pd.read_csv(mapping_path, skip_blank_lines=True, comment="#")
-        mapping.set_index(self.index_col, inplace = True)
+        mapping.set_index(self.index_col, inplace=True)
         self.mapping = mapping
 
         # Fetch blocks available in the folder
