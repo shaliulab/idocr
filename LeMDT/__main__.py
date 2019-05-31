@@ -10,6 +10,7 @@ from interface import Interface
 
 # Arguments to follow the command, adding video, etc options
 ap = argparse.ArgumentParser()
+ap.add_argument("-c", "--camera", type = str, default = "webcam", choices = ["opencv", "pylon"], help="Stream source")
 ap.add_argument("-p", "--port",     type = str, default = "/dev/ttyACM0", help="Absolute path to the Arduino port. Usually '/dev/ttyACM0' in Linux and COM in Windows")
 ap.add_argument("-m", "--mapping", type = str,                            help="Absolute path to csv providing pin number-pin name mapping", )
 ap.add_argument("--program", type = str,                                  help="Absolute path to csv providing the Arduino top level program")
@@ -23,7 +24,6 @@ ap.add_argument("-t", "--track", action = 'store_true',                   help="
 ap.add_argument("-r", "--reporting", action = 'store_true')
 ap.add_argument("-g", "--gui",       type = str,  default = "tkinter", choices=['opencv', 'tkinter'], help="tkinter/opencv")
 ap.add_argument("-i", "--ir",       action = 'store_true',                help='Shall I attempt to turn on the IR upon pressing play?')
-ap.add_argument("-c", "--camera", type = str, default = "opencv", choices = ["opencv", "pylon"], help="Stream source")
 ap.add_argument("--config", type = str, default = "config.yaml", help="Path to config file")
 ap.add_argument("-f", "--fps", type = int, help="Frames per second in the opened stream. Default as stated in the __init__ method in Tracker, is set to 2")
 args = vars(ap.parse_args())
@@ -47,5 +47,4 @@ interface = Interface(
     reporting = args["reporting"], config = args["config"], duration = DURATION, gui = args["gui"], ir = args["ir"]
 )
 
-interface.init_tracker()
 interface.start()

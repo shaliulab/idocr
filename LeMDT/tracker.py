@@ -85,6 +85,8 @@ class Tracker():
         self.kernel_factor = None
         self.kernel = None
         self.N = None
+        self.video_height = None
+        self.video_width = None
 
         # Assignment
         self.interface = interface
@@ -127,15 +129,12 @@ class Tracker():
         # if VIDEO_HEIGHT != 1024:
         #     cap.set(4, 1024)
 
-        self.load_camera()
-        self.init_image_arrays()
 
         self.status = True
  
         self.arenas = {}
         self.masks = {}
 
-        self.log.info("Stream has shape w:{} h:{}".format(self.interface.video_width, self.interface.video_height))
 
 
         if self.fps and video:
@@ -143,6 +142,11 @@ class Tracker():
             self.stream.set_fps(self.fps)
 
     def load_camera(self):
+        """
+        Populate the stream attribute of the Tracker class
+        Make it an instance of the classes in streams.py
+        """
+
 
         if self.video is not None:
             self.video = Path(self.video)
@@ -150,9 +154,13 @@ class Tracker():
                 self.stream = STREAMS[self.camera](self.video.__str__())
             else:
                 self.log.error("Video under provided path not found. Check for typos")
-                sys.exit(1)
         else:
             self.stream = STREAMS[self.camera](0)
+
+        self.stream.get_dimensions()
+        self.log.info("Stream has shape w:{} h:{}".format(self.video_width, self.video_height))
+        return True
+
 
     def init_image_arrays(self):
         """
@@ -160,21 +168,18 @@ class Tracker():
         These are required for the GUI to display something before start
         """
 
-        self.interface.video_width = self.stream.get_width() // self.crop
-        self.interface.video_height = self.stream.get_height()
-
         # Make accuImage an array of size heightxwidthxnframes that will
         # store in the :,:,i element the result of the tracking for frame i
-        self.accuImage = np.zeros((self.interface.video_height, self.interface.video_width, self.N), np.uint8)
+        self.accuImage = np.zeros((self.video_height, self.video_width, self.N), np.uint8)
         
-        # self.img = np.zeros((self.interface.video_height, self.interface.video_width, 3), np.uint8)
-        self.transform = np.zeros((self.interface.video_height, self.interface.video_width), np.uint8)
-        self.gray_masked = np.zeros((self.interface.video_height, self.interface.video_width), np.uint8)
+        # self.img = np.zeros((self.video_height, self.video_width, 3), np.uint8)
+        self.transform = np.zeros((self.video_height, self.video_width), np.uint8)
+        self.gray_masked = np.zeros((self.video_height, self.video_width), np.uint8)
 
-        self.interface.frame_color = np.zeros((self.interface.video_height, self.interface.video_width, 3), np.uint8)
-        self.interface.gray_color = np.zeros((self.interface.video_height, self.interface.video_width, 3), np.uint8)
-        self.interface.gray_gui = np.zeros((self.interface.video_height, self.interface.video_width), np.uint8)
-        self.interface.stacked_arenas = np.zeros((self.interface.video_height, self.interface.video_width), np.uint8)
+        self.interface.frame_color = np.zeros((self.video_height, self.video_width, 3), np.uint8)
+        self.interface.gray_color = np.zeros((self.video_height, self.video_width, 3), np.uint8)
+        self.interface.gray_gui = np.zeros((self.video_height, self.video_width), np.uint8)
+        self.interface.stacked_arenas = np.zeros((self.video_height, self.video_width), np.uint8)
 
 
     def rotate_frame(self, img, rotation=180):
@@ -512,7 +517,7 @@ class Tracker():
             masks = np.array(list(masks))
             main_mask = np.bitwise_or.reduce(masks)
         else:
-            main_mask = np.full((self.interface.video_height, self.interface.video_width, 3), 255, dtype=np.uint8)
+            main_mask = np.full((self.video_height, self.video_width, 3), 255, dtype=np.uint8)
     
         self.main_mask = main_mask
 

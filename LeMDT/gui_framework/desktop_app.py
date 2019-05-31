@@ -16,7 +16,7 @@ from PIL import ImageTk, Image
 
 # Local application imports
 from lmdt_utils import setup_logging
-from LMDT import ROOT_DIR, STATIC_DIR
+from LeMDT import ROOT_DIR, STATIC_DIR
 
 setup_logging()
 log = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ class BetterButton(tk.Button):
         log.debug("Reading image on path {}".format(fname))
         if not os.path.isfile(fname):
             log.warning('Could not find {}. Are you sure it is in /static?'.format(fname))
-            fname = Path(ROOT_DIR, 'static', 'question.png').__str__()
+            fname = Path(STATIC_DIR, 'question.png').__str__()
             photoimage = ImageTk.PhotoImage(file=fname)
         else:
             photoimage = ImageTk.PhotoImage(file=fname)
@@ -74,7 +74,8 @@ class TkinterGui():
         self.width = 800
 
         root.geometry("{}x{}+200+200".format(self.width, self.height))
-        icon_path = Path(ROOT_DIR, STATIC_DIR, 'fly.png').__str__()
+        icon_path = Path(STATIC_DIR, 'fly.png').__str__()
+        print(icon_path)
         # root.iconbitmap(icon_path)
         root.tk.call('wm', 'iconphoto', root._w, tk.PhotoImage(file=icon_path))
         

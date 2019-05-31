@@ -12,13 +12,20 @@ import psutil
 
 from decorators import export 
 from lmdt_utils import setup_logging
-from LMDT import ROOT_DIR
+from LeMDT import ROOT_DIR, UTILS_DIR
 
 setup_logging()
 
 
+class StandardStream():
+
+    def get_dimensions(self):
+        self.video_width = self.get_width()
+        self.video_height = self.get_height()
+
+
 @export
-class PylonStream():
+class PylonStream(StandardStream):
     def __init__(self, video=None):
         self.log = logging.getLogger(__name__)
         self.log.info("Attempting to open pylon camera")
@@ -29,14 +36,17 @@ class PylonStream():
             cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
         except genicam._genicam.RuntimeException as e:
             self.log.warning(e)
-            self.log.info('Opening Pylon camera')
-            script_path = Path(ROOT_DIR, 'src', 'utils', 'open_camera.sh').__str__() 
+            self.log.warning('Running open_camera.sh')
+            script_path = Path(UTILS_DIR, 'open_camera.sh').__str__() 
             os.system("sudo bash {}".format(script_path))
+            time.sleep(5)
             try:
                 cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-            except genicam._genicam.RuntimeException:
-                self.log.exception('Camera could not be loaded. Looks like the computer cannot access it')
+            except genicam._genicam.RuntimeException as e:
+                self.log.exception(e)
+                self.log.error('Camera could not be opened. Is the switch off?!')
                 sys.exit(1)
+
         except genicam._genicam.AccessException as e:
             self.log.warning('An exception has occurred. Camera could not be opened')
             self.log.critical(e)
@@ -136,7 +146,7 @@ class PylonStream():
         self.grabResult.Release()
 
 @export
-class StandardStream():
+class WebCamStream(StandardStream):
 
     def __init__(self, video=None):
 
@@ -190,5 +200,4 @@ class StandardStream():
     def release(self):
         self.cap.release()
 
-
-STREAMS = {"pylon": PylonStream, "opencv": StandardStream}
+STREAMS = {"pylon": PylonStream, "webcam": WebCamStream}

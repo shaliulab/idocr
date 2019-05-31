@@ -21,22 +21,23 @@ from orevent import OrEvent
 from saver import Saver
 from gui_framework.desktop_app import TkinterGui
 from tracker import Tracker
+from LeMDT import ROOT_DIR, PROJECT_DIR
 
 DjangoGui = None
 
 # Set up package configurations
 setup_logging()
-from LMDT import ROOT_DIR
 
 GUIS = {'django': DjangoGui, 'tkinter': TkinterGui}
 
+config_yaml = Path(PROJECT_DIR, "config.yaml")
 
 # @mixedomatic
 class Interface():
 
     def __init__(self, arduino=False, track=False, mapping=None, program=None, blocks=None, port=None,
-                 camera=None, video=None, reporting=False, config="config.yaml",
-                 duration=None, experimenter=None, gui="tkinter", ir=True
+                 camera=None, video=None, reporting=False, config=config_yaml,
+                 duration=None, experimenter=None, gui=None, ir=True
                  ):
 
         with open(config, 'r') as ymlfile:
@@ -133,7 +134,9 @@ class Interface():
 
         self.blocks = blocks
         self.port = port
-        self.gui = GUIS[gui](interface=self)
+        if gui:
+            print(gui)
+            self.gui = GUIS[gui](interface=self)
 
         self.timestamp = 0
         self.duration = duration if duration else self.cfg["interface"]["duration"]
@@ -147,7 +150,7 @@ class Interface():
 
     def init_tracker(self):
         """
-        Initialize a Tracker object that will provice Camera controls
+        Initialize a Tracker object that will provice camera controls
         Load the correct stream (Pylon, webcam camera or video)
         """
 
@@ -155,6 +158,9 @@ class Interface():
         ###########################
         self.log.info("Initializing tracker")
         self.tracker = Tracker(interface=self, camera=self.camera, video=self.video)
+        self.tracker.load_camera()
+        self.tracker.init_image_arrays()
+
 
     def init_device(self):
         """
@@ -271,7 +277,6 @@ class Interface():
             self.init_tracker()
 
         self.gui.create()
-
 
         while not self.exit.is_set() and self.gui is not None:
             # print(type(self.device.mapping))
