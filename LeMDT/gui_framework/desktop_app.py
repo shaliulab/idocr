@@ -5,6 +5,7 @@ import os.path
 from pathlib import Path
 import sys
 import time
+from tkinter import ttk
 import tkinter as tk
 from tkinter import filedialog
 
@@ -69,6 +70,9 @@ class TkinterGui():
         self.statusbar_text = None
 
         root = tk.Tk()
+        root.style = ttk.Style()
+        root.style.theme_use("clam")
+
         # set initial size of window (800x800 and 500 pixels up)
         self.height = 800
         self.width = 800

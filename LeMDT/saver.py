@@ -14,7 +14,7 @@ from LeMDT import PROJECT_DIR
 setup_logging()
 
 # https://stackoverflow.com/questions/16740887/how-to-handle-incoming-real-time-data-with-python-pandas/17056022
-max_len = 50
+max_len = 1000
 
 
 class Saver():
@@ -29,6 +29,11 @@ class Saver():
         self.log = logging.getLogger(__name__)
         self.lst = []
         self.record_event = record_event
+        self.columns = [
+            "frame", "arena", "cx", "cy", "datetime", "timestamp", 
+            "oct_left", "oct_right", "mch_left", "mch_right",
+            "eshock_left", "eshock_right"
+            ]
 
     def set_store(self, cfg):
         """
@@ -44,32 +49,30 @@ class Saver():
 
 
         
-    def process_row(self, d, key, max_len = 100):
+    def process_row(self, d, max_len = max_len):
         """
-        Append row d to the store 'key'.
+        Append row d to the store
     
-        When the number of items in the key's cache reaches max_len,
+        When the number of items in the cache reaches max_len,
         append the list of rows to the HDF5 store and clear the list.
     
         """
-        # keep the rows for each key separate.
-        # lst = self.cache.setdefault(key, [])
         
         if len(self.lst) >= max_len:
-            self.store_and_clear(self.lst, key)
+            self.store_and_clear()
         if self.record_event.is_set():
             self.lst.append(d)
             self.log.debug("Adding new datapoint to cache")      
 
 
-    def store_and_clear(self, key):
+    def store_and_clear(self):
         """
-        Convert key's cache list to a DataFrame and append that to HDF5.
+        Convert the cache list to a DataFrame and append that to HDF5.
         """
         try:
-            df = pd.DataFrame.from_records(self.lst)
+            df = pd.DataFrame.from_records(self.lst)[self.columns]
         except Exception as e:
-            self.log.error('There was an error saving the {}'.format(key))
+            self.log.error('There was an error saving the data')
             print(self.lst)
             self.log.error(e)
             return 0 

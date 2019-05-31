@@ -103,15 +103,5 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-src/Camera/*py
-src/Camera/new_20x/*
-images/*
-data/*
-metadata/*
-src/utils/check_video.py
-src/utils/make_video.py
+LeMDTe27SL5a9e19f94de287e28f789825
 failed_arenas/*
-src/utils/record_me.py
-src/utils/test1.py
-src/utils/tk-img2video.py
-

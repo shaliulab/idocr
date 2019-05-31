@@ -210,16 +210,19 @@ class Interface():
         Initialize the camera and fetch frames for an undefinite time
         This is the callback function of a button
         """
+        if self.play_event.is_set():
+            return None
+            
         self.play_event.set()
         self.play_start = datetime.datetime.now()
         
         if self.arduino:
-            self.device.run(self.threads["exit_or_record"])
+            self.device.toprun(self.threads["exit_or_record"])
 
         if self.track:
             try:
                 self.log.info("Running tracker")
-                self.tracker.run()
+                self.tracker.toprun()
             except Exception as e:
                 self.log.exception('Could not run tracker')
                 self.log.exception(e)

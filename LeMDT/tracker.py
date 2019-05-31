@@ -18,6 +18,7 @@ from streams import PylonStream, StandardStream, STREAMS
 from lmdt_utils import setup_logging
 from decorators import export
 from saver import Saver
+from LeMDT import PROJECT_DIR
 
 # Set up package configurations
 cv2_version = cv2.__version__
@@ -126,6 +127,11 @@ class Tracker():
 
         saver.set_store(self.interface.cfg)
         self.saver = saver        
+        
+        self.failed_arena_path = Path(PROJECT_DIR, self.interface.cfg['tracker']['fail'])
+        self.failed_arena_path.mkdir(parents=True, exist_ok=True) 
+
+
 
 
         ## TODO
@@ -364,12 +370,12 @@ class Tracker():
                                 "eshock_left" : self.interface.device.pin_state["ESHOCK_LEFT"],
                                 "eshock_right" : self.interface.device.pin_state["ESHOCK_RIGHT"],
                                 "frame": self.frame_count, "timestamp": self.interface.timestamp,
-                                "arena": arena.identity, "fly": fly.identity,
+                                "arena": arena.identity,
+                                #"fly": fly.identity,
                                 "cx": fly.x_corrected, "cy": fly.y_corrected,
                                 "datetime": datetime.datetime.now()
-                                },
-                            key = "data",
-                            )
+                                }
+                                )
                     self.found_flies += 1
                     
                     # Draw the fly
@@ -392,9 +398,9 @@ class Tracker():
                 # were validated, a fly was not found in this arena!
                 if id_fly == 1:
                     self.missing_fly += 1
-                    fname = Path(self.interface.cfg['tracker']['fail'], '{}_{}.tiff'. format(self.frame_count, arena.identity)).__str__()
+                    fname = str(self.record_frame_count) + "_" + str(arena.identity) + ".tiff"
                     gray_crop = gray[arena.tl_corner[1]:arena.br_corner[1], arena.tl_corner[0]:arena.br_corner[0]]
-                    cv2.imwrite(fname, gray_crop)
+                    cv2.imwrite(Path(self.failed_arena_path, fname).__str__(), gray_crop)
 
 
                 arenas_dict[id_arena] = arena
@@ -485,7 +491,7 @@ class Tracker():
 
         self.status = self.track()
 
-        while self.status and not self.interface.exit.is_set():                
+        while self.status and not self.interface.exit.is_set(): 
             self.merge_masks()
             self.interface.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
             self.status = self.track()
@@ -502,7 +508,7 @@ class Tracker():
 
         tracker_thread = threading.Thread(
             name = "tracker_thread",
-            target = self._run
+            target = self.run
         )
         
         self.interface.tracker_thread = tracker_thread
@@ -519,7 +525,7 @@ class Tracker():
         self.log.info("Tracking stopped")
         self.log.info("{} arenas in {} frames analyzed".format(20 * self.frame_count, self.frame_count))
         self.log.info("Number of arenas that fly is not detected in is {}".format(self.missing_fly))
-        self.saver.store_and_clear('data')
+        self.saver.store_and_clear()
 
         if not self.interface.exit.is_set(): self.interface.close()
 
