@@ -47,7 +47,5 @@ interface = Interface(
     reporting = args["reporting"], config = args["config"], duration = DURATION, gui = args["gui"], ir = args["ir"]
 )
 
-interface.load_tracker()
+interface.init_tracker()
 interface.start()
-
-

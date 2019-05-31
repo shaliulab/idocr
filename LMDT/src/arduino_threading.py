@@ -178,7 +178,7 @@ class ArduinoThread(threading.Thread):
         arduino_done = np.bitwise_and.reduce(list(self.device.interface.threads_finished.values()))
         # if its the last, signal exit
         if arduino_done:
-            self.device.interface.exit.set()
+            self.device.interface.close()
             self.device.interface.arduino_done = arduino_done
 
         return 1

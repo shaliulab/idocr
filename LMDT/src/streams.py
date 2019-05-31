@@ -21,7 +21,7 @@ setup_logging()
 class PylonStream():
     def __init__(self, video=None):
         self.log = logging.getLogger(__name__)
-        self.log.info("Starting pylon camera!")
+        self.log.info("Attempting to open pylon camera")
 
         ## TODO
         ## Check camera is visible!
@@ -84,7 +84,10 @@ class PylonStream():
         #cap.OffsetX.Max = 1000
         #cap.OffsetX = offset_x
         #cap.Width = width
-        self.cap = cap 
+        self.cap = cap
+
+        self.log.info("Camera loading successful")
+
 
 
     def get_fps(self):
@@ -140,11 +143,15 @@ class StandardStream():
         self.log = logging.getLogger(__name__)
 
         if video == 0:
-            self.log.info("Capturing stream!")
+            self.log.info("Attempting to open webcam")
             self.cap = cv2.VideoCapture(video)
+            self.log.info("Webcam opened successfully")
+
         elif video != 0:
             self.log.info("Opening {}!".format(video))
             self.cap = cv2.VideoCapture(video.__str__())
+        
+
 
     def get_fps(self):
         fps = self.cap.get(5)
@@ -183,5 +190,5 @@ class StandardStream():
     def release(self):
         self.cap.release()
 
-streams_dict = {"pylon": PylonStream, "opencv": StandardStream}
 
+STREAMS = {"pylon": PylonStream, "opencv": StandardStream}

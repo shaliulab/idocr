@@ -19,7 +19,7 @@ from arduino import LearningMemoryDevice
 from lmdt_utils import setup_logging
 from orevent import OrEvent
 from saver import Saver
-from gui.tkinter import TkinterGui
+from gui_framework.desktop_app import TkinterGui
 from tracker import Tracker
 
 DjangoGui = None
@@ -28,19 +28,19 @@ DjangoGui = None
 setup_logging()
 from LMDT import ROOT_DIR
 
-guis = {'django': DjangoGui, 'tkinter': TkinterGui}
+GUIS = {'django': DjangoGui, 'tkinter': TkinterGui}
 
 
 # @mixedomatic
 class Interface():
 
-    def __init__(self, arduino=False, track=False, mapping = None, program = None, blocks = None, port = None,
-                 camera = None, video = None, reporting=False, config = "config.yaml",
-                 duration = None, experimenter = None, gui = "tkinter", ir = True
+    def __init__(self, arduino=False, track=False, mapping=None, program=None, blocks=None, port=None,
+                 camera=None, video=None, reporting=False, config="config.yaml",
+                 duration=None, experimenter=None, gui="tkinter", ir=True
                  ):
 
         with open(config, 'r') as ymlfile:
-            self.cfg = yaml.load(ymlfile,  Loader=yaml.FullLoader)
+            self.cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
 
         ## Initialization of attributes
@@ -70,8 +70,6 @@ class Interface():
 
         self.metadata_saver = None
         self.data_saver = None
-        self.threads = None
-        self.threads_finished = None
         
         self.gray_color = None
         self.frame_color = None
@@ -85,8 +83,6 @@ class Interface():
         self.filtered_mappings = None
         self.program_path = None
         self.mapping_path = None
-
-
 
         self.blocks = None
         self.port = None
@@ -102,26 +98,18 @@ class Interface():
         self.arduino = arduino
         self.track = track
         self.init_time = datetime.datetime.now()
-
-        self.arduino_done = True
-        self.arduino_stopped = True
-        
-        self.stop = False
+       
         self.play_event = threading.Event()
         self.stop_event = threading.Event()
         self.record_event = threading.Event()
         self.arena_ok_event = threading.Event()
         self.load_program_event = threading.Event()
-
         self.exit = threading.Event()
-
         self.exit_or_record = OrEvent(self.exit, self.record_event)
 
         self.play_start = None
         self.record_start = None
         self.ir = ir
-
-        
 
         self.data_saver = Saver(
             store=self.cfg["tracker"]["store"], init_time=self.init_time,
@@ -133,18 +121,19 @@ class Interface():
             )
 
         self.threads = {}
-        self.threads_finished = {}
 
         self.reporting = reporting
         self.camera = camera
         self.video = video
-        self.mapping_path = Path(ROOT_DIR, 'mappings', 'main.csv').__str__() if mapping is None else mapping
+
+        self.mapping_path = mapping
+        self.default_mapping_path = Path(ROOT_DIR, 'mappings', 'main.csv').__str__()
         self.program_path = program
-        self.ir_path = Path(ROOT_DIR, "programs", 'ir.csv')
+        self.default_program_path = Path(ROOT_DIR, "programs", 'ir.csv').__str__()
 
         self.blocks = blocks
         self.port = port
-        self.gui = guis[gui](interface = self)
+        self.gui = GUIS[gui](interface=self)
 
         self.timestamp = 0
         self.duration = duration if duration else self.cfg["interface"]["duration"]
@@ -154,94 +143,48 @@ class Interface():
         self.log.info("Start time: {}".format(self.init_time.strftime("%Y%m%d-%H%M%S")))
         self.interface_initialized = False
         self.log.info('Interface has been initialized')
-    
-   
-    def cv2_update(self):
-        pack = False
-        if self.track:
-            pack = True
-            cv2.imshow("frame_color", self.frame_color)
-            #cv2.imshow('transform', self.transform)
-            cv2.imshow("gray_gui", self.gray_gui)
-            pack = True
-        
-        if self.arduino:
-            pass
-        
-        if self.track or self.arduino and pack:
-            # Check if user forces leave (press q)
-            q_pressed = cv2.waitKey(1) & 0xFF in [27, ord('q')]
-            if q_pressed:
-                self.onClose()
 
 
-    
-    def onClose(self, signo=None, _frame=None):
+    def init_tracker(self):
         """
-        Setting the Threading.Event() (to True) triggers the controlled shutdown of 
-        Arduino communication and storage of remaining cache
-        """
-        self.exit.set()
-        if signo is not None: self.log.info("Received {}".format(signo))
-
-        # if self.gui == "tkinter":
-        #     # set the stop event, cleanup the camera, and allow the rest of
-        #     # the quit process to continue
-        #     self.root.quit()
-            #self.root.destroy()
-
-        # else:
-            # cv2.destroyAllWindows()
-
-    def load_tracker(self):
-        """
-        Initialize the camera tracking and the arduino controls
+        Initialize a Tracker object that will provice Camera controls
+        Load the correct stream (Pylon, webcam camera or video)
         """
 
         # Setup camera tracking
         ###########################
-        if self.track:
-            self.log.info("Initializing tracker")
-            tracker = Tracker(interface=self, camera=self.camera, video=self.video)
-        else:
-            tracker = None
-        self.tracker = tracker
+        self.log.info("Initializing tracker")
+        self.tracker = Tracker(interface=self, camera=self.camera, video=self.video)
 
-    def load_device(self, stop_event_name='exit'):
+    def init_device(self):
+        """
+        Initialize a LearningMemoryDevice object that will provide Arduino controls
+        Load the mappings and a default paradigm by creating (no running) the corresponding parallel threads
+        Details:
+            It loads a program that turns on the IR only
+            This behavior only changes when self.program_path is set,
+            which can be done by pasing it via --program at runtime via the CLI
+        """
 
-        program_path = self.ir_path if self.program_path is None else self.program_path
-
-        self.device = LearningMemoryDevice(
+        self.log.info("Initializing Arduino board controls")
+        device = LearningMemoryDevice(
             interface=self,
-            mapping_path=self.mapping_path,
-            program_path=program_path,
+            mapping_path=self.default_mapping_path,
+            program_path=self.default_program_path,
             port=self.port
         )
 
-        self.prepare_device(stop_event_name)
-        if self.ir:
-            self.device.run(threads=self.threads)
-        self.log.info('Turning IR on')
-        
+        device.prepare('exit')
+        self.device = device
 
-            
-    def prepare_device(self, stop_event_name):
-
-    # Setup Arduino controls
-    ##########################
-        # initialize board
-        if self.ir and not self.load_program_event.is_set():
-            self.log.info("Initializing Arduino board controls")
-        if self.load_program_event.is_set():
-            print('Reloading program')
-            self.log.debug('Reloading program')
-            self.device.load_program(program_path = self.program_path, reload=True)
-
-        # power off any pins if any
-        self.device.power_off_arduino(exit=False, log=False)
-        # prepare the arduino parallel threads
-        self.device.prepare(stop_event_name=stop_event_name)
-
+    def close(self, signo=None, _frame=None):
+        """
+        Set the exit event
+        This event is listened to by processes in the Tracker and the LearningMemoryDevice
+        classes. Upon setting this event, these processes stop
+        """
+        self.exit.set()
+        if signo is not None: self.log.info("Received %", signo)
         
     def control_c_handler(self):
         """
@@ -253,18 +196,21 @@ class Interface():
 
         signals = ('TERM', 'HUP', 'INT')
         for sig in signals:
-            signal.signal(getattr(signal, 'SIG' + sig), self.onClose)
+            signal.signal(getattr(signal, 'SIG' + sig), self.close)
 
     def play(self):
         """
-        Initialize arduino and camera. Run frames for an undefinite time.
-        Turn on and off Arduino pins. This way, the user can test the device
-        prior to any experiment 
+        Signal the play event has been set
+        Set the play_start time
+        Turn on the IR light
+        Initialize the camera and fetch frames for an undefinite time
+        This is the callback function of a button
         """
         self.play_event.set()
         self.play_start = datetime.datetime.now()
-        if self.ir:
-            self.load_device('exit_or_record')
+        
+        if self.arduino:
+            self.device.run(self.threads["exit_or_record"])
 
         if self.track:
             try:
@@ -274,16 +220,17 @@ class Interface():
                 self.log.exception('Could not run tracker')
                 self.log.exception(e)
 
-        
-        self.interface_initialized = True
-
+        # NEEDED?
         if not self.track and not self.gui and self.arduino:
             self.log.debug("Sleeping for the duration of the experiment. This makes sense if we are checking Arduino")
             self.exit.wait(self.duration)
         
     def record(self):
         """
-        Start recording image data and runs arduino paradigm if any
+        Signal the record event has been set
+        Set the record_start time
+        Attempt to run the program in the Arduino paradigm
+        This is the callback function of a button
         """
         
         self.record_event.set()
@@ -292,35 +239,40 @@ class Interface():
 
         if not self.arduino:
             self.log.warning("No arduino program is loaded. Are you sure it is ok?")
-            self.control_c_handler()
-            # set the event so the savers actually save the data and not just ignore it
             
         else:
-            # if self.interface_initialized:
-            #     return None            
             try:
                 self.log.info("Running Arduino")
-                self.device.run(threads=self.threads)
+                self.device.toprun(self.device.threads["exit"])                 
+                
             except Exception as e:
                 self.log.exception('Could not run Arduino board. Check exception')
                 self.log.exception(e)
 
     
     def ok_arena(self):
+        """
+        Signal the arena_ok event has been set
+        This is the callback function of a button
+        """
         self.log.info("Fixing arena contours and stopping further detection")
         self.arena_ok_event.set()
     
-    def stop(self):
-        self.stop = True
-        self.play_event = threading.Event()
-        self.stop_event.set()
-
-    
     def start(self):
         """
-        Launch the tkinter gui and update it accordingly
+        Launch the tkinter GUI and update it accordingly
+        as long as there is a GUI selected
+        and the exit event has not been set
         """
+        self.control_c_handler()
+        if self.arduino:
+            self.init_device()
+        if self.track:
+            self.init_tracker()
+
+        self.gui.create()
+
 
         while not self.exit.is_set() and self.gui is not None:
             # print(type(self.device.mapping))
-            self.gui.update()
+            self.gui.run()

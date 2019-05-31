@@ -1,7 +1,5 @@
 # Standard library imports
 import argparse
-import numpy as np
-import pandas as pd
 import sys
 import threading
 import logging
@@ -12,6 +10,8 @@ import glob
 import os
 
 # Third party imports
+import numpy as np
+import pandas as pd
 import serial
 import yaml
 
@@ -24,7 +24,7 @@ from arduino_threading import ArduinoThread
 # Set up package configurations
 setup_logging()
 
-boards = {"Arduino": Arduino, "ArduinoMega": ArduinoMega}
+BOARDS = {"Arduino": Arduino, "ArduinoMega": ArduinoMega}
 
 class LearningMemoryDevice(PDLoader):
 
@@ -36,6 +36,7 @@ class LearningMemoryDevice(PDLoader):
         self.port = None
         self.pin_state = None
         self.stop_event_name = None
+        self.threads_finished = None
 
 
         self.init_time = None
@@ -63,47 +64,66 @@ class LearningMemoryDevice(PDLoader):
         self.log = logging.getLogger(__name__)
         self.log.debug('Loaded paradigm in {}'.format(self.program))
 
-        ###############################
-        self.load_program()
-        
+        self.threads = {"exit_or_record": {}, "exit" : {}}
+        self.threads_finished = {}
+
+        self.connect_arduino_board(self.port)
+
+    def connect_arduino_board(self, port):
+        """
+        Try loading the Arduino board with pyfirmata
+        Could fail if Arduino is not connected under port
+        """
+
+        try:
+            self.board = BOARDS[self.interface.cfg["arduino"]["board"]](port)
+            self.log.info("Loaded {} board".format(self.interface.cfg["arduino"]["board"]))
+        except serial.serialutil.SerialException as e:
+            self.log.error('Please provide the correct port')
+            self.log.error(e)
+            sys.exit(1)
+
+    def load_program(self, mapping_path=None, program_path=None):
+        """
+        Update the mapping_path and program_path
+        This function runs the __init__ method of the PDLoader
+        (Pandas Loader) class
+        """
+
+        mapping_path = self.interface.default_mapping_path if mapping_path is None else mapping_path
+        program_path = self.interface.default_program_path if program_path is None else program_path
+
+
+        PDLoader.__init__(self, mapping_path, program_path)
+
+
+    def prepare(self, stop_event_name):
+        """
+        Load the Arduino paradigm into LeMFT
+        Power off all pins
+        Create the threads dictionary
+        Initialize a dictionary storing the state of each pin. Default False
+        """
+
+        self.log.debug('Loading program')
+        self.load_program(mapping_path=self.mapping_path, program_path=self.program_path)
+
+        # power off any pins if any
+        self.power_pins_off(shutdown=False, log=False, ir=True)
+        # prepare the arduino parallel threads
+        self.create_threads(stop_event_name=stop_event_name)
         self.pin_state = {k: False for k in self.mapping.index}
 
 
-        self.program.to_csv(self.saver.store + "_paradigm.csv")
-
-        # pin_names = self.mapping.index
-        # self.pin_state = {p: 0 for p in pin_names}
-
-        # Try loading the Arduino board with pyfirmata
-        # Could fail if Arduino is not connected under port
-        try:
-            self.board = boards[self.interface.cfg["arduino"]["board"]](port)
-            self.log.info("Loaded {} board".format(self.interface.cfg["arduino"]["board"]))
-        except serial.serialutil.SerialException:
-            self.log.error('Please provide the correct port')
-            sys.exit(1)
-
-    
-    def load_program(self, mapping_path=None, program_path=None, reload = False):
-        mapping_path = self.mapping_path if mapping_path is None else mapping_path
-        if not reload:
-            program_path = self.program_path if program_path is None else program_path
-        print(program_path)
-     
-        PDLoader.__init__(self, mapping_path, program_path)
-        print('After reloading')
-        print(self.program)
-
-    
-    def prepare(self, stop_event_name = 'exit'):
+    def create_threads(self, stop_event_name='exit'):
         """
-        Transform the dataframe of events into a dictionary of Thread() objects that
-        can drive arduino pins independently
+        Take the loaded paradigm and create a dictionary of parallel threads
+        Each thread will be an instance of ArduinoThread, based on threading.Thread()
         """
 
         self.stop_event_name = stop_event_name
 
-        threads = {}
+        threads_subgroup = self.threads[stop_event_name]
         self.program["active"] = False
         self.program["thread_name"] = None
 
@@ -118,14 +138,14 @@ class LearningMemoryDevice(PDLoader):
             x0 = count[ev]
             x1 = count[ev]+1
 
-            d_start =      np.asscalar(self.program.loc[[ev]].iloc[x0:x1,:]["start"])
-            d_end =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1,:]["end"])
+            d_start =      np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :]["start"])
+            d_end =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :]["end"])
 
             if d_end <= d_start:
                 continue
-            d_on =         np.asscalar(self.program.loc[[ev]].iloc[x0:x1,:]["on"])
-            d_off =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1,:]["off"])
-            block =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1,:].index)
+            d_on =         np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :]["on"])
+            d_off =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :]["off"])
+            block =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :].index)
 
             d_name = 'thread-{}-{}'.format(ev, count[ev])
 
@@ -153,46 +173,49 @@ class LearningMemoryDevice(PDLoader):
 
             d.setDaemon(False)
             d.do_run = True
-            threads[d_name] = d
-            self.interface.threads_finished[d_name] = False
+            threads_subgroup[d_name] = d
+            self.threads_finished[d_name] = False
             count[ev] += 1
 
-        ################################
+        #################################################
         ## Finished preparing/configuring the threads
-        ################################
-        
-         
-        self.interface.threads = threads
-        print(self.interface.threads)
-
-        return threads
+        #################################################
+        self.threads[stop_event_name] = threads_subgroup
+        return self.threads
 
     
-    def _run(self, threads):
+    def run(self, threads):
+        """
+        Set the arduino_start time
+        Start each of the threads that was prepared in device.prepare()
+        """
 
         t = threading.currentThread()
         self.log.info('start()ing arduino threads')
         self.interface.arduino_start = datetime.datetime.now()
 
         for process in threads.values():
-            process.start(start_time = self.interface.arduino_start, duration = self.interface.duration)
-        self.log.debug('{} waiting for slave threads'.format(t.name))
+            if not process.is_alive():
+                process.start(start_time=self.interface.arduino_start, duration=self.interface.duration)
+            else:
+                self.log.info("thread % already started", process.name)
+        
+        self.log.debug('% waiting for slave threads', t.name)
 
-        # wait until all threads are finished               
+        # wait until all parallel threads are finished               
         self.interface.exit.wait()
-
-        self.onClose()
-
-        return None
-
-    def run(self, threads):
-
-        print(threads)
+        self.close()
+        
+    def toprun(self, threads):
+        """
+        Create an intermediate thread between main thread
+        and all parallel threads and start it
+        """
 
         arduino_thread = threading.Thread(
-            name = 'SUPER_ARDUINO',
-            target = self._run,
-            kwargs = {
+            name='SUPER_ARDUINO',
+            target=self.run,
+            kwargs={
                 "threads": threads
                 }
         )
@@ -201,17 +224,24 @@ class LearningMemoryDevice(PDLoader):
         arduino_thread.start()
         return None
 
-    def onClose(self):
+    def close(self):
+        """
+        Power off the arduino pins, save metadata cache to a file and
+        signal the end of Arduino parallel threads
+        """
             
         t = threading.currentThread()
 
-        self.power_off_arduino()
+        # power off every pin
+        self.power_pins_off()
         self.log.info('{} storing and cleaning cache'.format(t.name))
-        print(t)
+        # save the cache to a file
         self.saver.store_and_clear('metadata')
 
+        # NEEDED?
         self.interface.arduino_done = True
-        if not self.interface.exit.is_set() and self.stop_event_name == 'exit': self.interface.onClose()
+        # if the exit event is not set yet and this is the stop event of the threads, activate the interface close method
+        if not self.interface.exit.is_set() and self.stop_event_name == 'exit': self.interface.close()
         return True
  
 
@@ -222,8 +252,11 @@ class LearningMemoryDevice(PDLoader):
         return [self.pin_id2n(p), pin_state_g[p]]
 
 
-    def power_off_arduino(self, exit=True, ir=False, log=True):
-
+    def power_pins_off(self, shutdown=True, ir=False, log=True):
+        """
+        Sets every pin mentioned in the mapping file to OFF except the if infrared (ir) is True.
+        In that case, the IR stays ON
+        """
 
         # stop all the threads
         if self.interface.threads and log:
@@ -235,7 +268,7 @@ class LearningMemoryDevice(PDLoader):
             if self.mapping.loc[self.mapping.index.values == 'IRLED', 'pin_number'].values != p or ir:
                 self.board.digital[p].write(0)
     
-        if exit:
+        if shutdown:
             return False
     ######################
     ## Enf of LearningMemoryDevice class
@@ -261,6 +294,6 @@ if __name__ == "__main__":
  
     duration = 60 * args["duration"]
         
-    interface = Interface(arduino = True, mapping = args["mapping"], program = args["sequence"], port = args["port"], duration = duration)
+    interface = Interface(arduino=True, mapping=args["mapping"], program=args["sequence"], port=args["port"], duration=duration)
     interface.prepare()
     interface.start()

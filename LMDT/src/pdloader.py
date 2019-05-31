@@ -46,9 +46,7 @@ class PDLoader():
         
         # Read program table
         program = pd.read_csv(program_path)
-        # print('Ayyy')
-        # print(program_path)
-
+        
         # Make numeric and divide by 60
         program = self.format(program, 'block')
         # Autocomplete start NaNs based on previous block
@@ -65,7 +63,7 @@ class PDLoader():
         self.program = program
         self.block_names = block_names
         self.loaded = True
-        log.info('Paradigm is read into Python')
+        log.info('Paradigm is read')
 
     def complete_nan(self, program):
 
@@ -79,7 +77,6 @@ class PDLoader():
 
         return program
 
-    
     def format(self, df, index):
         df.set_index(index, inplace=True)
 

@@ -14,7 +14,7 @@ from pathlib import Path
 
 # Local application imports
 from features import Arena, Fly
-from streams import PylonStream, StandardStream, streams_dict
+from streams import PylonStream, StandardStream, STREAMS
 from lmdt_utils import setup_logging
 from decorators import export
 
@@ -147,14 +147,18 @@ class Tracker():
         if self.video is not None:
             self.video = Path(self.video)
             if self.video.is_file():
-                self.stream = streams_dict[self.camera](self.video.__str__())
+                self.stream = STREAMS[self.camera](self.video.__str__())
             else:
                 self.log.error("Video under provided path not found. Check for typos")
                 sys.exit(1)
         else:
-            self.stream = streams_dict[self.camera](0)
+            self.stream = STREAMS[self.camera](0)
 
     def init_image_arrays(self):
+        """
+        Initialize containers for the images that will be produced by the device
+        These are required for the GUI to display something before start
+        """
 
         self.interface.video_width = self.stream.get_width() // self.crop
         self.interface.video_height = self.stream.get_height()
@@ -173,7 +177,6 @@ class Tracker():
         self.interface.stacked_arenas = np.zeros((self.interface.video_height, self.interface.video_width), np.uint8)
 
 
-
     def rotate_frame(self, img, rotation=180):
         # Rotate the image by certan angles, 0, 90, 180, 270, etc.
         rows, cols = img.shape[:2]
@@ -183,6 +186,9 @@ class Tracker():
  
     
     def annotate_frame(self, img):
+        """
+        Take a np.array and annotate it to provide info about frame number and time
+        """
 
         ## TODO Dont make coordinates of text hardcoded
         ###################################################
@@ -193,7 +199,8 @@ class Tracker():
         return img
 
     def find_arenas(self, gray, RangeLow1 = 0, RangeUp1 = 255):
-        """Performs Otsu thresholding followed by morphological transformations to improve the signal/noise.
+        """
+        Performs Otsu thresholding followed by morphological transformations to improve the signal/noise.
         Input image is the average image
         Output is a tuple of length 2, where every elemnt is either a list of contours or None (if no contours were found)
         
@@ -223,6 +230,9 @@ class Tracker():
         return arena_contours
 
     def track(self):
+
+
+    # THIS FUNCTION NEEDS TO BE SPLIT INTO AT LEAST 2
         
         if not self.interface.exit.is_set():
             # Check if experiment is over
@@ -244,7 +254,7 @@ class Tracker():
             # Exit 
             if not ret:
                 self.log.info("Stream or video is finished. Closing")
-                self.onClose()
+                self.close()
                 self.interface.stream_finished = True
                 return False
            
@@ -412,12 +422,9 @@ class Tracker():
         if self.frame_count % 100 == 0:
             self.log.info("Frame #{}".format(self.frame_count))
 
-
-
-
-
-
      
+    # TODO
+    # MORE COMMENTS
     def stack_arenas(self, arenas):
 
         gray_color = self.interface.gray_color
@@ -448,7 +455,15 @@ class Tracker():
         #     
 
         
-    def _run(self):
+    def run(self):
+        """
+        Start tracking in a while loop
+        Munge processed frames and masks
+        When while is finished, run self.close()
+        Signal the exit event has been set if not yet
+        This is the target function of the intermediate thread
+        and it runs self.track an indefinite amount of time
+        """
 
         self.status = self.track()
 
@@ -456,15 +471,16 @@ class Tracker():
             self.merge_masks()
             self.interface.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
             self.status = self.track()
+            # NEEDED?
             self.interface.exit.wait(.2)
         
-        self.onClose()
+        self.close()            
 
-        if not self.interface.exit.is_set():
-            self.interface.exit.set()
-            
-
-    def run(self):
+    def toprun(self):
+        """
+        Create an intermediate thread between the main
+        and the tracker thread, and start it
+        """
 
         tracker_thread = threading.Thread(
             name = "tracker_thread",
@@ -475,14 +491,19 @@ class Tracker():
         tracker_thread.start()
         return None
         
-    def onClose(self):
+    def close(self):
+        """
+        Release thre stream
+        Save the cached data
+        If the exit event is not yet set, call interface.close()
+        """
         self.stream.release()
         self.log.info("Tracking stopped")
         self.log.info("{} arenas in {} frames analyzed".format(20 * self.frame_count, self.frame_count))
         self.log.info("Number of arenas that fly is not detected in is {}".format(self.missing_fly))
         self.saver.store_and_clear('data')
 
-        if not self.interface.exit.is_set(): self.interface.onClose()
+        if not self.interface.exit.is_set(): self.interface.close()
 
     def merge_masks(self):
     
