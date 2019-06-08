@@ -71,10 +71,14 @@ class Saver():
         """
         try:
             df = pd.DataFrame.from_records(self.lst)[self.columns]
+        
+        except KeyError as e:
+            self.log.info("No data was collected. Did you press the record button?")
+            return 1
         except Exception as e:
             self.log.error('There was an error saving the data')
             print(self.lst)
-            self.log.error(e)
+            self.log.exception(e)
             return 0 
         else:
             self.lst.clear()

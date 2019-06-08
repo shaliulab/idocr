@@ -131,7 +131,7 @@ class TkinterGui():
                 circle = self.canvas.create_circle(x, y, 6, fill = "red")
 
         # Initialize statusbar
-        self.statusbar_text = "Welcome to LMDT"
+        self.statusbar_text = "Welcome to LeMDT"
         statusbar = tk.Label(self.statusbar_frame, text=self.statusbar_text, relief=tk.SUNKEN, anchor=tk.W)
         statusbar.pack(side=tk.LEFT, fill=tk.X, expand = tk.YES)
         self.statusbar = statusbar
@@ -307,15 +307,9 @@ class TkinterGui():
         '''
         ## Improve messages in the statusbar
         ## It should warn when the next event is coming
+        ## TODO REFACTOR
 
-
-        if self.interface.play_event.is_set():
-            self.statusbar['text'] = 'Running tracker'
-
-        if self.interface.arena_ok_event.is_set():
-            self.statusbar['text'] = "Fixing arena contours and stopping further detection"
-
-        if self.interface.arduino:
+        if self.interface.arduino and self.interface.record_event.is_set():
             c1 = self.interface.device.overview['start'] < self.interface.timestamp
             c2 = self.interface.device.overview['end'] > self.interface.timestamp
             selected_rows = c1 & c2
@@ -330,8 +324,14 @@ class TkinterGui():
                 self.statusbar['text'] = text
             else:
                 self.statusbar['text'] = self.statusbar_text
-        elif self.interface.record_event.is_set():
-            self.statusbar['text'] = 'Recording without Arduino paradigm for {} seconds'.format(int(self.interface.timestamp))
+        elif self.interface.arena_ok_event.is_set():
+            self.statusbar['text'] = "Fixing arena contours and stopping further detection"
+
+        elif self.interface.play_event.is_set():
+            self.statusbar['text'] = 'Running tracker @ {} fps'.format(self.interface.tracker.sampled_fps)
+
+        # else:
+        #     self.statusbar['text'] = 'Recording without Arduino paradigm for {} seconds'.format(int(self.interface.timestamp))
 
 
     def apply_updates(self):

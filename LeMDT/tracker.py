@@ -112,6 +112,7 @@ class Tracker():
 
         # Config variables
         self.fps = self.interface.cfg["tracker"]["fps"]
+        self.sampled_fps = 0
         self.block_size = self.interface.cfg["arena"]["block_size"]
         self.param1 = self.interface.cfg["arena"]["param1"]
         self.crop = self.interface.cfg["tracker"]["crop"]
@@ -266,11 +267,11 @@ class Tracker():
                 self.interface.timestamp = 0
 
             # Read a new frame
-            ret, frame = self.stream.read_frame()
+            success, frame = self.stream.read_frame()
 
             # If ret is False, a new frame could not be read
             # Exit 
-            if not ret:
+            if not success:
                 self.log.info("Stream or video is finished. Closing")
                 self.close()
                 self.interface.stream_finished = True
@@ -280,7 +281,7 @@ class Tracker():
             # Make single channel i.e. grayscale
             if len(frame.shape) == 3:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                gray_color = frame  
+                gray_color = frame
             else:
                 gray = frame.copy()
                 gray_color = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
@@ -337,7 +338,7 @@ class Tracker():
                 ## DEBUG
                 ## Add the arena to the dictionary
                 self.arenas[arena.identity] = arena
-                self.masks[arena.identity] = mask 
+                self.masks[arena.identity] = mask
 
                 ## Find flies in this arena
                 gray_masked = cv2.bitwise_and(self.transform, mask)
@@ -440,8 +441,7 @@ class Tracker():
             return None
         
     def update_counts(self):
-        self.frame_count += 1
-        
+        self.frame_count += 1       
         if self.interface.record_event.is_set():
                 self.record_frame_count += 1
         
@@ -449,6 +449,27 @@ class Tracker():
             self.log.info("Frame #{}".format(self.frame_count))
 
      
+    
+    def sample_fps(self, interval_duration=2):
+
+        while not self.interface.exit.is_set():
+            before = self.frame_count
+            self.interface.exit.wait(interval_duration)
+            after = self.frame_count
+            sampled_fps = (after - before) / interval_duration
+            self.sampled_fps = sampled_fps
+        
+    def _sample_fps(self):
+
+        sample_fps_thread = threading.Thread(
+            name = "sample_fps",
+            target = self.sample_fps,
+            kwargs={"interval_duration": 2}
+        )
+        sample_fps_thread.start()
+
+        
+        
     # TODO
     # MORE COMMENTS
     def stack_arenas(self, arenas):
@@ -492,13 +513,18 @@ class Tracker():
         """
 
         self.status = self.track()
+        self._sample_fps()
 
         while self.status and not self.interface.exit.is_set(): 
             self.merge_masks()
             self.interface.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
             self.status = self.track()
             # NEEDED?
-            self.interface.exit.wait(.2)
+            # we neet to event.wait so that Python listens to the
+            # event while it is idle
+            # as opposed what would happen with time.sleep
+            # where the timeout would always be 100% done
+            #self.interface.exit.wait(.2)
         
         self.close()            
 
@@ -513,8 +539,8 @@ class Tracker():
             target = self.run
         )
         
-        self.interface.tracker_thread = tracker_thread
         tracker_thread.start()
+        self.interface.tracker_thread = tracker_thread
         return None
         
     def close(self):

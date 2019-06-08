@@ -119,6 +119,7 @@ class ArduinoThread(threading.Thread):
 
         self.device.active_block[block] = True
 
+        # false if n_iters is np.nan
         if n_iters == n_iters:    
             for _ in range(int(n_iters)):
 
@@ -148,8 +149,6 @@ class ArduinoThread(threading.Thread):
                     self.toggle_pin(pin_number, 0, 0)
                     return 0
 
-       
-
         else:
             # pins without cycle
             start_time = datetime.datetime.now()
@@ -157,7 +156,7 @@ class ArduinoThread(threading.Thread):
             sleep_time = min(end - start, duration - start)
             if sleep2 < 0:
                 sleep_time += sleep2
-   
+
             #time.sleep(sleep_time)
             stop = self.wait(sleep_time)
             if stop:
@@ -170,8 +169,6 @@ class ArduinoThread(threading.Thread):
 
         # Check if there's any thread from the current block that's still active
         self.device.active_block[block] = np.any(self.device.program.query('block == "{}"'.format(block))["active"])
-
-
         # communicate to interface that current thread is finished
         self.device.threads_finished[d_name] = True
         # check if it was the last (in that case, the reduce method returns True)
