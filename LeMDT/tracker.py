@@ -369,10 +369,12 @@ class Tracker():
                                 "mch_right" : self.interface.device.pin_state["ODOUR_B_MCH_LEFT"],
                                 "eshock_left" : self.interface.device.pin_state["ESHOCK_LEFT"],
                                 "eshock_right" : self.interface.device.pin_state["ESHOCK_RIGHT"],
-                                "frame": self.frame_count, "timestamp": self.interface.timestamp,
+                                "frame": self.frame_count,
+                                "t": self.interface.timestamp,
                                 "arena": arena.identity,
                                 #"fly": fly.identity,
-                                "cx": fly.x_corrected, "cy": fly.y_corrected,
+                                "cx": fly.x_corrected,
+                                "cy": fly.y_corrected,
                                 "datetime": datetime.datetime.now()
                                 }
                                 )

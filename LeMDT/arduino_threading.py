@@ -173,13 +173,12 @@ class ArduinoThread(threading.Thread):
 
 
         # communicate to interface that current thread is finished
-        self.device.interface.threads_finished[d_name] = True
+        self.device.threads_finished[d_name] = True
         # check if it was the last (in that case, the reduce method returns True)
-        arduino_done = np.bitwise_and.reduce(list(self.device.interface.threads_finished.values()))
+        arduino_done = np.bitwise_and.reduce(list(self.device.threads_finished.values()))
         # if its the last, signal exit
         if arduino_done:
-            self.device.interface.close()
-            self.device.interface.arduino_done = arduino_done
+            self.device.close()
 
         return 1
     
@@ -203,8 +202,7 @@ class ArduinoThread(threading.Thread):
             value
         ))
 
-
-        x = bool(value) if not freq else freq
+        x = value if not freq else freq
         self.device.pin_state[self.pin_name] = x
 
   

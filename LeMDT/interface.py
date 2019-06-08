@@ -61,7 +61,6 @@ class Interface():
         self.device = None
 
 
-        self.arduino_done = None    # becomes true if all events are complete
         self.arduino_stopped = None # becomes true if user stops the arduino controls prematurily with Control C       
         self.exit = None            # later assigned a threading.Event()
         self.stream_finished = None # becomes true if stream is finished (i.e more frames are not available)
@@ -93,7 +92,8 @@ class Interface():
         self.arduino = arduino
         self.track = track
         self.init_time = datetime.datetime.now()
-       
+     
+        self.arduino_done = threading.Event()    # becomes true if all events are complete
         self.play_event = threading.Event()
         self.stop_event = threading.Event()
         self.record_event = threading.Event()
@@ -105,8 +105,6 @@ class Interface():
         self.play_start = None
         self.record_start = None
 
-
-        self.threads = {}
 
         self.reporting = reporting
         self.camera = camera
@@ -129,7 +127,7 @@ class Interface():
         
         self.log.info("Start time: {}".format(self.init_time.strftime("%Y%m%d-%H%M%S")))
         self.interface_initialized = False
-        self.log.info('Interface has been initialized')
+        self.log.info('Interface initialized')
 
 
     def init_tracker(self):
@@ -140,7 +138,7 @@ class Interface():
 
         # Setup camera tracking
         ###########################
-        self.log.info("Initializing tracker")
+        self.log.info("Running tracker.init_tracker")
         self.tracker = Tracker(interface=self, camera=self.camera, video=self.video)
         self.tracker.load_camera()
         self.tracker.init_image_arrays()
@@ -156,7 +154,7 @@ class Interface():
             which can be done by pasing it via --program at runtime via the CLI
         """
 
-        self.log.info("Initializing Arduino board controls")
+        self.log.info("Running device.init_device")
         device = LearningMemoryDevice(
             interface=self,
             mapping_path=self.default_mapping_path,
@@ -168,15 +166,15 @@ class Interface():
         
         self.device = device
     
-    def init_dummy_device(self):
-        device = LearningMemoryDevice(
-            interface=self,
-            mapping_path=self.default_mapping_path,
-            program_path=self.default_program_path,
-        )
-        device.load_program(mapping_path=self.mapping_path, program_path=self.program_path)
-        device.init_pin_state()
-        self.device = device
+    # def init_dummy_device(self):
+    #     device = LearningMemoryDevice(
+    #         interface=self,
+    #         mapping_path=self.default_mapping_path,
+    #         program_path=self.default_program_path,
+    #     )
+    #     device.load_program(mapping_path=self.mapping_path, program_path=self.program_path)
+    #     device.init_pin_state()
+    #     self.device = device
 
 
 
@@ -187,7 +185,7 @@ class Interface():
         classes. Upon setting this event, these processes stop
         """
         self.exit.set()
-        self.log.info("Signal to close received")
+        self.log.info("Running interface.close()")
         if signo is not None: self.log.info("Received %", signo)
         
     def init_control_c_handler(self):
@@ -217,7 +215,7 @@ class Interface():
         self.play_start = datetime.datetime.now()
         
         if self.arduino:
-            self.device.toprun(self.threads["exit_or_record"])
+            self.device.toprun(self.device.threads["exit"])
 
         if self.track:
             try:
@@ -242,14 +240,15 @@ class Interface():
         
         self.record_event.set()
         self.record_start = datetime.datetime.now()
-        self.log.info("Starting recording. Savers will cache data and save it to csv files")
+        self.log.info("Pressed record")
+        self.log.info("Savers will cache data and save it to csv files")
 
         if not self.arduino:
             self.log.warning("No arduino program is loaded. Are you sure it is ok?")
             
         else:
             try:
-                self.log.info("Running Arduino")
+                self.log.info("Running device.toprun")
                 self.device.toprun(self.device.threads["exit"])                 
                 
             except Exception as e:
@@ -262,7 +261,7 @@ class Interface():
         Signal the arena_ok event has been set
         This is the callback function of a button
         """
-        self.log.info("Fixing arena contours and stopping further detection")
+        self.log.info("Pressed arena confirmation button")
         self.arena_ok_event.set()
     
     def start(self):
@@ -274,8 +273,6 @@ class Interface():
         self.init_control_c_handler()
         if self.arduino:
             self.init_device()
-        else:
-            self.init_dummy_device()
     
         if self.track:
             self.init_tracker()

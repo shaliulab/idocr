@@ -30,8 +30,8 @@ class Saver():
         self.lst = []
         self.record_event = record_event
         self.columns = [
-            "frame", "arena", "cx", "cy", "datetime", "timestamp", 
-            "oct_left", "oct_right", "mch_left", "mch_right",
+            "frame", "arena", "cx", "cy", "datetime", "t", \
+            "oct_left", "oct_right", "mch_left", "mch_right", \
             "eshock_left", "eshock_right"
             ]
 

@@ -46,7 +46,6 @@ class LearningMemoryDevice(PDLoader):
         ## Assignment
         self.interface = interface
 
-        self.interface.arduino_done = False
         self.interface.arduino_stopped = False
 
 
@@ -96,7 +95,7 @@ class LearningMemoryDevice(PDLoader):
         """
         Initialize a dictionary storing the state of each pin. Default False
         """
-        self.pin_state = {k: False for k in self.mapping.index}
+        self.pin_state = {k: 0 for k in self.mapping.index}
 
 
 
@@ -111,7 +110,7 @@ class LearningMemoryDevice(PDLoader):
         self.load_program(mapping_path=self.mapping_path, program_path=self.program_path)
 
         # power off any pins if any
-        self.power_pins_off(shutdown=False, log=False, ir=True)
+        self.power_pins_off(shutdown=False, ir=True)
         # prepare the arduino parallel threads
         self.create_threads(stop_event_name=stop_event_name)
         self.init_pin_state()
@@ -123,8 +122,11 @@ class LearningMemoryDevice(PDLoader):
         Each thread will be an instance of ArduinoThread, based on threading.Thread()
         """
 
-        self.stop_event_name = stop_event_name
+        if self.program is None:
+            self.log.error("No program loaded. Exiting")
+            sys.exit(1)
 
+        self.stop_event_name = stop_event_name
         threads_subgroup = self.threads[stop_event_name]
         self.program["active"] = False
         self.program["thread_name"] = None
@@ -132,7 +134,6 @@ class LearningMemoryDevice(PDLoader):
         self.active_block = {k: False for k in self.overview.index}
  
         # They are not run throughout the lifetime of the program, just at some interval and without intermitency
-        
         events = self.program.index.get_level_values('pin_id')
         count = {ev: 0 for ev in events}
         for i, ev in enumerate(events):
@@ -237,9 +238,8 @@ class LearningMemoryDevice(PDLoader):
         # power off every pin
         self.power_pins_off()
 
-
+        self.interface.arduino_done.set()
         # NEEDED?
-        self.interface.arduino_done = True
         # if the exit event is not set yet and this is the stop event of the threads, activate the interface close method
         if not self.interface.exit.is_set() and self.stop_event_name == 'exit': self.interface.close()
         return True
@@ -252,15 +252,11 @@ class LearningMemoryDevice(PDLoader):
         return [self.pin_id2n(p), pin_state_g[p]]
 
 
-    def power_pins_off(self, shutdown=True, ir=False, log=True):
+    def power_pins_off(self, shutdown=True, ir=False):
         """
         Sets every pin mentioned in the mapping file to OFF except the if infrared (ir) is True.
         In that case, the IR stays ON
         """
-
-        # stop all the threads
-        if self.interface.threads and log:
-            self.log.info("Quitting program")
 
         # power everything off except if ir is False.
         # In that case the IR light is kept

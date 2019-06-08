@@ -105,3 +105,5 @@ venv.bak/
 
 LeMDTe27SL5a9e19f94de287e28f789825
 failed_arenas/*
+.vscode/*
+.pylintrc
