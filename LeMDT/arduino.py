@@ -67,6 +67,11 @@ class LearningMemoryDevice(PDLoader):
         Could fail if Arduino is not connected under port
         """
 
+        if port is None:
+            self.log.error('No port has been assigned')
+            self.log.error('I dont know where is Arduino')
+            sys.exit(1)
+
         try:
             self.board = BOARDS[self.interface.cfg["arduino"]["board"]](port)
             self.log.info("Loaded {} board".format(self.interface.cfg["arduino"]["board"]))
@@ -110,11 +115,12 @@ class LearningMemoryDevice(PDLoader):
         # power off any pins if any
         self.power_pins_off(shutdown=False, ir=True)
         # prepare the arduino parallel threads
-        self.create_threads(stop_event_name=stop_event_name)
+        threads = self.create_threads(self.threads, stop_event_name=stop_event_name)
         self.init_pin_state()
+        return threads
 
 
-    def create_threads(self, stop_event_name='exit'):
+    def create_threads(self, threads, stop_event_name='exit'):
         """
         Take the loaded paradigm and create a dictionary of parallel threads
         Each thread will be an instance of ArduinoThread, based on threading.Thread()
@@ -125,7 +131,13 @@ class LearningMemoryDevice(PDLoader):
             sys.exit(1)
 
         self.stop_event_name = stop_event_name
-        threads_subgroup = self.threads[stop_event_name]
+        threads_subgroup = {}
+        print('Upon initialization')
+        print(id(threads_subgroup))
+        threads_subgroup[stop_event_name] = threads[stop_event_name]
+        print('After sharing threads')
+        print(id(threads_subgroup))
+
         self.program["active"] = False
         self.program["thread_name"] = None
 
@@ -181,9 +193,8 @@ class LearningMemoryDevice(PDLoader):
         #################################################
         ## Finished preparing/configuring the threads
         #################################################
-        self.threads[stop_event_name] = threads_subgroup
-        print(self.threads)
-        return self.threads
+        threads[stop_event_name] = threads_subgroup
+        return threads
 
     
     def run(self, threads):

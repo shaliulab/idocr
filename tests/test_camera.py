@@ -32,9 +32,3 @@ class TestCamera(unittest.TestCase, Interface):
 
         self.tracker.load_camera()
         self.tracker.stream.read_frame()
-
-
-    
-
-
-        

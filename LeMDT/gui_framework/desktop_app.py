@@ -103,10 +103,15 @@ class TkinterGui():
 
     def create(self):
         """
-        Initialize the GUI
+        Fire up a Tkinter window
+
+        Set its name, shape, a statusbar and a control monitor for the Arduino
+
+        Called by interface.init_components() method,
+        upon starting the Python software
         """
         self.log.info('Initializing graphical interface')
-        self.root.wm_title("LeMFT")
+        self.root.wm_title("LeMDT")
         self.root.wm_protocol("WM_DELETE_WINDOW", self.close)
         self.canvas.addtag_all("all")
 
@@ -141,6 +146,10 @@ class TkinterGui():
 
 
     def create_menu(self):
+        """
+        Add the menu entries for the program and mapping files
+        Called by __init__
+        """
         # creating a menu instance
         self.menu = tk.Menu(self.root)
         self.root.config(menu=self.menu)
@@ -149,7 +158,7 @@ class TkinterGui():
         
         # adds a command to the menu option, calling it exit, and the
         # command it runs on event is client_exit
-        file_menu.add_command(label="Program", command=self.ask_program)
+        file_menu.add_command(label="Program", command=self.load_program)
         file_menu.add_command(label="Mapping", command=self.ask_mapping)
 
 
@@ -157,6 +166,10 @@ class TkinterGui():
         self.menu.add_cascade(label="File", menu=file_menu)
 
     def configure_layout(self):
+        """
+        Arrange the elements of the GUI
+        Called by __init__
+        """
         main_frame = tk.Frame(self.root)
         bd = self.bd
         tracker_frame = tk.Frame(main_frame, relief = tk.RIDGE, bd = bd)
@@ -189,7 +202,9 @@ class TkinterGui():
     def configure_buttons(self):
         """
         Initialize buttons
+        Called by __init__
         """
+        
         playButton = BetterButton(self.button_frame, 'play', self.interface.play, 1)
         okButton = BetterButton(self.button_frame, 'ok_arena', self.interface.ok_arena, 2)
         recordButton = BetterButton(self.button_frame, 'record', self.interface.record, 3)
@@ -201,7 +216,9 @@ class TkinterGui():
     def create_canvas(self):
         """
         Initialize canvas (where the Arduino monitor is placed)
+        Called by __init__
         """
+        
         bd = self.bd
         canvas = tk.Canvas(self.arduino_frame, width=self.width//2, height=self.height//2, highlightthickness=0, bd=bd)
 
@@ -212,33 +229,60 @@ class TkinterGui():
         canvas.bind("<Configure>", self.on_resize)
         self.canvas = canvas
    
-    def ask_program(self, filetype='program'):
+    def ask_program(self):
         """
         Select a file in the /program dir to provide a program or paradigm
         Once a valid file is selected, the program is loaded
-        This is the callback function of the program submenu in the file menu
         """
-        initialdir = Path(PROJECT_DIR, filetype+'s').__str__()
+        initialdir = Path(PROJECT_DIR, 'programs').as_posix()
         program_path = tk.filedialog.askopenfilename(
-            initialdir = initialdir,title = "Select {} file".format(filetype),
+            initialdir = initialdir,title = "Select program file",
             filetypes = (("csv files","*.csv"),("all files","*.*"))
             )
+        return program_path
+        
+    def load_program_callback(self):
+        """
+        This is the callback function of the program submenu in the file menu
+        """
+
+        threads = self.load_program()
+        self.interface.device.threads = threads
+        
+    def load_program(self, program_path = None):
+        """
+        A helper function of ask_program that takes the program_path
+        the user selected in the GUI and actually loads it into memory
+        This is the callback function of the program submenu in the file menu
+        """
+
+        if program_path is None:
+            program_path = self.ask_program()
         if program_path != ():
             self.interface.load_program_event.set()
             self.interface.device.program_path = program_path
-            self.interface.device.prepare('exit')
-            self.log.info('Loading program {}'.format(self.interface.program_path))
-
+            threads = self.interface.device.prepare('exit')
+            self.log.info('Loading program {}'.format(self.interface.device.program_path))
+            return threads
 
 
     def ask_mapping(self):
+        """
+        Select a file in the /mapping dir to provide a 'mapping' i.e.
+        a link between the pin numbers on Arduino and the corresponding components
+        they are connected to:
+          example
+          -------
+             pin 10 = ODOUR A LEFT
+             pin 11 = ODOUR A RIGHT
+             ...
+        """
         initialdir = Path(PROJECT_DIR, 'mappings').__str__()
         self.interface.mapping_path = tk.filedialog.askopenfilename(
             initialdir = initialdir,title = "Select mapping file",
             filetypes = (("csv files","*.csv"),("all files","*.*"))
             )
         self.log.info('Loading mapping {}'.format(self.interface.mapping_path))
-
 
 
     def on_resize(self,event):
@@ -257,6 +301,9 @@ class TkinterGui():
 
 
     def on_click(self, event):
+        """
+        Callback function when clicking anywhere on the canvas
+        """
         self.log.info("clicked at {} {}".format(event.x, event.y))
 
     def preprocess(self, img, width):
@@ -330,11 +377,11 @@ class TkinterGui():
         elif self.interface.play_event.is_set():
             self.statusbar['text'] = 'Running tracker @ {} fps'.format(self.interface.tracker.sampled_fps)
 
-        # else:
-        #     self.statusbar['text'] = 'Recording without Arduino paradigm for {} seconds'.format(int(self.interface.timestamp))
-
-
     def apply_updates(self):
+        """
+        Reflect all changes in the GUI
+        Called by gui.run()
+        """
         self.root.update_idletasks()
         ## needed to close the window with X
         self.root.update()

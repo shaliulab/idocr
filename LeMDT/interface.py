@@ -93,7 +93,7 @@ class Interface():
         self.track = track
         self.interface_start = datetime.datetime.now()
      
-        self.arduino_done = threading.Event()    # becomes true if all events are complete
+        self.arduino_done = threading.Event()
         self.play_event = threading.Event()
         self.stop_event = threading.Event()
         self.record_event = threading.Event()
@@ -134,6 +134,9 @@ class Interface():
         """
         Initialize a Tracker object that will provice camera controls
         Load the correct stream (Pylon, webcam camera or video)
+
+        Called by interface.init_components() method,
+        upon starting the Python software
         """
 
         # Setup camera tracking
@@ -149,36 +152,25 @@ class Interface():
         """
         Initialize a LearningMemoryDevice object that will provide Arduino controls
         Load the mappings and a default paradigm by creating (no running) the corresponding parallel threads
+        Called by interface.init_components() method,
+        upon starting the Python software
+
         Details:
             It loads a program that turns on the IR only
             This behavior only changes when self.program_path is set,
             which can be done by pasing it via --program at runtime via the CLI
         """
 
-        self.log.info("Running device.init_device")
+        self.log.info("Running interface.init_device")
         device = LearningMemoryDevice(
             interface=self,
             mapping_path=self.default_mapping_path,
             program_path=self.default_program_path,
         )
         device.connect_arduino_board(self.port)
-
         device.prepare('exit')
-        
         self.device = device
     
-    # def init_dummy_device(self):
-    #     device = LearningMemoryDevice(
-    #         interface=self,
-    #         mapping_path=self.default_mapping_path,
-    #         program_path=self.default_program_path,
-    #     )
-    #     device.load_program(mapping_path=self.mapping_path, program_path=self.program_path)
-    #     device.init_pin_state()
-    #     self.device = device
-
-
-
     def close(self, signo=None, _frame=None):
         """
         Set the exit event
@@ -268,13 +260,10 @@ class Interface():
         """
         self.log.info("Pressed arena confirmation button")
         self.arena_ok_event.set()
+
     
-    def start(self):
-        """
-        Launch the tkinter GUI and update it accordingly
-        as long as there is a GUI selected
-        and the exit event has not been set
-        """
+    def init_components(self):
+        
         self.init_control_c_handler()
         if self.arduino:
             self.init_device()
@@ -284,6 +273,16 @@ class Interface():
 
         self.gui.create()
 
+
+    
+    def start(self):
+        """
+        Launch the tkinter GUI and update it accordingly
+        as long as there is a GUI selected
+        and the exit event has not been set
+        """
+
+        self.init_components()
         while not self.exit.is_set() and self.gui is not None:
             # print(type(self.device.mapping))
             self.gui.run()
