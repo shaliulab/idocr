@@ -17,7 +17,7 @@ from PIL import ImageTk, Image
 
 # Local application imports
 from lmdt_utils import setup_logging
-from LeMDT import ROOT_DIR, STATIC_DIR
+from LeMDT import PROJECT_DIR, ROOT_DIR, STATIC_DIR
 
 setup_logging()
 log = logging.getLogger(__name__)
@@ -218,21 +218,21 @@ class TkinterGui():
         Once a valid file is selected, the program is loaded
         This is the callback function of the program submenu in the file menu
         """
-        initialdir = Path(ROOT_DIR, filetype+'s').__str__()
+        initialdir = Path(PROJECT_DIR, filetype+'s').__str__()
         program_path = tk.filedialog.askopenfilename(
             initialdir = initialdir,title = "Select {} file".format(filetype),
             filetypes = (("csv files","*.csv"),("all files","*.*"))
             )
         if program_path != ():
             self.interface.load_program_event.set()
-            self.interface.program_path = program_path
-            self.device.prepare('exit')
+            self.interface.device.program_path = program_path
+            self.interface.device.prepare('exit')
             self.log.info('Loading program {}'.format(self.interface.program_path))
 
 
 
     def ask_mapping(self):
-        initialdir = Path(ROOT_DIR, 'mappings').__str__()
+        initialdir = Path(PROJECT_DIR, 'mappings').__str__()
         self.interface.mapping_path = tk.filedialog.askopenfilename(
             initialdir = initialdir,title = "Select mapping file",
             filetypes = (("csv files","*.csv"),("all files","*.*"))

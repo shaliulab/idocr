@@ -182,6 +182,7 @@ class LearningMemoryDevice(PDLoader):
         ## Finished preparing/configuring the threads
         #################################################
         self.threads[stop_event_name] = threads_subgroup
+        print(self.threads)
         return self.threads
 
     

@@ -161,8 +161,8 @@ class Saver():
         image_list = glob.glob(f"{self.store_img.as_posix()}/*.jpg")
         sorted_images = sorted(image_list, key=os.path.getmtime)
         for file in sorted_images:
-            print("Adding image")
-            print(self.store_video)
+            # print("Adding image")
+            # print(self.store_video)
             image_frame = cv2.imread(file)
             self.out.write(image_frame)
             self.out2.write(image_frame)
