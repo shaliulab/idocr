@@ -1,15 +1,21 @@
 # Standard library imports
+import glob
 import logging
+import os
 import os.path
 import datetime
 from pathlib import Path
 
 # Third party imports
+import cv2
 import pandas as pd
+
 
 # Local application imports
 from lmdt_utils import setup_logging
+from decorators import if_record_event
 from LeMDT import PROJECT_DIR
+
 # Set up package configurations
 setup_logging()
 
@@ -19,13 +25,11 @@ max_len = 1000
 
 class Saver():
 
-    def __init__(self, cache = {}, init_time = None, record_event = None):
+    def __init__(self, tracker, cache={}, record_event=None):
 
 
-        self.init_time = None
         self.cache = cache
-        self.init_time = init_time
-        
+        self.tracker = tracker
         self.log = logging.getLogger(__name__)
         self.lst = []
         self.record_event = record_event
@@ -34,22 +38,51 @@ class Saver():
             "oct_left", "oct_right", "mch_left", "mch_right", \
             "eshock_left", "eshock_right"
             ]
+        self.path = None
+        self.output_dir = None
+        self.store = None
+        self.store_video = None
+        self.store_img = None
+        self.out = None
 
     def set_store(self, cfg):
         """
         Set the absolute path to the output file (without extension)
         """
-        now = self.init_time.strftime("%Y-%m-%d_%H-%M-%S")
-        output_dir = Path(PROJECT_DIR, cfg["saver"]["path"], now)
-        filename = now+"_"+cfg["interface"]["machine_id"]
-        self.store = Path(output_dir, filename).__str__()
-        # create the directory structure, if it does not exist yet
-        output_dir.mkdir(parents=True, exist_ok=True) 
 
-
-
+        self.log.info("Setting the store path")
         
-    def process_row(self, d, max_len = max_len):
+        
+        self.path = cfg["saver"]["path"]
+        record_start = self.tracker.interface.record_start.strftime("%Y-%m-%d_%H-%M-%S")
+        
+        
+        self.output_dir = Path(PROJECT_DIR, self.path, record_start)
+        filename = record_start+"_"+cfg["interface"]["machine_id"]
+        self.store = Path(self.output_dir, filename)
+
+        video_format = "mp4"
+        self.store_video = self.store.as_posix() + "." + video_format
+        self.store_video2 = self.store.as_posix() + "2." + ".avi"
+
+
+        self.store_img = Path(self.output_dir, "frames")
+        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+        fourcc2 = cv2.VideoWriter_fourcc(*'XVID')
+
+        self.out = cv2.VideoWriter(self.store_video, fourcc, 2, (500, 500))
+        self.out2 = cv2.VideoWriter(self.store_video2, fourcc, 2, (500, 500))
+
+        self.log.info("Creating dirs")
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.store_img.mkdir(parents=True, exist_ok=False)
+
+
+        return True
+
+
+
+    def process_row(self, d, max_len=max_len):
         """
         Append row d to the store
     
@@ -58,17 +91,23 @@ class Saver():
     
         """
         
+        if not self.tracker.interface.record_event.is_set():
+            return True
+        
         if len(self.lst) >= max_len:
             self.store_and_clear()
         if self.record_event.is_set():
             self.lst.append(d)
             self.log.debug("Adding new datapoint to cache")      
 
-
     def store_and_clear(self):
         """
         Convert the cache list to a DataFrame and append that to HDF5.
         """
+        
+        if not self.tracker.interface.record_event.is_set():
+            return True
+
         try:
             df = pd.DataFrame.from_records(self.lst)[self.columns]
         
@@ -87,10 +126,10 @@ class Saver():
         # check the dataframe is not empty
         # could be empty if user closes before recording anything
            
-        self.log.info("Saving cache to {}".format(self.store))
+        self.log.info("Saving cache to {}".format(self.store.as_posix()))
 
         # save to csv
-        with open(self.store + ".csv", 'a') as store:
+        with open(self.store.as_posix() + ".csv", 'a') as store:
             df.to_csv(store)
 
 
@@ -104,6 +143,33 @@ class Saver():
 
         #     self.log.info(df)
         #     self.log.exception(e)
-            
+
+    def save_img(self, filename, frame):
+
+        if not self.tracker.interface.record_event.is_set():
+            return True
+
+        full_path = Path(self.store_img, filename).as_posix()
+        cv2.imwrite(full_path, frame)
+
+
+    def images_to_video(self, clear_images=False):
+
+        if not self.tracker.interface.record_event.is_set():
+            return True
+  
+        image_list = glob.glob(f"{self.store_img.as_posix()}/*.jpg")
+        sorted_images = sorted(image_list, key=os.path.getmtime)
+        for file in sorted_images:
+            print("Adding image")
+            print(self.store_video)
+            image_frame = cv2.imread(file)
+            self.out.write(image_frame)
+            self.out2.write(image_frame)
+        if clear_images:
+            for file in image_list:
+                os.remove(file)
+
+
 
 

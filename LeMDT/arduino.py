@@ -38,7 +38,6 @@ class LearningMemoryDevice(PDLoader):
         self.threads_finished = None
 
 
-        self.init_time = None
         self.reporting = None
 
         self.log = None
@@ -53,7 +52,6 @@ class LearningMemoryDevice(PDLoader):
         self.program_path = program_path
 
         # Inherited from interface
-        self.init_time = self.interface.init_time
         self.reporting = self.interface.reporting
 
         self.log = logging.getLogger(__name__)

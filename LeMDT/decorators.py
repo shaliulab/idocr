@@ -1,4 +1,6 @@
 __all__ = []
+import functools
+
 def export(defn):
     globals()[defn.__name__] = defn
     __all__.append(defn.__name__)
@@ -27,4 +29,38 @@ def mixedomatic(cls):
     setattr(cls, '__init__', __init__)
     return cls
 
+def if_record_event(func=None, *, interface=None):
+    """Decorator function with arguments
+    Decorator can be used with or without arguments
+    Examples:
+        >>>
+        >>> @decorator_with_args
+        >>> def func():
+        >>>     pass
+        >>>
+        >>> @decorator_with_args(arg='foo')
+        >>> def func():
+        >>>     pass
+        >>>
+    """
+
+    # 1. Decorator arguments are applied to itself as partial arguments
+    if func is None:
+        return functools.partial(if_record_event, interface=None)
+
+    # 2. logic with the arguments
+    ...
+
+    # 3. Handles the actual decorating
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Write decorator function logic here
+        # Before function call
+        # ...
+        if interface.record_event.is_set():
+            result = func(*args, **kwargs)
+            # After function call
+            # ...
+            return result
+    return wrapper
 

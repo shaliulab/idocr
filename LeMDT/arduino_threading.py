@@ -86,10 +86,11 @@ class ArduinoThread(threading.Thread):
         if n_iters > 0:
             self.log.info("{} will cycle {} times: start {} end {} tt {}".format(d_name, n_iters, start, end, duration))
             
-        
+        baseline = self.device.interface.record_start if self.device.interface.record_start else self.device.interface.interface_start
+
         # halt all threads until start_time + sync_time is reached
         # wait until all threads are ready to begin
-        sleep1 = (self.device.interface.init_time + datetime.timedelta(seconds=sync_time) - datetime.datetime.now()).total_seconds()
+        sleep1 = (baseline + datetime.timedelta(seconds=sync_time) - datetime.datetime.now()).total_seconds()
         stop = self.wait(sleep1)
         self.log.info('{} running'.format(d_name))
         if stop:

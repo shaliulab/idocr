@@ -41,7 +41,7 @@ def crop_stream(img, crop):
 @export
 class Tracker():
    
-    def __init__(self, interface, camera = "opencv", video = None):
+    def __init__(self, interface, camera="opencv", video=None):
         """
         Setup video recording parameters.
         """
@@ -122,12 +122,7 @@ class Tracker():
 
         self.log = logging.getLogger(__name__)
 
-        saver = Saver(
-            init_time=self.interface.init_time, record_event=self.interface.record_event
-        )
-
-        saver.set_store(self.interface.cfg)
-        self.saver = saver        
+              
         
         self.failed_arena_path = Path(PROJECT_DIR, self.interface.cfg['tracker']['fail'])
         self.failed_arena_path.mkdir(parents=True, exist_ok=True) 
@@ -154,6 +149,14 @@ class Tracker():
         if self.fps and video:
             # Set the FPS of the camera
             self.stream.set_fps(self.fps)
+
+    def set_saver(self):
+        saver = Saver(
+            tracker=self, record_event=self.interface.record_event
+        )
+
+        self.saver = saver
+
 
     def load_camera(self):
         """
@@ -267,6 +270,7 @@ class Tracker():
                 self.interface.timestamp = 0
 
             # Read a new frame
+            frame_time = datetime.datetime.now()
             success, frame = self.stream.read_frame()
 
             # If ret is False, a new frame could not be read
@@ -417,6 +421,8 @@ class Tracker():
 
             # Update GUI graphics
             self.interface.frame_color = frame_color
+            # Save frame
+            self.saver.save_img(frame_time.strftime("%Y-%m-%d_%H-%M-%S") + ".jpg", frame_color)
 
             # TODO: Make into utils function
             #self.interface.stacked_arenas = self.stack_arenas(arenas_dict)
@@ -525,6 +531,8 @@ class Tracker():
             # as opposed what would happen with time.sleep
             # where the timeout would always be 100% done
             #self.interface.exit.wait(.2)
+
+        self.saver.images_to_video()
         
         self.close()            
 
