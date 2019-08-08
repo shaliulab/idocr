@@ -81,7 +81,8 @@ class Arena():
         return mask
 
     def draw(self, img):
-        """Draw the arena
+        """
+        Draw the arena
         """
       
         self.tracker.log.debug('Arena {} has an area of {}'.format(self.identity, self.area))

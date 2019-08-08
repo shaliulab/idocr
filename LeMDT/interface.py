@@ -142,6 +142,8 @@ class Interface():
         # Setup camera tracking
         ###########################
         self.log.info("Running tracker.init_tracker")
+        print(self.camera)
+        print(self.video)
         self.tracker = Tracker(interface=self, camera=self.camera, video=self.video)
         self.tracker.set_saver()
         self.tracker.load_camera()

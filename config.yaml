@@ -5,6 +5,7 @@ arena:
     kernel_factor: 5
     rangelow: 0
     rangeup: 255
+    targets: 20
 
 fly:
     min_length: 0

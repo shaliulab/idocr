@@ -89,6 +89,7 @@ class Tracker():
         self.N = None
         self.video_height = None
         self.video_width = None
+        self.targets = None
 
         # Assignment
         self.interface = interface
@@ -112,6 +113,7 @@ class Tracker():
 
         # Config variables
         self.fps = self.interface.cfg["tracker"]["fps"]
+        self.targets = self.interface.cfg["arena"]["targets"]
         self.sampled_fps = 0
         self.block_size = self.interface.cfg["arena"]["block_size"]
         self.param1 = self.interface.cfg["arena"]["param1"]
@@ -146,9 +148,7 @@ class Tracker():
 
 
 
-        if self.fps and video:
-            # Set the FPS of the camera
-            self.stream.set_fps(self.fps)
+        
 
     def set_saver(self):
         saver = Saver(
@@ -169,10 +169,16 @@ class Tracker():
             self.video = Path(self.video)
             if self.video.is_file():
                 self.stream = STREAMS[self.camera](self.video.__str__())
+                print(self.stream)
             else:
                 self.log.error("Video under provided path not found. Check for typos")
         else:
             self.stream = STREAMS[self.camera](0)
+
+        if self.fps and self.video:
+            # Set the FPS of the camera
+            self.stream.set_fps(self.fps)
+
 
         self.video_width, self.video_height = self.stream.get_dimensions()
         self.log.info("Stream has shape w:{} h:{}".format(self.video_width, self.video_height))
@@ -253,7 +259,6 @@ class Tracker():
 
     def track(self):
 
-
     # THIS FUNCTION NEEDS TO BE SPLIT INTO AT LEAST 2
         
         if not self.interface.exit.is_set():
@@ -297,8 +302,9 @@ class Tracker():
             if self.frame_count < self.N and self.frame_count > 0 or not self.interface.arena_ok_event.is_set():
                 self.arena_contours = self.find_arenas(gray)
 
-            if self.arena_contours is None or len(self.arena_contours) == 0:
-                self.log.debug("Frame #{} no arenas".format(self.frame_count))
+            found_targets = len(self.arena_contours)
+            if self.arena_contours is None or found_targets != self.targets:
+                self.log.debug("Number of arenas found not equal to target. Discarding frame".format(self.frame_count))
                 self.frame_count += 1
                 status = self.track()
                 return status
