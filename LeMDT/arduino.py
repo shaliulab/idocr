@@ -131,12 +131,9 @@ class LearningMemoryDevice(PDLoader):
             sys.exit(1)
 
         self.stop_event_name = stop_event_name
-        threads_subgroup = {}
-        print('Upon initialization')
-        print(id(threads_subgroup))
-        threads_subgroup[stop_event_name] = threads[stop_event_name]
-        print('After sharing threads')
-        print(id(threads_subgroup))
+        # threads_subgroup = {}
+        # threads_subgroup[stop_event_name] = threads[stop_event_name]
+        threads_subgroup = threads[stop_event_name]
 
         self.program["active"] = False
         self.program["thread_name"] = None
