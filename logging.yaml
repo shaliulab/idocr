@@ -10,7 +10,7 @@ handlers:
   console:
     class: logging.StreamHandler
     formatter: simple
-    level: INFO 
+    level: DEBUG
     stream: ext://sys.stdout
   console_basic:
     class: logging.StreamHandler
@@ -25,7 +25,7 @@ handlers:
     filename: arduino.log
   file_tracker:
     class: logging.FileHandler
-    level: CRITICAL 
+    level: DEBUG 
     formatter: simple
     filename: tracker.log
 

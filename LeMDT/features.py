@@ -16,20 +16,20 @@ class Arena():
 
     ## TODO
     ## Make config an argument that the user can change from the CLI
-    def __init__(self, tracker, contour, identity, config = "config.yml"):
+    def __init__(self, tracker, contour, config = "config.yml"):
         """Initialize an arena object
         """
         self.tracker = tracker
         self.contour = contour
-        self.identity = identity
         self.min_arena_area = self.tracker.interface.cfg["arena"]["min_area"] 
         self.area = None
+        self.corners = None
+        self.identity = None
         self.mask = None
         self.box = None
         self.fly = None
         self.tl_corner = None
         self.br_corner  = None
-        self.corners = None
         self.dilation_kernel = np.ones((5,5),np.uint8)
         fly = None
 
@@ -62,8 +62,11 @@ class Arena():
             pass
             # handle what happens when the if above is not true
         
-        self.corners = np.array([tl_corner, br_corner])
-        return self.corners
+        corners = np.array([tl_corner, br_corner])
+        return corners
+
+    def set_id(self, identity):
+        self.identity = identity
 
     def validate(self):
         

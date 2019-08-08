@@ -257,7 +257,9 @@ class Tracker():
 
         return arena_contours
 
+
     def track(self):
+        targets = self.interface.cfg["arena"]["targets"]
 
     # THIS FUNCTION NEEDS TO BE SPLIT INTO AT LEAST 2
         
@@ -303,17 +305,20 @@ class Tracker():
                 self.arena_contours = self.find_arenas(gray)
 
             found_targets = len(self.arena_contours)
-            if self.arena_contours is None or found_targets != self.targets:
-                self.log.debug("Number of arenas found not equal to target. Discarding frame".format(self.frame_count))
+            if self.arena_contours is None or found_targets < int(targets):
+
+                self.log.debug("Number of putative arenas found less than target. Discarding frame".format(self.frame_count))
                 self.frame_count += 1
+                self.interface.frame_color = gray_color
                 status = self.track()
                 return status
 
+            
             transform = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.block_size, self.param1)
             self.transform = transform
 
 
-            arenas_dict = {}
+            arenas_list = [None] * targets 
 
                
             # Initialize an arena identity that will be increased with 1
@@ -325,9 +330,9 @@ class Tracker():
                         
                 # Initialize an Arena object
                 
-                arena = Arena(tracker = self, contour = arena_contour, identity = id_arena)
+                arena = Arena(tracker = self, contour = arena_contour)
                 # and compute parameters used in validation and drawing
-                corners = arena.compute()
+                arena.corners = arena.compute()
                 # Validate the arena
                 # If not validated, move on the next arena contour
                 # i.e. ignore the current arena
@@ -335,7 +340,33 @@ class Tracker():
                    # move on to next i.e. continue to the next iteration
                    # continue means we actually WON'T continue with the current arena
                    continue
+                else:
 
+                    arenas_list[id_arena-1] = arena
+                    # Update the id_arena to account for one more arena detected
+                    id_arena += 1
+
+            
+            found_arenas = len(arenas_list)
+            if found_arenas != self.targets:
+                
+                self.log.debug("Number of arenas found not equal to target. Discarding frame".format(self.frame_count))
+                self.frame_count += 1
+                self.interface.frame_color = gray_color
+                status = self.track()
+                return status
+
+            
+            # sort arenas by position!!
+            sorted_arenas_list = []
+            sorted_arenas_br_to_tl_horizontally = sorted(arenas_list, key=lambda a: (-a.corners[1][1],-a.corners[1][0]) )
+            [print(a.corners[1]) for a in sorted_arenas_list]
+
+
+
+            for identity, arena in enumerate(sorted_arenas_br_to_tl_horizontally):
+
+                arena.set_id(identity+1)
                
                 # If validated, keep analyzing the current arena
                 frame_color = arena.draw(frame_color)
@@ -372,23 +403,34 @@ class Tracker():
                         self.log.debug("Fly not validated")
                         continue
                     self.log.debug("Fly {} in arena {} validated with area {} and length {}".format(fly.identity, fly.arena.identity, fly.area, fly.diagonal))
-                    self.saver.process_row(
-                            d = {
-                                "oct_left" : self.interface.device.pin_state["ODOUR_A_OCT_LEFT"],
-                                "oct_right" : self.interface.device.pin_state["ODOUR_A_OCT_RIGHT"],
-                                "mch_left" : self.interface.device.pin_state["ODOUR_B_MCH_LEFT"],
-                                "mch_right" : self.interface.device.pin_state["ODOUR_B_MCH_LEFT"],
-                                "eshock_left" : self.interface.device.pin_state["ESHOCK_LEFT"],
-                                "eshock_right" : self.interface.device.pin_state["ESHOCK_RIGHT"],
-                                "frame": self.frame_count,
-                                "t": self.interface.timestamp,
-                                "arena": arena.identity,
-                                #"fly": fly.identity,
-                                "cx": fly.x_corrected,
-                                "cy": fly.y_corrected,
-                                "datetime": datetime.datetime.now()
-                                }
-                                )
+                    
+                    d = {
+                        "oct_left" : None,
+                        "oct_right" : None,
+                        "mch_left" : None,
+                        "mch_right" : None,
+                        "eshock_left" : None,
+                        "eshock_right" : None,
+                        "frame": self.frame_count,
+                        "t": self.interface.timestamp,
+                        "arena": arena.identity,
+                        #"fly": fly.identity,
+                        "cx": fly.x_corrected,
+                        "cy": fly.y_corrected,
+                        "datetime": datetime.datetime.now()
+                        }
+
+                    if self.interface.device:
+                 
+                        d["oct_left"] = self.interface.device.pin_state["ODOUR_A_OCT_LEFT"]
+                        d["oct_right"] = self.interface.device.pin_state["ODOUR_A_OCT_RIGHT"]
+                        d["mch_left"] = self.interface.device.pin_state["ODOUR_B_MCH_LEFT"]
+                        d["mch_right"] = self.interface.device.pin_state["ODOUR_B_MCH_LEFT"]
+                        d["eshock_left"] = self.interface.device.pin_state["ESHOCK_LEFT"]
+                        d["eshock_right"] = self.interface.device.pin_state["ESHOCK_RIGHT"]
+                                
+                    self.saver.process_row(d)
+
                     self.found_flies += 1
                     
                     # Draw the fly
@@ -415,10 +457,6 @@ class Tracker():
                     gray_crop = gray[arena.tl_corner[1]:arena.br_corner[1], arena.tl_corner[0]:arena.br_corner[0]]
                     cv2.imwrite(Path(self.failed_arena_path, fname).__str__(), gray_crop)
 
-
-                arenas_dict[id_arena] = arena
-                # Update the id_arena to account for one more arena detected
-                id_arena += 1
 
 
                 ########################################

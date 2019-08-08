@@ -8,6 +8,7 @@ from pypylon import pylon
 from pypylon import genicam
 import cv2
 import coloredlogs
+import numpy as np
 import psutil
 
 from decorators import export 
