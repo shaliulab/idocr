@@ -25,7 +25,7 @@ arduino:
     board: ArduinoMega
 
 saver:
-    path: "LeMDTe27SL5a9e19f94de287e28f789825/LEARNER_001"
+    path: "lemdt_results/LeMDTe27SL5a9e19f94de287e28f789825/LEARNER_001"
 
 blocks:
     folder: LeMDT/blocks/
