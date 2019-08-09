@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 import yaml
 from pathlib import Path
+from sklearn.cluster import KMeans
 
 # Local application imports
 from features import Arena, Fly
@@ -381,7 +382,14 @@ class Tracker():
 
             # sort arenas by position!!
             sorted_arenas_list = []
-            sorted_arenas_br_to_tl_horizontally = sorted(arenas_list, key=lambda a: (-a.corners[1][1],-a.corners[1][0]) )
+            # sort the arenas_list using the br corner attribute (.corners[1])
+            # the corner is a tuple showing (x, y)
+            # we want to sort first on y ([1]) and then on x ([0])
+            # both in decreasing order because the 
+
+
+
+            sorted_arenas_br_to_tl_horizontally = sorted(arenas_list, key=lambda a: (a.column, a.corners[1][1]))
             [print(a.corners[1]) for a in sorted_arenas_list]
 
             for identity, arena in enumerate(sorted_arenas_br_to_tl_horizontally):

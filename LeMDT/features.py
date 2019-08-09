@@ -24,6 +24,7 @@ class Arena():
         self.min_arena_area = self.tracker.interface.cfg["arena"]["min_area"] 
         self.area = None
         self.corners = None
+        self.column = None
         self.identity = None
         self.mask = None
         self.box = None
@@ -67,6 +68,9 @@ class Arena():
 
     def set_id(self, identity):
         self.identity = identity
+
+    def set_column(self, column_number):
+        self.column = column_number
 
     def validate(self):
         
