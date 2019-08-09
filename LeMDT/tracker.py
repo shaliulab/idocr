@@ -249,12 +249,37 @@ class Tracker():
             avgImage = self.accuImage[:,:,self.frame_count].astype('uint8')
 
         image_blur = cv2.GaussianBlur(avgImage, (self.kernel_factor, self.kernel_factor), 0)
-        _, image1 = cv2.threshold(image_blur, RangeLow1, RangeUp1, cv2.THRESH_BINARY+cv2.THRESH_OTSU) 
-        arena_opening = cv2.morphologyEx(image1, cv2.MORPH_OPEN, self.kernel, iterations = 2)
+        _, thresholded = cv2.threshold(image_blur, RangeLow1, RangeUp1, cv2.THRESH_BINARY+cv2.THRESH_OTSU) 
+        #arena_opening = cv2.morphologyEx(image1, cv2.MORPH_OPEN, self.kernel, iterations = 2)
+        arena_opening = thresholded.copy()
         if cv2_version[0] == '4':
             arena_contours, _ = cv2.findContours(arena_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         else:
             _, arena_contours, _ = cv2.findContours(arena_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        
+        # to merge contours belonging to the same chamber
+        # specially on ROI 10
+        contour_mask = np.zeros_like(gray)
+        
+        for c in arena_contours:
+            cv2.fillPoly(contour_mask, pts = [c], color=(255,255,255))
+
+
+        
+        dilation = cv2.dilate(contour_mask, (5,5), 10)
+        erosion = cv2.erode(dilation, (5,5), 10) 
+
+        # cv2.imshow('thr', image1)
+        # cv2.imshow('erosion', erosion)
+        # cv2.imshow('contour mask', contour_mask)       
+        # if cv2.waitKey(33) == ord('q'):
+        #     self.close()
+
+        if cv2_version[0] == '4':
+            arena_contours, _ = cv2.findContours(erosion, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        else:
+            _, arena_contours, _ = cv2.findContours(erosion, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         return arena_contours
 
@@ -313,8 +338,7 @@ class Tracker():
                 self.interface.frame_color = gray_color
                 status = self.track()
                 return status
-
-            
+                        
             transform = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.block_size, self.param1)
             self.transform = transform
 
@@ -327,12 +351,8 @@ class Tracker():
             id_arena = 1
             # For every arena contour detected
 
-            print(len(self.arena_contours))
-
             for arena_contour in self.arena_contours:                       
                 
-
-
                 # Initialize an Arena object                
                 arena = Arena(tracker = self, contour = arena_contour)
                 # and compute parameters used in validation and drawing
@@ -356,7 +376,7 @@ class Tracker():
             found_arenas = np.sum([a is not None for a in arenas_list])
             if found_arenas != self.targets and False:
                 
-                self.log.debug("Number of arenas found not equal to target. Discarding frame".format(self.frame_count))
+                self.log.debug("Number of arenas found not equal to target. Discarding frame")
                 self.frame_count += 1
                 self.interface.frame_color = gray_color
                 status = self.track()
@@ -390,7 +410,6 @@ class Tracker():
 
 
             sorted_arenas_br_to_tl_horizontally = sorted(arenas_list, key=lambda a: (a.column, a.corners[1][1]))
-            [print(a.corners[1]) for a in sorted_arenas_list]
 
             for identity, arena in enumerate(sorted_arenas_br_to_tl_horizontally):
 

@@ -31,6 +31,9 @@ class Arena():
         self.fly = None
         self.tl_corner = None
         self.br_corner  = None
+        self.width = self.tracker.interface.cfg['arena']['width']
+        self.height = self.tracker.interface.cfg['arena']['height']
+        
         self.dilation_kernel = np.ones((5,5),np.uint8)
         fly = None
 
@@ -40,28 +43,38 @@ class Arena():
     def compute(self):
         # try:
         self.area = cv2.contourArea(self.contour)
-        # except:
-
-        #self.x, self.y, self.w, self.h = cv2.boundingRect(self.contour)
-        rect = cv2.minAreaRect(self.contour)
-        box = cv2.boxPoints(rect)
-        box = np.int0(box)
-        self.box = box
-        tl_corner = np.min(box, axis = 0)
-        br_corner = np.max(box, axis = 0)
-
-        self.tl_corner = tl_corner 
-        self.br_corner = br_corner 
-
-        #self.center = (self.x + self.w//2, self.y + self.h // 2)
+       
         M0 = cv2.moments(self.contour)
         if M0['m00'] != 0 and M0['m10']:
-            self.cx = int(M0['m10']/M0['m00'])
-            self.cy = int(M0['m01']/M0['m00'])
-            self.center = (self.cx, self.cy)
+            cx = int(M0['m10']/M0['m00'])
+            cy = int(M0['m01']/M0['m00'])
+            self.cx = cx
+            self.cy = cy
+            
+            self.center = (cx, cy)
+            
         else:
             pass
             # handle what happens when the if above is not true
+        
+        #rect = cv2.minAreaRect(self.contour)
+        #box = cv2.boxPoints(rect)
+        #box = np.int0(box)
+        box = np.array([
+            [cx-self.width, cy-self.height], [cx-self.width, cy+self.height],
+            [cx+self.width, cy+self.height], [cx+self.width, cy-self.height]
+            ])
+            
+        self.box = box
+
+        
+
+        tl_corner = np.min(box, axis = 0)
+        br_corner = np.max(box, axis = 0)
+    
+        self.tl_corner = tl_corner 
+        self.br_corner = br_corner 
+
         
         corners = np.array([tl_corner, br_corner])
         return corners
