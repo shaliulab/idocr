@@ -48,26 +48,28 @@ class Arena():
         if M0['m00'] != 0 and M0['m10']:
             cx = int(M0['m10']/M0['m00'])
             cy = int(M0['m01']/M0['m00'])
-            self.cx = cx
-            self.cy = cy
-            
-            self.center = (cx, cy)
+            box = np.array([
+                [cx-self.width, cy-self.height], [cx-self.width, cy+self.height],
+                [cx+self.width, cy+self.height], [cx+self.width, cy-self.height]
+            ])  
+        
             
         else:
-            pass
-            # handle what happens when the if above is not true
+            rect = cv2.minAreaRect(self.contour)
+            box = cv2.boxPoints(rect)
+            box = np.int0(box)
+            cx = np.mean([pt[0] for pt in box])
+            cy = np.mean([pt[1] for pt in box])
         
-        #rect = cv2.minAreaRect(self.contour)
-        #box = cv2.boxPoints(rect)
-        #box = np.int0(box)
-        box = np.array([
-            [cx-self.width, cy-self.height], [cx-self.width, cy+self.height],
-            [cx+self.width, cy+self.height], [cx+self.width, cy-self.height]
-            ])
-            
         self.box = box
+        center = (cx, cy)
+        self.center = center
+        self.cx  = cx
+        self.cy = cy
 
-        
+
+            # handle what happens when the if above is not true
+       
 
         tl_corner = np.min(box, axis = 0)
         br_corner = np.max(box, axis = 0)

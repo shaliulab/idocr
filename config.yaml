@@ -5,8 +5,8 @@ arena:
     kernel_factor: 5
     rangelow: 0
     rangeup: 255
-    targets: 20
-    columns: 2
+    targets: 10
+    columns: 1
     width: 80
     height: 15
 

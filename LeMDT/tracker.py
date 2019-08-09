@@ -165,9 +165,9 @@ class Tracker():
         Make it an instance of the classes in streams.py
         """
 
-
         if self.video is not None:
             self.video = Path(self.video)
+            
             if self.video.is_file():
                 self.stream = STREAMS[self.camera](self.video.__str__())
                 print(self.stream)
@@ -360,7 +360,7 @@ class Tracker():
                 # Validate the arena
                 # If not validated, move on the next arena contour
                 # i.e. ignore the current arena
-                if not arena.validate() and False:
+                if not arena.validate():
                    # move on to next i.e. continue to the next iteration
                    # continue means we actually WON'T continue with the current arena
                    continue
@@ -437,77 +437,77 @@ class Tracker():
                 # Initialize a fly identity that will be increased with 1
                 # for every validated fly i.e. not on every loop iteration!
                 id_fly = 1
+
+                putative_flies = []
+
                 # For every arena contour detected
                 for fly_contour in fly_contours:
                     # Initialize a Fly object
                     fly = Fly(tracker = self, arena = arena, contour = fly_contour, identity = id_fly)
                     # and compute parameters used in validation and drawing
                     fly.compute()
+                
                     
                     # If not validated, move on the next fly contour
                     # i.e. ignore the current fly 
                     if not fly.validate(gray):
                         self.log.debug("Fly not validated")
                         continue
-                    self.log.debug("Fly {} in arena {} validated with area {} and length {}".format(fly.identity, fly.arena.identity, fly.area, fly.diagonal))
-                    
-                    d = {
-                        "oct_left" : None,
-                        "oct_right" : None,
-                        "mch_left" : None,
-                        "mch_right" : None,
-                        "eshock_left" : None,
-                        "eshock_right" : None,
-                        "frame": self.frame_count,
-                        "t": self.interface.timestamp,
-                        "arena": arena.identity,
-                        #"fly": fly.identity,
-                        "cx": fly.x_corrected,
-                        "cy": fly.y_corrected,
-                        "datetime": datetime.datetime.now()
-                        }
 
-                    if self.interface.device:
-                 
-                        d["oct_left"] = self.interface.device.pin_state["ODOUR_A_OCT_LEFT"]
-                        d["oct_right"] = self.interface.device.pin_state["ODOUR_A_OCT_RIGHT"]
-                        d["mch_left"] = self.interface.device.pin_state["ODOUR_B_MCH_LEFT"]
-                        d["mch_right"] = self.interface.device.pin_state["ODOUR_B_MCH_LEFT"]
-                        d["eshock_left"] = self.interface.device.pin_state["ESHOCK_LEFT"]
-                        d["eshock_right"] = self.interface.device.pin_state["ESHOCK_RIGHT"]
-                                
-                    self.saver.process_row(d)
+                    putative_flies.append(fly)
 
-                    self.found_flies += 1
-                    
-                    # Draw the fly
-                    frame_color = fly.draw(frame_color, self.frame_count)
-
-                    # Add the fly to the arena
-                    arena.fly = fly
-                  
-                    # Update the id_fly to account for one more fly detected
-                    id_fly += 1
-
-                    if id_fly > 1:
-                        self.log.debug("Arena {} in frame {}. Multiple flies found".format(arena.identity, self.frame_count))
-
-                    ############################################
-                    ## End for loop over all putative flies
-                    ##
-               
-                # If still 1, it means that none of the fly contours detected
-                # were validated, a fly was not found in this arena!
-                if id_fly == 1:
+                if len(putative_flies) == 0:
                     self.missing_fly += 1
                     fname = str(self.record_frame_count) + "_" + str(arena.identity) + ".tiff"
                     gray_crop = gray[arena.tl_corner[1]:arena.br_corner[1], arena.tl_corner[0]:arena.br_corner[0]]
                     cv2.imwrite(Path(self.failed_arena_path, fname).__str__(), gray_crop)
+                    continue
+                elif len(putative_flies) > 1:
+                    self.log.debug("Arena {} in frame {}. Multiple flies found".format(arena.identity, self.frame_count))             
+                    fly = sorted(putative_flies, key = lambda f: f.area, reverse=True)[0]
+                else:
+                    fly = putative_flies[0]
 
 
+                self.log.debug("Fly {} in arena {} validated with area {} and length {}".format(fly.identity, fly.arena.identity, fly.area, fly.diagonal))
+                
+                d = {
+                    "oct_left" : None,
+                    "oct_right" : None,
+                    "mch_left" : None,
+                    "mch_right" : None,
+                    "eshock_left" : None,
+                    "eshock_right" : None,
+                    "frame": self.frame_count,
+                    "t": self.interface.timestamp,
+                    "arena": arena.identity,
+                    #"fly": fly.identity,
+                    "cx": fly.x_corrected,
+                    "cy": fly.y_corrected,
+                    "datetime": datetime.datetime.now()
+                    }
 
-                ########################################
-                ## End for loop over all putative arenas
+                if self.interface.device:
+                
+                    d["oct_left"] = self.interface.device.pin_state["ODOUR_A_OCT_LEFT"]
+                    d["oct_right"] = self.interface.device.pin_state["ODOUR_A_OCT_RIGHT"]
+                    d["mch_left"] = self.interface.device.pin_state["ODOUR_B_MCH_LEFT"]
+                    d["mch_right"] = self.interface.device.pin_state["ODOUR_B_MCH_LEFT"]
+                    d["eshock_left"] = self.interface.device.pin_state["ESHOCK_LEFT"]
+                    d["eshock_right"] = self.interface.device.pin_state["ESHOCK_RIGHT"]
+                            
+                self.saver.process_row(d)
+
+                self.found_flies += 1
+                
+                # Draw the fly
+                frame_color = fly.draw(frame_color, self.frame_count)
+
+                # Add the fly to the arena
+                arena.fly = fly
+
+            ########################################
+            ## End for loop over all putative arenas
 
 
             # Update GUI graphics

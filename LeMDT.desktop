@@ -1,8 +1,6 @@
 #!/usr/bin/env xdg-open
 [Desktop Entry]
 Name=Learning Memory
-Exec=bash -c 'cd /home/luna.kuleuven.be/u0127714/VIBFlySleepLab && /home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python -m LeMDT --track --camera pylon --arduino'
-Icon=/home/luna.kuleuven.be/u0127714/VIBFlySleepLab/LeMDT/static/fly.png
 Type=Application
 Terminal=true
 Categories=GTK;GNOME;Utility;
