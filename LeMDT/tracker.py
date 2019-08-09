@@ -368,9 +368,8 @@ class Tracker():
                 cluster_mean_x[i] = np.mean(x_coord[kmeans.labels_ == c])
             
             indices = sorted(range(len(cluster_mean_x)), key=lambda k: cluster_mean_x[k])
-            # labels = np.array(cluster_centers[indices])[kmeans.labels_]
             labels = np.array(cluster_centers)[indices][kmeans.labels_]
-            print(labels)
+            #print(labels)
 
 
 
