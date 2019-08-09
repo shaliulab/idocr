@@ -5,6 +5,8 @@ arena:
     kernel_factor: 5
     rangelow: 0
     rangeup: 255
+    targets: 10
+    columns: 1
 
 fly:
     min_length: 0
@@ -17,17 +19,19 @@ tracker:
     fps: 2
     experimenter: "Sayed"
     crop: 1
-    store: "data/store"
     N: 10
     fail: 'failed_arenas/'
 
 arduino:
-    store: "metadata/store"
     board: ArduinoMega
 
+saver:
+    path: "lemdt_results/LeMDTe27SL5a9e19f94de287e28f789825/LEARNER_001"
+
 blocks:
-    folder: blocks/
+    folder: LeMDT/blocks/
     pattern: '.csv'
 
 interface:
     duration: 200
+    machine_id: "LeMDTe27SL5a9e19f94de287e28f789825"

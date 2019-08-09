@@ -1,33 +1,34 @@
 # https://stackoverflow.com/a/4761058
-import sys
-sys.path.append('../src')
-import unittest
-from pathlib import Path
 import logging
-from tests import test_generic
-from src.interface.main import Interface
-from src.camera.main import Tracker
+from pathlib import Path
+import sys
+import unittest
+
+from . import test_generic
+from LeMDT.LeMDT.interface import Interface
+from LeMDT.LeMDT.interface import Tracker
+from pypylon import pylon, genicam
 
 
-
-class TestCamera(test_generic.TestGeneric, Interface):
+class TestCamera(unittest.TestCase, Interface):
 
     def __init__(self, *args, **kwargs):
 
-        super(TestCamera, self).__init__(*args, **kwargs)
-        Interface.__init__(self,
-            arduino=False, track=True,
-            camera='pylon', gui="tkinter",
-            reporting=False, config="config.yml", duration=120
+        interface = Interface(
+             arduino = False, track = True,
+             camera = 'pylon', duration = 10
         )
-        self.store = self.data_saver.store
-    
-    # def test_camera_exists(self):
-    #     test_result = False:
         
-    #     try:
-    #         Tracker(self, self.canera, self.video)
-    #         test_result = True
-    #     except Exception:
+        self.tracker = Tracker(interface=interface, camera=interface.camera)
+        unittest.TestCase.__init__(self, *args, **kwargs)
 
-        
+    def test_camera_can_be_loaded(self):
+        """
+        Make sure that the camera can be loaded
+        """
+        self.tracker.load_camera()
+    
+    def test_camera_can_read_frames(self):
+
+        self.tracker.load_camera()
+        self.tracker.stream.read_frame()
