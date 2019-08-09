@@ -326,29 +326,34 @@ class Tracker():
             id_arena = 1
             # For every arena contour detected
 
-            for arena_contour in self.arena_contours:
-                        
-                # Initialize an Arena object
+            print(len(self.arena_contours))
+
+            for arena_contour in self.arena_contours:                       
                 
+
+
+                # Initialize an Arena object                
                 arena = Arena(tracker = self, contour = arena_contour)
                 # and compute parameters used in validation and drawing
                 arena.corners = arena.compute()
                 # Validate the arena
                 # If not validated, move on the next arena contour
                 # i.e. ignore the current arena
-                if not arena.validate():
+                if not arena.validate() and False:
                    # move on to next i.e. continue to the next iteration
                    # continue means we actually WON'T continue with the current arena
                    continue
-                else:
-
+                   
+                elif id_arena <= targets:
                     arenas_list[id_arena-1] = arena
                     # Update the id_arena to account for one more arena detected
                     id_arena += 1
+                else:
+                    break
 
             
-            found_arenas = len(arenas_list)
-            if found_arenas != self.targets:
+            found_arenas = np.sum([a is not None for a in arenas_list])
+            if found_arenas != self.targets and False:
                 
                 self.log.debug("Number of arenas found not equal to target. Discarding frame".format(self.frame_count))
                 self.frame_count += 1
@@ -357,12 +362,27 @@ class Tracker():
                 return status
 
             
+            columns = self.interface.cfg['arena']['columns']
+            x_coord = np.array([a.corners[1][0] for a in arenas_list])
+            kmeans = KMeans(n_clusters=columns).fit(x_coord.reshape(len(x_coord),1))
+            
+            cluster_mean_x = [0,] * columns
+            cluster_centers = list(range(columns))
+            for i, c in enumerate(range(columns)):
+                cluster_mean_x[i] = np.mean(x_coord[kmeans.labels_ == c])
+            
+            indices = sorted(range(len(cluster_mean_x)), key=lambda k: cluster_mean_x[k])
+            labels = np.array(cluster_centers)[indices][kmeans.labels_]
+            #print(labels)
+
+            for i, a in enumerate(arenas_list):
+                a.set_column(labels[i])
+
+
             # sort arenas by position!!
             sorted_arenas_list = []
             sorted_arenas_br_to_tl_horizontally = sorted(arenas_list, key=lambda a: (-a.corners[1][1],-a.corners[1][0]) )
             [print(a.corners[1]) for a in sorted_arenas_list]
-
-
 
             for identity, arena in enumerate(sorted_arenas_br_to_tl_horizontally):
 

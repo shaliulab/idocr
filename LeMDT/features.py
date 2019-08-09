@@ -33,8 +33,8 @@ class Arena():
         self.dilation_kernel = np.ones((5,5),np.uint8)
         fly = None
 
-    def __repr__(self):
-        print("Arena(tracker = self, contour = arena_contour, identity = {})".format(self.identity))
+    def __str__(self):
+        return "Arena(tracker = self, contour = arena_contour, identity = {})".format(self.identity)
         
     def compute(self):
         # try:
