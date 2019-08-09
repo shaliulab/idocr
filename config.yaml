@@ -6,6 +6,7 @@ arena:
     rangelow: 0
     rangeup: 255
     targets: 10
+    columns: 1
 
 fly:
     min_length: 0

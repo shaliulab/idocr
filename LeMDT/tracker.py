@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 import yaml
 from pathlib import Path
+from sklearn.cluster import KMeans
 
 # Local application imports
 from features import Arena, Fly
@@ -357,9 +358,36 @@ class Tracker():
                 return status
 
             
+            columns = self.interface.cfg['arena']['columns']
+            x_coord = np.array([a.corners[1][0] for a in arenas_list])
+            kmeans = KMeans(n_clusters=columns).fit(x_coord.reshape(len(x_coord),1))
+            
+            cluster_mean_x = [0,] * columns
+            cluster_centers = list(range(columns))
+            for i, c in enumerate(range(columns)):
+                cluster_mean_x[i] = np.mean(x_coord[kmeans.labels_ == c])
+            
+            indices = sorted(range(len(cluster_mean_x)), key=lambda k: cluster_mean_x[k])
+            # labels = np.array(cluster_centers[indices])[kmeans.labels_]
+            labels = np.array(cluster_centers)[indices][kmeans.labels_]
+            print(labels)
+
+
+
+            for i, a in enumerate(arenas_list):
+                a.set_column(labels[i])
+
+
             # sort arenas by position!!
             sorted_arenas_list = []
-            sorted_arenas_br_to_tl_horizontally = sorted(arenas_list, key=lambda a: (-a.corners[1][1],-a.corners[1][0]) )
+            # sort the arenas_list using the br corner attribute (.corners[1])
+            # the corner is a tuple showing (x, y)
+            # we want to sort first on y ([1]) and then on x ([0])
+            # both in decreasing order because the 
+
+
+
+            sorted_arenas_br_to_tl_horizontally = sorted(arenas_list, key=lambda a: (a.column, a.corners[1][1]))
             [print(a.corners[1]) for a in sorted_arenas_list]
 
 
