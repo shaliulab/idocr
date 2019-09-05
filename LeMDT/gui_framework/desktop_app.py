@@ -341,8 +341,10 @@ class TkinterGui():
         for i, pin in enumerate(mapping.itertuples()):
 
             state = self.interface.device.pin_state[pin.Index]
-            if type(state) is bool:
+            if type(state) is bool or type(state) is int:
                 color = 'yellow' if state else 'red'
+            elif type(state) is float:
+                color = 'grey'
             else:
                 color = 'blue'
             self.canvas.itemconfig(i+1, fill = color)

@@ -204,8 +204,8 @@ class ArduinoThread(threading.Thread):
     
     def toggle_pin(self, pin_number, value, freq=None):
         """
-        Updates the state of pin pin_number with value, while logging and caching this
-        so user can confirm it. TODO. Finish show_circuit and use message
+        Update the state of pin pin_number with value,
+        while logging and caching this so user can confirm it.
         """
 
         d = threading.currentThread()
@@ -223,46 +223,7 @@ class ArduinoThread(threading.Thread):
         ))
 
         x = value if not freq else freq
+        print("x")
+        print(x)
+
         self.device.pin_state[self.pin_name] = x
-
-  
-        #self.show_circuit(
-        #            #pin_state,
-        #            message
-        #            )
-
-
-    # def show_circuit(self, 
-    #                 #pin_state,
-    #                 message=None, flush=True):
-    #    #global pin_state
-    #    pin_state_g = {p: "x" if v == 1 else "0" for p, v in self.pin_state.items()}
-
-    #    main_pins = self.device.mapping.query('pin_group == "main"').index.values[1:]
-    #    left_pins = self.device.mapping.query('pin_group == "left"').index.values
-    #    right_pins = self.device.mapping.query('pin_group == "right"').index.values
-       
-    #    show_data = [self.pin_id2n(p) for p in main_pins] + [pin_state_g[p] for p in main_pins]
-    #    show_data2 = [self.left_pair(p, pin_state_g) for p in left_pins] 
-    #    show_data3 = [self.left_pair(p, pin_state_g)[::-1] for p in right_pins] 
-    #    show_data4 = list(zip(show_data2, show_data3))
-    #    flatten = lambda l: [item for sublist in l for item in sublist]
-    #    show_data4 = flatten(flatten(show_data4))
-    #    show_data += show_data4
-    #    n=4
-    #    n2=18
-    #    circuit = " " * 8 + "{}-VA  {}-MA  {}-IR  {}-VI   \n" +    " " * 8 + "[{}]" + " " * n + "[{}]" + " " * n + "[{}]" + " " * n + "[{}]\n" +    "{}-LO1  [{}]" + " " * n2 + "[{}] RO1-{}\n" +    "{}-LO2  [{}]" + " " * n2 + "[{}] RO2-{}\n" +    "{}-LES  [{}]" + " " * n2 + "[{}] RES-{}\n" +    "{}-LL   [{}]" + " " * n2 + "[{}]  RL-{}\n"
-    #    filled_circuit = circuit.format(*show_data)        
-           
-           
-    #    if not message is None:
-    #        output = "{}: {}\n{}".format(datetime.datetime.now(), message, filled_circuit)
-    #    else:
-    #        output = "{}: \n{}".format(datetime.datetime.now(), filled_circuit)
-    #    if flush:
-    #        nlines = len(filled_circuit.split('\n'))
-    #        output = nlines * "\033[F\033[K" + output
-
-    #    handle = open("pin_state.txt", "a+")
-    #    handle.write(output)
-    #    handle.close()
