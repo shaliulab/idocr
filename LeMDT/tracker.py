@@ -15,7 +15,7 @@ from sklearn.cluster import KMeans
 
 # Local application imports
 from features import Arena, Fly
-from streams import PylonStream, StandardStream, STREAMS
+from streams import STREAMS
 from lmdt_utils import setup_logging
 from decorators import export
 from saver import Saver
@@ -170,7 +170,6 @@ class Tracker():
             
             if self.video.is_file():
                 self.stream = STREAMS[self.camera](self.video.__str__())
-                print(self.stream)
             else:
                 self.log.error("Video under provided path not found. Check for typos")
         else:

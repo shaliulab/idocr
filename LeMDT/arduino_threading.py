@@ -48,31 +48,53 @@ class ArduinoThread(threading.Thread):
 
     def pin_thread(self, pin_number, duration, start_time, start, end, on, off, block, i, n_iters=np.nan, d_name=None, board=None):
         """
-        Run by every thread independently, this function replicates the program specified in the corresponding row
-        of the program dataframe. Turns on a pin at a specific timepoint and after some waiting time, it turns it off
+        Run a single Arduino event in a separate thread independently.
+        
+        Run by every thread independently, this function implements the event specified in the corresponding row
+        of the paradigm dataframe. Turns on a pin at a specific timepoint and after some waiting time, it turns it off
         If on and off are not none, it can implement a cycle during this waiting time i.e. the pin can be turned on and off
         between start and end for on and off seconds respectively.
 
-        Keywords
-          pin_number: integer declaring the number of the pin on the Arduino board
+        Parameters
+        ----------
+        pin_number: int
+            Number of the pin on the Arduino board.
           
-          duration: time in seconds that the whole program is supposed to last.
-                       After duration, all pins should go off, no matter what their program is
+        duration: float
+            time in seconds that the whole paradigm is supposed to last.
+            After duration, all pins should go off, no matter what their program is.
           
-          start_time: datetime object declaring the exact moment when run()
-          (the function that calls pin_thread when defining the threads) is executed. Only makes sense in scheduled pins.
+        start_time: datetime.datetime
+            Exact moment when run() (the function that calls pin_thread when defining the threads) is executed.
+            Only makes sense in scheduled pins.
           
-          start: timepoint in seconds when the pin should go on for the first time. Only makes sense in scheduled pins.
+        start: float
+            timepoint in seconds when the pin should go on for the first time.
+            Only makes sense in scheduled pins.
+            Not the same as start_time because the pin does not go ON from time 0,
+            in most cases there is a waiting time.
           
-          end: timepoint in seconds when the pin should be turned off for good
+        end: float
+            timepoint in seconds when the pin should be turned off for good.
           
-          on: duration of the on time in a cycle. Only makes sense in intermitent pins.
+        on: float
+            duration of the on time in a cycle.
+            Only makes sense in intermitent pins.
           
-          off: duration of the off time in a cycle. Only makes sense in intermitent pins.
+        off: float
+            duration of the off time in a cycle.
+            Only makes sense in intermitent pins.
           
-          n_iters: By default is None, but it will be asigned a value equal to the number of cycles
-                   required by intermitent pins (as instructed in the program). If the pin does not have a cycle,
-                   then it will still be None        
+        n_iters: int, optional
+            Number of cycles required by intermitent pins (as instructed in the program).
+            Default is None
+            If the pin does not have a cycle it will remain None.
+
+        Returns
+        -------
+        int
+            1 for normal runs and 0 for early exits.
+
         """
         sync_time = 1
         # d = threading.currentThread()
@@ -116,7 +138,7 @@ class ArduinoThread(threading.Thread):
 
         ##############
         # It's time to activate the Arduino    
-        self.device.program.iloc[i,:]["active"] = True
+        self.device.paradigm.iloc[i,:]["active"] = True
 
         self.device.active_block[block] = True
 

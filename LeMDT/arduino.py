@@ -17,7 +17,7 @@ import yaml
 
 # Local application imports
 from pyfirmata import ArduinoMega, Arduino
-from pdloader import PDLoader
+from paradigm_loader import ParadigmLoader
 from lmdt_utils import setup_logging
 from arduino_threading import ArduinoThread
 
@@ -26,13 +26,15 @@ setup_logging()
 
 BOARDS = {"Arduino": Arduino, "ArduinoMega": ArduinoMega}
 
-class LearningMemoryDevice(PDLoader):
+class LearningMemoryDevice(ParadigmLoader):
 
     def __init__(self, interface, mapping_path, program_path):
 
         ## Initialization
         self.mapping = None
         self.program = None
+        self.paradigm = None
+
         self.pin_state = None
         self.stop_event_name = None
         self.threads_finished = None
@@ -55,7 +57,7 @@ class LearningMemoryDevice(PDLoader):
         self.reporting = self.interface.reporting
 
         self.log = logging.getLogger(__name__)
-        self.log.debug('Loaded paradigm in {}'.format(self.program))
+        # self.log.debug('Loaded paradigm in {}'.format(self.program))
 
         self.threads = {"exit_or_record": {}, "exit" : {}}
         self.threads_finished = {}
@@ -83,7 +85,7 @@ class LearningMemoryDevice(PDLoader):
     def load_program(self, mapping_path=None, program_path=None):
         """
         Update the mapping_path and program_path
-        This function runs the __init__ method of the PDLoader
+        This function runs the __init__ method of the ParadigmLoader
         (Pandas Loader) class
         """
 
@@ -91,7 +93,7 @@ class LearningMemoryDevice(PDLoader):
         program_path = self.interface.default_program_path if program_path is None else program_path
 
 
-        PDLoader.__init__(self, mapping_path, program_path)
+        ParadigmLoader.__init__(self, mapping_path, program_path)
 
 
     def init_pin_state(self):
@@ -104,7 +106,7 @@ class LearningMemoryDevice(PDLoader):
 
     def prepare(self, stop_event_name):
         """
-        Load the Arduino paradigm into LeMFT
+        Load the Arduino paradigm into LeMDT
         Power off all pins
         Create the threads dictionary
         """
@@ -126,8 +128,8 @@ class LearningMemoryDevice(PDLoader):
         Each thread will be an instance of ArduinoThread, based on threading.Thread()
         """
 
-        if self.program is None:
-            self.log.error("No program loaded. Exiting")
+        if self.paradigm is None:
+            self.log.error("No paradigm loaded. Exiting")
             sys.exit(1)
 
         self.stop_event_name = stop_event_name
@@ -135,31 +137,31 @@ class LearningMemoryDevice(PDLoader):
         # threads_subgroup[stop_event_name] = threads[stop_event_name]
         threads_subgroup = threads[stop_event_name]
 
-        self.program["active"] = False
-        self.program["thread_name"] = None
+        self.paradigm["active"] = False
+        self.paradigm["thread_name"] = None
 
-        self.active_block = {k: False for k in self.overview.index}
+        self.active_block = {k: False for k in self.program.index}
  
         # They are not run throughout the lifetime of the program, just at some interval and without intermitency
-        events = self.program.index.get_level_values('pin_id')
+        events = self.paradigm.index.get_level_values('pin_id')
         count = {ev: 0 for ev in events}
         for i, ev in enumerate(events):
             d_pin_number = np.asscalar(self.mapping.loc[ev]["pin_number"])
             x0 = count[ev]
             x1 = count[ev]+1
 
-            d_start =      np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :]["start"])
-            d_end =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :]["end"])
+            d_start =      np.asscalar(self.paradigm.loc[[ev]].iloc[x0:x1, :]["start"])
+            d_end =        np.asscalar(self.paradigm.loc[[ev]].iloc[x0:x1, :]["end"])
 
             if d_end <= d_start:
                 continue
-            d_on =         np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :]["on"])
-            d_off =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :]["off"])
-            block =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :].index)
+            d_on =         np.asscalar(self.paradigm.loc[[ev]].iloc[x0:x1, :]["on"])
+            d_off =        np.asscalar(self.paradigm.loc[[ev]].iloc[x0:x1, :]["off"])
+            block =        np.asscalar(self.paradigm.loc[[ev]].iloc[x0:x1, :].index)
 
             d_name = 'thread-{}-{}'.format(ev, count[ev])
 
-            self.program[i,"thread_name"] = d_name
+            self.paradigm[i,"thread_name"] = d_name
 
             kwargs = {
                 "pin_number"   : d_pin_number,
