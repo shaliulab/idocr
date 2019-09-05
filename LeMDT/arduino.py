@@ -17,6 +17,7 @@ import yaml
 
 # Local application imports
 from pyfirmata import ArduinoMega, Arduino
+from dummy_arduino import Dummy
 from paradigm_loader import ParadigmLoader
 from lmdt_utils import setup_logging
 from arduino_threading import ArduinoThread
@@ -24,7 +25,7 @@ from arduino_threading import ArduinoThread
 # Set up package configurations
 setup_logging()
 
-BOARDS = {"Arduino": Arduino, "ArduinoMega": ArduinoMega}
+BOARDS = {"Arduino": Arduino, "ArduinoMega": ArduinoMega, "Dummy": Dummy}
 
 class LearningMemoryDevice(ParadigmLoader):
 
