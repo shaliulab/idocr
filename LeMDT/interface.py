@@ -34,9 +34,11 @@ config_yaml = Path(PROJECT_DIR, "config.yaml").__str__()
 # @mixedomatic
 class Interface():
 
-    def __init__(self, arduino=False, track=False, mapping=None, program=None, blocks=None, port=None,
-                 camera=None, video=None, reporting=False, config=config_yaml,
-                 duration=None, experimenter=None, gui=None):
+    def __init__(self, arduino=False, track=False,
+    mapping_path=Path(PROJECT_DIR, 'mappings', 'main.csv').__str__(),
+    program_path=Path(PROJECT_DIR, "programs", 'ir.csv').__str__(),
+    blocks=None, port=None, camera=None, video=None, reporting=False, config=config_yaml,
+    duration=None, experimenter=None, gui=None):
 
         with open(config, 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
@@ -110,10 +112,8 @@ class Interface():
         self.camera = camera
         self.video = video
 
-        self.mapping_path = mapping
-        self.default_mapping_path = Path(PROJECT_DIR, 'mappings', 'main.csv').__str__()
-        self.program_path = program
-        self.default_program_path = Path(PROJECT_DIR, "programs", 'ir.csv').__str__()
+        self.mapping_path = mapping_path
+        self.program_path = program_path
 
         self.blocks = blocks
         self.port = port
@@ -166,8 +166,8 @@ class Interface():
         self.log.info("Running interface.init_device")
         device = LearningMemoryDevice(
             interface=self,
-            mapping_path=self.default_mapping_path,
-            program_path=self.default_program_path,
+            mapping_path=self.mapping_path,
+            program_path=self.program_path,
         )
         device.connect_arduino_board(self.port)
         device.prepare('exit')

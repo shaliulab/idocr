@@ -95,6 +95,9 @@ class LearningMemoryDevice(ParadigmLoader):
 
 
         ParadigmLoader.__init__(self, mapping_path, program_path)
+        print('paradigm')
+        print(self.paradigm)
+
 
 
     def init_pin_state(self):
@@ -125,8 +128,20 @@ class LearningMemoryDevice(ParadigmLoader):
 
     def create_threads(self, threads, stop_event_name='exit'):
         """
-        Take the loaded paradigm and create a dictionary of parallel threads
-        Each thread will be an instance of ArduinoThread, based on threading.Thread()
+        Read the paradigm and update the `threads` dictionary. The dictionary has one dictionary inside for two types of events.
+        The dictionaries are populated with `create_threads`. It adds one item for every event in the paradigm.
+        The dictionary inside threads is selected with the `stop_event_name` argument.
+        The subdictionaries have items with values of type `ArduinoThread` and
+        keys set to pin_name_X where x is a counter of how many times the pin has been called.
+
+        Parameters
+        ----------
+
+        threads: dict
+            Thread container that will be used by self.run
+        stop_event_name: str
+            Key of the subdict inside threads that will be populated  
+
         """
 
         if self.paradigm is None:
@@ -136,17 +151,22 @@ class LearningMemoryDevice(ParadigmLoader):
         self.stop_event_name = stop_event_name
         # threads_subgroup = {}
         # threads_subgroup[stop_event_name] = threads[stop_event_name]
+
+        # Access the subdict that will be populated
         threads_subgroup = threads[stop_event_name]
 
-        self.paradigm["active"] = False
-        self.paradigm["thread_name"] = None
-
+ 
         self.active_block = {k: False for k in self.program.index}
  
         # They are not run throughout the lifetime of the program, just at some interval and without intermitency
+        # print(self.paradigm)
+
+
+        print(self.paradigm.index)
+        
         events = self.paradigm.index.get_level_values('pin_id')
         count = {ev: 0 for ev in events}
-        for i, ev in enumerate(events):
+        for event_index, ev in enumerate(events):
             d_pin_number = np.asscalar(self.mapping.loc[ev]["pin_number"])
             x0 = count[ev]
             x1 = count[ev]+1
@@ -162,7 +182,7 @@ class LearningMemoryDevice(ParadigmLoader):
 
             d_name = 'thread-{}-{}'.format(ev, count[ev])
 
-            self.paradigm[i,"thread_name"] = d_name
+            self.paradigm[event_index,"thread_name"] = d_name
 
             kwargs = {
                 "pin_number"   : d_pin_number,
@@ -175,7 +195,7 @@ class LearningMemoryDevice(ParadigmLoader):
                 "d_name"         : d_name, 
                 "board":         self.board,
                 "block"         : block,
-                "i"             : i
+                "event_index"             : event_index
             }
 
             d = ArduinoThread(

@@ -87,7 +87,7 @@ class ParadigmLoader():
         program = self.infer_block_start_from_previous_block(program)  
         # Infer the end for each block
         program["end"] = program["start"] + program["duration"] * program["times"]
-        
+
         self.program = program
         
         # Take a snapshot of the program and save it in overview
@@ -122,6 +122,7 @@ class ParadigmLoader():
     def read_block(self, block_name):
         """Read the correct block file ignoring comments and blank lines."""
         block = pd.read_csv(Path(self.blocks_folder, self.blocks[block_name]), skip_blank_lines=True, comment="#")
+        block.set_index('pin_id')
         return block
 
     def compile(self, program, blocks):
@@ -144,17 +145,16 @@ class ParadigmLoader():
 
         expanded_blocks = [None,] * program.shape[0]
         # For every block in the program file 
-        for i, block in enumerate(program.itertuples()):
+        for i, block_row in enumerate(program.itertuples()):
             
             # Fetch the needed fields
-            block_name = block.Index # the block name
-            start = block.start
-            times = block.times
-            duration = block.duration
+            block_name = block_row.block # the block name
+            start = block_row.start
+            times = block_row.times
+            duration = block_row.duration
 
             # Read the block and format it the same way the program file was
             block = self.read_block(block_name)
-            block.set_index('pin_id')
             block = self.minutes_to_seconds(block)
 
             # The program describes how many times a block has to be repeated.
@@ -187,15 +187,24 @@ class ParadigmLoader():
             # End will be either the one that would correspond based on the number of iterations and the duration
             # unless the block stops earlier than that i.e. the minimum is block.end so we need
             # to take the element-wise minimum of the event ends (end) and the block end (block.end)
-            end = (block_repeat["end"] + block_repeat["iterations"] * duration).values
+            end_column = (block_repeat["end"] + block_repeat["iterations"] * duration).values
             block_end = np.array([block.end])
-            end = np.minimum(block_end, end)
-            block_repeat.loc[:, "end"] = end
+            
+            end_column_corrected = np.minimum(block_end, end_column).T
+            
+            block_repeat.loc[:, "end"] = end_column_corrected
 
             # Add the dataframe to the corrresponding position of the expanded_blocks list
             expanded_blocks[i] = block_repeat
 
         # Concat all the dataframes in the list and return it
         paradigm = pd.concat(expanded_blocks, sort=True)
-        
+        paradigm.set_index('pin_id', inplace=True)
+        print(paradigm.index)
+
+        # Initialize the active and thread_name columns with default values
+        # active will serve as a dynamic monitor
+        # thread_name will be filled in this function
+        paradigm["active"] = False
+        paradigm["thread_name"] = None
         return paradigm

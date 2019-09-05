@@ -46,7 +46,7 @@ class ArduinoThread(threading.Thread):
             # self.device.interface.play_event.wait()
 
 
-    def pin_thread(self, pin_number, duration, start_time, start, end, on, off, block, i, n_iters=np.nan, d_name=None, board=None):
+    def pin_thread(self, pin_number, duration, start_time, start, end, on, off, block, event_index, n_iters=np.nan, d_name=None, board=None):
         """
         Run a single Arduino event in a separate thread independently.
         
@@ -137,8 +137,8 @@ class ArduinoThread(threading.Thread):
         # pin_id = self.mapping.query('pin_number == "{}"'.format(pin_number)).index[0]
 
         ##############
-        # It's time to activate the Arduino    
-        self.device.paradigm.iloc[i,:]["active"] = True
+        # It's time to activate the Arduino
+        self.device.paradigm.iloc[event_index,:]["active"] = True
 
         self.device.active_block[block] = True
 
@@ -191,7 +191,7 @@ class ArduinoThread(threading.Thread):
         self.log.info("{} stopped".format(d_name))
 
         # Check if there's any thread from the current block that's still active
-        self.device.active_block[block] = np.any(self.device.program.query('block == "{}"'.format(block))["active"])
+        self.device.active_block[block] = np.any(self.device.paradigm.query('block == "{}"'.format(block))["active"])
         # communicate to interface that current thread is finished
         self.device.threads_finished[d_name] = True
         # check if it was the last (in that case, the reduce method returns True)
