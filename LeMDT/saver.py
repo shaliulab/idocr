@@ -77,6 +77,9 @@ class Saver():
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.store_img.mkdir(parents=True, exist_ok=False)
 
+        store_header = pd.DataFrame(columns=self.columns)
+        with open(self.store.as_posix() + ".csv", 'w') as store:
+            store_header.to_csv(store)
 
         return True
 
@@ -130,19 +133,8 @@ class Saver():
 
         # save to csv
         with open(self.store.as_posix() + ".csv", 'a') as store:
-            df.to_csv(store)
+            df.to_csv(store, header=False)
 
-
-        # try saving to hdf5
-        # try:
-        #     with pd.HDFStore(self.store + ".h5") as store:
-        #         store.append(key, df)
-        # except Exception as e:
-        #     self.log.info(key)
-        #     self.log.error("{} could not save cache to h5 file. Please investigate traceback. Is pytables available?".format(self.name))
-
-        #     self.log.info(df)
-        #     self.log.exception(e)
 
     def save_img(self, filename, frame):
 
