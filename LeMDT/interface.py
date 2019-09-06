@@ -238,11 +238,14 @@ class Interface():
         This is the callback function of a button
         """
         
+        # Set the record_event so the data recording methods
+        # can run (if_record_event decorator)
         self.record_event.set()
         
-        
         self.record_start = datetime.datetime.now()
-        self.tracker.saver.set_store()
+        self.tracker.saver.init_record_start()
+        self.tracker.saver.init_output_files()
+        self.tracker.saver.save_paradigm()
         
         self.log.info("Pressed record")
         self.log.info("Savers will cache data and save it to csv files")

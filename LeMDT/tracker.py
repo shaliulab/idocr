@@ -147,10 +147,6 @@ class Tracker():
         self.arenas = {}
         self.masks = {}
 
-
-
-        
-
     def set_saver(self):
         saver = Saver(
             tracker=self, cfg = self.interface.cfg,

@@ -55,37 +55,32 @@ class Saver():
         self.machine_id = cfg["interface"]["machine_id"]
 
 
-    def set_store(self):
+    def init_record_start(self):
         """
-        Set the absolute path to the output csv and avi files
-        create directory structure if needed
-        and initialize csv header
+        Set absolute paths to output (depend on what time the record button is pressed)
+        and create directory structure if needed.
         """
         record_start_formatted = self.tracker.interface.record_start.strftime("%Y-%m-%d_%H-%M-%S")
         filename = record_start_formatted + "_" + self.machine_id
         self.output_dir = Path(PROJECT_DIR, self.path, record_start_formatted)
         self.store = Path(self.output_dir, filename)
         self.store_video = self.store.as_posix()
-        print("STORE VIDEO")
-        print(self.store_video)
-
         self.store_img = Path(self.output_dir, "frames")
-        self.output_video_shape = (1000, 1000)
-        
         self.log.info("Creating output directory structures")
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.store_img.mkdir(parents=True, exist_ok=False)
 
-        # self.video_writer = VideoWriter(self.store_video + "_sk." + self.video_format, frameSize=STREAM_SHAPE[::-1])
-
-        self.video_out_fourcc = ['H264', 'XVID', 'MJPG', 'DIVX', 'FMP4', 'MP4V']
+    def init_output_files(self):
+        """Initialize csv and avi files."""
+        video_out_fourcc = ['H264', 'XVID', 'MJPG', 'DIVX', 'FMP4', 'MP4V']
+        vifc = video_out_fourcc[3]
+        self.output_video_shape = (1000, 1000)
         self.video_writers = [
             cv2.VideoWriter(
-                self.store_video + "_" + vifc + "." + self.video_format,
+                self.store_video + suffix + self.video_format,
                 cv2.VideoWriter_fourcc(*vifc),
                 self.video_out_fps, self.output_video_shape
-            ) for vifc in self.video_out_fourcc
-        ]
+            ) for suffix in ["_original.", "_annotated."]]
 
 
         store_header = pd.DataFrame(columns=self.columns)
@@ -93,6 +88,10 @@ class Saver():
             store_header.to_csv(store)
 
         return True
+
+    def save_paradigm(self):
+        """Save a copy of the paradigm for future reference"""
+        self.tracker.interface.device.paradigm.to_csv(os.path.join(self.output_dir, "paradigm.csv"), header=True)
 
 
     @if_record_event
@@ -168,8 +167,8 @@ class Saver():
 
         # self.video_writer.write(self.tracker.interface.original_frame)
         # self.video_writer.release()
-        img = cv2.resize(self.tracker.interface.original_frame, self.output_video_shape)
-        [vw.write(img) for vw in self.video_writers]
+        imgs = [self.tracker.interface.original_frame, self.tracker.interface.frame_color]
+        [vw.write(cv2.resize(img, self.output_video_shape)) for img, vw in zip(imgs, self.video_writers)]
 
     def stop_video(self):
         [vw.release() for vw in self.video_writers]
