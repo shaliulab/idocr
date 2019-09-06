@@ -180,7 +180,8 @@ class LearningMemoryDevice(ParadigmLoader):
 
             d_name = 'thread-{}-{}'.format(ev, count[ev])
 
-            self.paradigm[event_index,"thread_name"] = d_name
+            self.paradigm["thread_name"][event_index]= d_name
+            print(self.paradigm)
 
             kwargs = {
                 "pin_number"   : d_pin_number,
