@@ -359,14 +359,14 @@ class TkinterGui():
         ## TODO REFACTOR
 
         if self.interface.arduino and self.interface.record_event.is_set():
-            c1 = self.interface.device.overview['start'] < self.interface.timestamp
-            c2 = self.interface.device.overview['end'] > self.interface.timestamp
+            c1 = self.interface.device.paradigm['start'] < self.interface.timestamp
+            c2 = self.interface.device.paradigm['end'] > self.interface.timestamp
             selected_rows = c1 & c2
-            active_blocks = self.interface.device.overview.index[selected_rows].tolist()
+            active_blocks = self.interface.device.paradigm.index[selected_rows].tolist()
             if active_blocks:
                 main_block = active_blocks[-1]
-                passed = self.interface.timestamp - self.interface.device.overview.loc[main_block]['start']
-                left = self.interface.device.overview.loc[main_block]['end'] - self.interface.timestamp
+                passed = self.interface.timestamp - self.interface.device.paradigm.loc[main_block]['start']
+                left = self.interface.device.paradigm.loc[main_block]['end'] - self.interface.timestamp
                 time_position = np.round(np.array([passed, left]) / 60, 3)
                 text = 'Running ' + ' and '.join(active_blocks) + ' blocks'
                 text += ' {}m passed, {}m left'.format(*time_position)
