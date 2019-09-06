@@ -650,12 +650,12 @@ class Tracker():
         If the exit event is not yet set, call interface.close()
         """
         self.stream.release()
+        self.saver.stop_video()
+
         self.log.info("Tracking stopped")
         self.log.info("{} arenas in {} frames analyzed".format(20 * self.frame_count, self.frame_count))
         self.log.info("Number of arenas that fly is not detected in is {}".format(self.missing_fly))
         self.saver.store_and_clear()
-        # self.saver.video_writer.release()
-        [vw.release() for vw in self.saver.video_writers]
 
 
         if not self.interface.exit.is_set(): self.interface.close()

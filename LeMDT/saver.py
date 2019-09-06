@@ -49,6 +49,9 @@ class Saver():
         self.path = cfg["saver"]["path"]
         self.video_format = cfg["saver"]["video_format"]
         self.video_out_fps = cfg["saver"]["fps"]
+        print(type(self.video_out_fps))
+        print(self.video_out_fps)
+        
         self.machine_id = cfg["interface"]["machine_id"]
 
 
@@ -67,25 +70,20 @@ class Saver():
         print(self.store_video)
 
         self.store_img = Path(self.output_dir, "frames")
-        STREAM_SHAPE = (self.tracker.stream.get_height(), self.tracker.stream.get_width())
-        print(STREAM_SHAPE)
-
-        self.video_out_fourcc = ['H264', 'XVID', 'MJPG', 'DIVX', 'FMP4']
-
-
-
-
+        self.output_video_shape = (1000, 1000)
+        
         self.log.info("Creating output directory structures")
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.store_img.mkdir(parents=True, exist_ok=False)
 
         # self.video_writer = VideoWriter(self.store_video + "_sk." + self.video_format, frameSize=STREAM_SHAPE[::-1])
 
+        self.video_out_fourcc = ['H264', 'XVID', 'MJPG', 'DIVX', 'FMP4', 'MP4V']
         self.video_writers = [
             cv2.VideoWriter(
                 self.store_video + "_" + vifc + "." + self.video_format,
                 cv2.VideoWriter_fourcc(*vifc),
-                self.video_out_fps, STREAM_SHAPE
+                self.video_out_fps, self.output_video_shape
             ) for vifc in self.video_out_fourcc
         ]
 
@@ -170,5 +168,10 @@ class Saver():
 
         # self.video_writer.write(self.tracker.interface.original_frame)
         # self.video_writer.release()
+        img = cv2.resize(self.tracker.interface.original_frame, self.output_video_shape)
+        [vw.write(img) for vw in self.video_writers]
 
-        [vw.write(self.tracker.interface.original_frame) for vw in self.video_writers]
+    def stop_video(self):
+        [vw.release() for vw in self.video_writers]
+
+
