@@ -153,7 +153,8 @@ class Tracker():
 
     def set_saver(self):
         saver = Saver(
-            tracker=self, record_event=self.interface.record_event
+            tracker=self, cfg = self.interface.cfg,
+            record_event=self.interface.record_event
         )
 
         self.saver = saver
@@ -314,6 +315,8 @@ class Tracker():
                 return False
            
             frame = crop_stream(frame, self.crop)
+            self.interface.original_frame = frame.copy()
+
             # Make single channel i.e. grayscale
             if len(frame.shape) == 3:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -513,6 +516,7 @@ class Tracker():
             self.interface.frame_color = frame_color
             # Save frame
             self.saver.save_img(frame_time.strftime("%Y-%m-%d_%H-%M-%S") + ".jpg", frame_color)
+            self.saver.save_video()
 
             # TODO: Make into utils function
             #self.interface.stacked_arenas = self.stack_arenas(arenas_dict)
@@ -621,9 +625,7 @@ class Tracker():
             # as opposed what would happen with time.sleep
             # where the timeout would always be 100% done
             #self.interface.exit.wait(.2)
-
-        self.saver.images_to_video()
-        
+      
         self.close()            
 
     def toprun(self):
@@ -652,6 +654,9 @@ class Tracker():
         self.log.info("{} arenas in {} frames analyzed".format(20 * self.frame_count, self.frame_count))
         self.log.info("Number of arenas that fly is not detected in is {}".format(self.missing_fly))
         self.saver.store_and_clear()
+        # self.saver.video_writer.release()
+        [vw.release() for vw in self.saver.video_writers]
+
 
         if not self.interface.exit.is_set(): self.interface.close()
 

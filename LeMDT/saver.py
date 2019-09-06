@@ -8,8 +8,9 @@ from pathlib import Path
 
 # Third party imports
 import cv2
+import numpy
 import pandas as pd
-
+# from skvideo.io import VideoWriter
 
 # Local application imports
 from lmdt_utils import setup_logging
@@ -25,7 +26,7 @@ max_len = 1000
 
 class Saver():
 
-    def __init__(self, tracker, cache={}, record_event=None):
+    def __init__(self, tracker, cfg, cache={}, record_event=None):
 
 
         self.cache = cache
@@ -45,37 +46,49 @@ class Saver():
         self.store_img = None
         self.out = None
 
-    def set_store(self, cfg):
-        """
-        Set the absolute path to the output file (without extension)
-        """
-
-        self.log.info("Setting the store path")
-        
-        
         self.path = cfg["saver"]["path"]
-        record_start = self.tracker.interface.record_start.strftime("%Y-%m-%d_%H-%M-%S")
-        
-        
-        self.output_dir = Path(PROJECT_DIR, self.path, record_start)
-        filename = record_start+"_"+cfg["interface"]["machine_id"]
+        self.video_format = cfg["saver"]["video_format"]
+        self.video_out_fps = cfg["saver"]["fps"]
+        self.machine_id = cfg["interface"]["machine_id"]
+
+
+    def set_store(self):
+        """
+        Set the absolute path to the output csv and avi files
+        create directory structure if needed
+        and initialize csv header
+        """
+        record_start_formatted = self.tracker.interface.record_start.strftime("%Y-%m-%d_%H-%M-%S")
+        filename = record_start_formatted + "_" + self.machine_id
+        self.output_dir = Path(PROJECT_DIR, self.path, record_start_formatted)
         self.store = Path(self.output_dir, filename)
-
-        video_format = "mp4"
-        self.store_video = self.store.as_posix() + "." + video_format
-        self.store_video2 = self.store.as_posix() + "2." + ".avi"
-
+        self.store_video = self.store.as_posix()
+        print("STORE VIDEO")
+        print(self.store_video)
 
         self.store_img = Path(self.output_dir, "frames")
-        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-        fourcc2 = cv2.VideoWriter_fourcc(*'XVID')
+        STREAM_SHAPE = (self.tracker.stream.get_height(), self.tracker.stream.get_width())
+        print(STREAM_SHAPE)
 
-        self.out = cv2.VideoWriter(self.store_video, fourcc, 2, (500, 500))
-        self.out2 = cv2.VideoWriter(self.store_video2, fourcc, 2, (500, 500))
+        self.video_out_fourcc = ['H264', 'XVID', 'MJPG', 'DIVX', 'FMP4']
 
-        self.log.info("Creating dirs")
+
+
+
+        self.log.info("Creating output directory structures")
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.store_img.mkdir(parents=True, exist_ok=False)
+
+        # self.video_writer = VideoWriter(self.store_video + "_sk." + self.video_format, frameSize=STREAM_SHAPE[::-1])
+
+        self.video_writers = [
+            cv2.VideoWriter(
+                self.store_video + "_" + vifc + "." + self.video_format,
+                cv2.VideoWriter_fourcc(*vifc),
+                self.video_out_fps, STREAM_SHAPE
+            ) for vifc in self.video_out_fourcc
+        ]
+
 
         store_header = pd.DataFrame(columns=self.columns)
         with open(self.store.as_posix() + ".csv", 'w') as store:
@@ -84,7 +97,7 @@ class Saver():
         return True
 
 
-
+    @if_record_event
     def process_row(self, d, max_len=max_len):
         """
         Append row d to the store
@@ -94,8 +107,8 @@ class Saver():
     
         """
         
-        if not self.tracker.interface.record_event.is_set():
-            return True
+        # if not self.tracker.interface.record_event.is_set():
+        #     return True
         
         if len(self.lst) >= max_len:
             self.store_and_clear()
@@ -103,6 +116,7 @@ class Saver():
             self.lst.append(d)
             self.log.debug("Adding new datapoint to cache")      
 
+    @if_record_event
     def store_and_clear(self):
         """
         Convert the cache list to a DataFrame and append that to HDF5.
@@ -135,33 +149,26 @@ class Saver():
         with open(self.store.as_posix() + ".csv", 'a') as store:
             df.to_csv(store, header=False)
 
-
+    @if_record_event
     def save_img(self, filename, frame):
 
-        if not self.tracker.interface.record_event.is_set():
-            return True
+        # if not self.tracker.interface.record_event.is_set():
+            # return True
 
         full_path = Path(self.store_img, filename).as_posix()
         cv2.imwrite(full_path, frame)
 
+    @if_record_event
+    def save_video(self):
 
-    def images_to_video(self, clear_images=False):
+        # if not self.tracker.interface.record_event.is_set():
+            # return True
+        print("SAVING VIDEO")
 
-        if not self.tracker.interface.record_event.is_set():
-            return True
-  
-        image_list = glob.glob(f"{self.store_img.as_posix()}/*.jpg")
-        sorted_images = sorted(image_list, key=os.path.getmtime)
-        for file in sorted_images:
-            # print("Adding image")
-            # print(self.store_video)
-            image_frame = cv2.imread(file)
-            self.out.write(image_frame)
-            self.out2.write(image_frame)
-        if clear_images:
-            for file in image_list:
-                os.remove(file)
+        # self.video_writer.open()
+        # print(self.tracker.interface.original_frame)
 
+        # self.video_writer.write(self.tracker.interface.original_frame)
+        # self.video_writer.release()
 
-
-
+        [vw.write(self.tracker.interface.original_frame) for vw in self.video_writers]

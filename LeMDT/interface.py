@@ -67,7 +67,8 @@ class Interface():
         self.arduino_stopped = None # becomes true if user stops the arduino controls prematurily with Control C       
         self.exit = None            # later assigned a threading.Event()
         self.stream_finished = None # becomes true if stream is finished (i.e more frames are not available)
-        self.camera_closed = None   # becomes true if user stops tracking with X/q      
+        self.camera_closed = None   # becomes true if user stops tracking with X/q
+        self.original_frame = None    
         self.gray_color = None
         self.frame_color = None
         self.gray_gui = None
@@ -241,7 +242,7 @@ class Interface():
         
         
         self.record_start = datetime.datetime.now()
-        self.tracker.saver.set_store(self.cfg)
+        self.tracker.saver.set_store()
         
         self.log.info("Pressed record")
         self.log.info("Savers will cache data and save it to csv files")
