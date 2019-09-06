@@ -31,12 +31,13 @@ GUIS = {'django': DjangoGui, 'tkinter': TkinterGui}
 
 config_yaml = Path(PROJECT_DIR, "config.yaml").__str__()
 
+
 # @mixedomatic
 class Interface():
 
     def __init__(self, arduino=False, track=False,
-    mapping_path=Path(PROJECT_DIR, 'mappings', 'main.csv').__str__(),
-    program_path=Path(PROJECT_DIR, "programs", 'ir.csv').__str__(),
+    mapping_path=None,
+    program_path=None,
     blocks=None, port=None, camera=None, video=None, reporting=False, config=config_yaml,
     duration=None, experimenter=None, gui=None):
 
@@ -111,6 +112,9 @@ class Interface():
         self.reporting = reporting
         self.camera = camera
         self.video = video
+
+        if mapping_path is None: mapping_path = Path(PROJECT_DIR, 'mappings', 'main.csv').__str__()
+        if program_path is None: program_path = Path(PROJECT_DIR, "programs", 'ir.csv').__str__()
 
         self.mapping_path = mapping_path
         self.program_path = program_path

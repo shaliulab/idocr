@@ -90,9 +90,7 @@ class LearningMemoryDevice(ParadigmLoader):
         (Pandas Loader) class
         """
 
-        mapping_path = self.interface.default_mapping_path if mapping_path is None else mapping_path
-        program_path = self.interface.default_program_path if program_path is None else program_path
-
+        print(mapping_path)
 
         ParadigmLoader.__init__(self, mapping_path, program_path)
         print('paradigm')
