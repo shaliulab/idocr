@@ -1,3 +1,3 @@
 pin_id,start,end,on,off,block
-ODOUR_A_OCT_RIGHT,5,7,NaN,NaN,
-ODOUR_A_OCT_LEFT,12,14,NaN,NaN,
+ODOUR_A_RIGHT,5,7,NaN,NaN,
+ODOUR_A_LEFT,12,14,NaN,NaN,

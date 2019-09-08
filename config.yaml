@@ -39,3 +39,4 @@ blocks:
 interface:
     duration: 200
     machine_id: "LeMDTe27SL5a9e19f94de287e28f789825"
+    filename: "tkinter.csv"

@@ -114,7 +114,7 @@ class Interface():
         self.camera = camera
         self.video = video
 
-        if mapping_path is None: mapping_path = Path(PROJECT_DIR, 'mappings', 'main.csv').__str__()
+        if mapping_path is None: mapping_path = Path(PROJECT_DIR, 'mappings', self.cfg["interface"]["filename"]).__str__()
         if program_path is None: program_path = Path(PROJECT_DIR, "programs", 'ir.csv').__str__()
 
         self.mapping_path = mapping_path

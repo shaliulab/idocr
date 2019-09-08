@@ -487,12 +487,12 @@ class Tracker():
 
                 if self.interface.device:
                 
-                    d["oct_left"] = self.interface.device.pin_state["ODOUR_A_OCT_LEFT"]
-                    d["oct_right"] = self.interface.device.pin_state["ODOUR_A_OCT_RIGHT"]
-                    d["mch_left"] = self.interface.device.pin_state["ODOUR_B_MCH_LEFT"]
-                    d["mch_right"] = self.interface.device.pin_state["ODOUR_B_MCH_LEFT"]
-                    d["eshock_left"] = self.interface.device.pin_state["ESHOCK_LEFT"]
-                    d["eshock_right"] = self.interface.device.pin_state["ESHOCK_RIGHT"]
+                    d["oct_left"] = self.interface.device.pin_state["ODOUR_A_LEFT"]
+                    d["oct_right"] = self.interface.device.pin_state["ODOUR_A_RIGHT"]
+                    d["mch_left"] = self.interface.device.pin_state["ODOUR_B_LEFT"]
+                    d["mch_right"] = self.interface.device.pin_state["ODOUR_B_LEFT"]
+                    d["eshock_left"] = self.interface.device.pin_state["EL_SHOCK_LEFT"]
+                    d["eshock_right"] = self.interface.device.pin_state["EL_SHOCK_RIGHT"]
                             
                 self.saver.process_row(d)
 

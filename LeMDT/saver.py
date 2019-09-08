@@ -170,6 +170,7 @@ class Saver():
         imgs = [self.tracker.interface.original_frame, self.tracker.interface.frame_color]
         [vw.write(cv2.resize(img, self.output_video_shape)) for img, vw in zip(imgs, self.video_writers)]
 
+    @if_record_event
     def stop_video(self):
         [vw.release() for vw in self.video_writers]
 

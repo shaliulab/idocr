@@ -13,6 +13,7 @@ from tkinter import filedialog
 import cv2
 import imutils
 import numpy as np
+import pandas as pd
 from PIL import ImageTk, Image
 
 # Local application imports
@@ -25,6 +26,30 @@ log = logging.getLogger(__name__)
 def _create_circle(self, x, y, r, **kwargs):
     return self.create_oval(x-r, y-r, x+r, y+r, **kwargs)
 tk.Canvas.create_circle = _create_circle
+
+# a subclass of Canvas for dealing with resizing of windows
+class ResizingCanvas(tk.Canvas):
+    def __init__(self,parent,**kwargs):
+        tk.Canvas.__init__(self,parent,**kwargs)
+        self.bind("<Configure>", self.on_resize)
+        self.height = self.winfo_reqheight()
+        self.width = self.winfo_reqwidth()
+
+    def on_resize(self,event):
+        # determine the ratio of old width/height to new width/height
+        wscale = float(event.width)/self.width
+        hscale = float(event.height)/self.height
+        self.width = event.width
+        self.height = event.height
+        # resize the canvas 
+        self.config(width=self.width, height=self.height)
+        # rescale all the objects tagged with the "all" tag
+        self.scale("all",0,0,wscale,hscale)
+        print("canvas size: {}x{}".format(self.height, self.width))
+
+    
+    def create_circle(self, x, y, r, **kwargs):
+        return self.create_oval(x-r, y-r, x+r, y+r, **kwargs)
 
 
 class BetterButton(tk.Button):
@@ -54,13 +79,19 @@ class BetterButton(tk.Button):
         return photoimage
 
     def push(self):
-        self.grid(row=0, column = self.index, padx = 10)
+        print("self.index/3")
+        print(self.index/3)
+        self.place(relx=self.index/3, anchor="nw")
 
 
 class TkinterGui():
 
     def __init__(self, interface):
 
+        HEIGHT = 1000
+        WIDTH = 1000
+        self.width = WIDTH
+        self.height = HEIGHT
         self.gui_pad = None
         self.log = None
         self.init = None
@@ -70,23 +101,49 @@ class TkinterGui():
         self.statusbar_text = None
 
         root = tk.Tk()
-        root.style = ttk.Style()
-        root.style.theme_use("clam")
-
+        canvas = tk.Canvas(root, height=HEIGHT, width=WIDTH)
+        canvas.pack()
+        
+        
         # set initial size of window (800x800 and 500 pixels up)
-        self.height = 800
-        self.width = 800
-
-        root.geometry("{}x{}+200+200".format(self.width, self.height))
+        
+        # root.geometry("{}x{}+200+200".format(self.width, self.height))
         icon_path = Path(STATIC_DIR, 'fly.png').__str__()
         # root.iconbitmap(icon_path)
         root.tk.call('wm', 'iconphoto', root._w, tk.PhotoImage(file=icon_path))
-        
+
+        # self.root.grid_rowconfigure(0, weight=1)
+        # self.root.grid_columnconfigure(0, weight=1)
+        # self.root.grid_columnconfigure(1, weight=1)
+
+
         self.root = root
         self.interface = interface
+        self.control_panel_path = Path(PROJECT_DIR, 'arduino_panel', self.interface.cfg["interface"]["filename"]).__str__()
+
         self.bd = 1
 
-        self.create_menu()
+        ####################################
+        ## MENU 
+        ####################################
+        
+        # Add the menu entries for the program and mapping files
+
+        # create a menu (topbar) instance
+        self.menu = tk.Menu(self.root)
+        self.root.config(menu=self.menu)
+        
+        # create the file object
+        file_menu = tk.Menu(self.menu)
+        # add a command to the menu option, calling it exit, and the
+        # command it runs on event is client_exit
+        file_menu.add_command(label="Program", command=self.load_program)
+        file_menu.add_command(label="Mapping", command=self.ask_mapping)
+        # add "file" to our menu
+        self.menu.add_cascade(label="File", menu=file_menu)
+
+        
+        
         self.configure_layout()
         self.configure_buttons()
         self.create_canvas()
@@ -115,89 +172,99 @@ class TkinterGui():
         self.root.wm_protocol("WM_DELETE_WINDOW", self.close)
         self.canvas.addtag_all("all")
 
+
+
         # init tracker frame
         wshape = (self.height, self.width)
         init_tracker_frame = np.zeros(shape=wshape, dtype=np.uint8)
         label = tk.Label(self.tracker_frame, image=self.preprocess(init_tracker_frame, wshape[1]//2))
-        label.pack(side=tk.LEFT, anchor=tk.W)
+        label.pack()
         self.panel['frame_color'] = label
 
 
         # init arduino control
         if self.interface.arduino:
-            for i, pin in enumerate(self.interface.device.mapping.itertuples()):
-                label = tk.Label(self.canvas, text = pin.Index, fg = 'white', bg = 'black')
-                y = pin.x*60
-                x = 30 + pin.y * 60
-                label.place(x=x-15, y=y-30)
-                self.panel[i] = label
+            control_panel = pd.read_csv(self.control_panel_path, skip_blank_lines=True, comment="#")
+            radius = 6
+            sym = control_panel["sym"].values
+            print(sym)
+            pad_y = .05*self.canvas.height
+
+            non_symmetric_pins = control_panel.loc[np.bitwise_not(sym)]
+            x_values = np.array([.15, .45]) * self.canvas.width
+            y_values = np.array([.1, .2, .35, 0.5, .65, .8, .95]) * self.canvas.height
+    
+            for i, pin in enumerate(non_symmetric_pins.itertuples()):
+                
                 # circle is an integer indicating the index of the shape
-                # i.e. the first cirlce returns 1, the second 2 and so forth
-                circle = self.canvas.create_circle(x, y, 6, fill = "red")
+                # i.e. the first circle returns 1, the second 2 and so forth
+                # third number is the radius   
+                TEXT = pin.rendered_text
+                self.canvas.create_circle(x_values[pin.column], y_values[pin.row], radius, fill = "red")
+                self.canvas.create_text((x_values[pin.column], y_values[pin.row] + pad_y), text = TEXT)
+                
+            symmetric_pins = control_panel.loc[sym]
+
+            for i, pin in enumerate(symmetric_pins.itertuples()):
+                
+                # circle is an integer indicating the index of the shape
+                # i.e. the first circle returns 1, the second 2 and so forth
+                # third number is the radius   
+                
+                self.canvas.create_circle(x_values[pin.column], y_values[pin.row], radius, fill = "red")
+                TEXT = "_".join(pin.pin_id.split("_")[:2])
+                self.canvas.create_text((x_values[pin.column], y_values[pin.row] + pad_y), text = TEXT)
+            
+
+
 
         # Initialize statusbar
         self.statusbar_text = "Welcome to LeMDT"
-        statusbar = tk.Label(self.statusbar_frame, text=self.statusbar_text, relief=tk.SUNKEN, anchor=tk.W)
-        statusbar.pack(side=tk.LEFT, fill=tk.X, expand = tk.YES)
+        statusbar = tk.Label(self.statusbar_frame, text=self.statusbar_text)
+        statusbar.pack(fill="x", expand = tk.YES)
         self.statusbar = statusbar
 
         
         self.canvas.addtag_all("all")
 
 
-    def create_menu(self):
-        """
-        Add the menu entries for the program and mapping files
-        Called by __init__
-        """
-        # creating a menu instance
-        self.menu = tk.Menu(self.root)
-        self.root.config(menu=self.menu)
-        # create the file object)
-        file_menu = tk.Menu(self.menu)
-        
-        # adds a command to the menu option, calling it exit, and the
-        # command it runs on event is client_exit
-        file_menu.add_command(label="Program", command=self.load_program)
-        file_menu.add_command(label="Mapping", command=self.ask_mapping)
-
-
-        #added "file" to our menu
-        self.menu.add_cascade(label="File", menu=file_menu)
-
     def configure_layout(self):
         """
         Arrange the elements of the GUI
         Called by __init__
         """
-        main_frame = tk.Frame(self.root)
-        bd = self.bd
-        tracker_frame = tk.Frame(main_frame, relief = tk.RIDGE, bd = bd)
-        arduino_frame = tk.Frame(main_frame, relief = tk.RIDGE, bd = bd)
-        button_frame = tk.Frame(main_frame, relief = tk.RIDGE, bd = bd)
-        statusbar_frame = tk.Frame(main_frame, relief = tk.RIDGE, bd = bd)
+        self.nb = ttk.Notebook(self.root)
+        self.nb.place(relx = 0, rely=0, relheight = 1, relwidth = 1, anchor="nw")
+        main_frame = tk.Frame(self.nb, bg="#80c1ff", bd=self.bd)
+        main_frame.place(relx=0, rely=0, relheight=1,relwidth=1)
+        
+        zoom_frame = tk.Frame(self.nb, bg="#80c1ff", bd=self.bd)
+        zoom_frame.place(relx=0, rely=0, relheight=1,relwidth=1)
+        
+        
+        tracker_frame = tk.Frame(main_frame, bg = "#000000")
+        arduino_frame = tk.Frame(main_frame, bg = "#F0D943")
+        button_frame = tk.Frame(main_frame)
+        statusbar_frame = tk.Frame(main_frame)
 
         # Layout config
-        main_frame.grid(row=0, column=0, sticky="nsew")
-        self.root.grid_rowconfigure(0, weight=1)
-        self.root.grid_columnconfigure(0, weight=1)
-        self.root.grid_columnconfigure(1, weight=1)
-
-        tracker_frame.grid(row=0, column=0, sticky="ew")
-        arduino_frame.grid(row=0, column=1, sticky="nsew")
-        button_frame.grid(row=1, column=0, columnspan=3)
-        statusbar_frame.grid(row=2, column=0, columnspan=2, sticky='ew')
+        tracker_frame.place(relx=0,rely=0, relheight=0.75, relwidth=0.75, anchor="nw")
+        arduino_frame.place(relx=0.75,rely=0, relheight=0.75, relwidth=0.25, anchor="nw")
         
-        main_frame.grid_rowconfigure(0, weight=1)
-        main_frame.grid_columnconfigure(0, weight=1)
-        main_frame.grid_columnconfigure(1, weight=1)
-
+        button_frame.place(relx=0.25, rely=.75, relheight=0.2, relwidth=0.5, anchor="nw")
+        statusbar_frame.place(relx=0, rely=.95, relheight=0.05, relwidth=1, anchor="nw")
+        
         # Add to instance
         self.main_frame = main_frame
+        self.zoom_frame = zoom_frame
         self.tracker_frame = tracker_frame
         self.arduino_frame = arduino_frame
         self.button_frame = button_frame
         self.statusbar_frame = statusbar_frame
+
+        self.nb.add(self.main_frame, text = "Monitor")
+        self.nb.add(self.zoom_frame, text = "Zoom")
+
     
     def configure_buttons(self):
         """
@@ -205,12 +272,12 @@ class TkinterGui():
         Called by __init__
         """
         
-        playButton = BetterButton(self.button_frame, 'play', self.interface.play, 1)
-        okButton = BetterButton(self.button_frame, 'ok_arena', self.interface.ok_arena, 2)
-        recordButton = BetterButton(self.button_frame, 'record', self.interface.record, 3)
+        playButton = BetterButton(self.button_frame, 'play', self.interface.play, 0)
+        okButton = BetterButton(self.button_frame, 'ok_arena', self.interface.ok_arena, 1)
+        recordButton = BetterButton(self.button_frame, 'record', self.interface.record, 2)
 
         buttons = [playButton, okButton, recordButton]
-        [b.push() for b in buttons]
+        [b.pack(side="left", expand=True, padx=10) for b in buttons]
 
     
     def create_canvas(self):
@@ -220,13 +287,10 @@ class TkinterGui():
         """
         
         bd = self.bd
-        canvas = tk.Canvas(self.arduino_frame, width=self.width//2, height=self.height//2, highlightthickness=0, bd=bd)
-
-        canvas.width = self.width // 2
-        canvas.height = self.height // 2
-        canvas.pack(fill=tk.BOTH, expand=tk.YES)
+        canvas = ResizingCanvas(self.arduino_frame, highlightthickness=0, bd=bd)
+        canvas.pack(fill=tk.X)
         canvas.bind("<Button-1>", self.on_click)
-        canvas.bind("<Configure>", self.on_resize)
+        # canvas.bind("<Configure>", self.on_resize)
         self.canvas = canvas
    
     def ask_program(self):
@@ -284,22 +348,6 @@ class TkinterGui():
             )
         self.log.info('Loading mapping {}'.format(self.interface.mapping_path))
 
-
-    def on_resize(self,event):
-        """
-
-        """
-        
-        # determine the ratio of old width/height to new width/height
-        wscale = float(event.width)/self.canvas.width
-        hscale = float(event.height)/self.canvas.height
-        self.canvas.width = event.width
-        self.canvas.height = event.height
-        # resize the canvas
-        self.canvas.scale("all",0,0,wscale,hscale)
-        # rescale all the objects tagged with the "all" tag
-
-
     def on_click(self, event):
         """
         Callback function when clicking anywhere on the canvas
@@ -347,7 +395,7 @@ class TkinterGui():
                 color = 'grey'
             else:
                 color = 'blue'
-            self.canvas.itemconfig(i+1, fill = color)
+            self.canvas.itemconfig(i*2-1, fill = color)
 
     
     def update_statusbar(self):
