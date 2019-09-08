@@ -17,9 +17,10 @@ import pandas as pd
 from PIL import ImageTk, Image
 
 # Local application imports
-from lmdt_utils import setup_logging
+from lmdt_utils import setup_logging, _toggle_pin
 from LeMDT import PROJECT_DIR, ROOT_DIR, STATIC_DIR
 from decorators import if_record_event
+
 
 setup_logging()
 log = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ class ResizingCanvas(tk.Canvas):
         self.config(width=self.width, height=self.height)
         # rescale all the objects tagged with the "all" tag
         self.scale("all",0,0,wscale,hscale)
-        print("canvas size: {}x{}".format(self.height, self.width))
+        # print("canvas size: {}x{}".format(self.height, self.width))
 
     
     def create_circle(self, x, y, r, **kwargs):
@@ -100,6 +101,7 @@ class TkinterGui():
         self.interface = None
         self.panel = {}
         self.statusbar_text = None
+        self.circles = {}
 
         root = tk.Tk()
         canvas = tk.Canvas(root, height=HEIGHT, width=WIDTH)
@@ -209,8 +211,9 @@ class TkinterGui():
                 # i.e. the first circle returns 1, the second 2 and so forth
                 # third number is the radius   
                 TEXT = pin.rendered_text
-                self.canvas.create_circle(x_values[pin.column], y_values[pin.row], radius, fill = "red")
+                circle = self.canvas.create_circle(x_values[pin.column], y_values[pin.row], radius, fill = "red", tags = ["clickable", pin.pin_id])
                 self.canvas.create_text((x_values[pin.column], y_values[pin.row] + pad_y), text = TEXT)
+                self.circles[pin.pin_id] = circle
                 
             symmetric_pins = control_panel.loc[sym]
 
@@ -220,9 +223,13 @@ class TkinterGui():
                 # i.e. the first circle returns 1, the second 2 and so forth
                 # third number is the radius   
                 
-                self.canvas.create_circle(x_values[pin.column], y_values[pin.row], radius, fill = "red")
+                self.canvas.create_circle(x_values[pin.column], y_values[pin.row], radius, fill = "red", tags = ["clickable", pin.pin_id])
+                self.circles[pin.pin_id] = circle
                 TEXT = "_".join(pin.pin_id.split("_")[:2])
                 self.canvas.create_text((x_values[pin.column], y_values[pin.row] + pad_y), text = TEXT)
+            
+            self.canvas.tag_bind("clickable", "<1>", self.circle_click)
+
             
 
 
@@ -298,7 +305,7 @@ class TkinterGui():
         bd = self.bd
         canvas = ResizingCanvas(self.arduino_frame, highlightthickness=0, bd=bd)
         canvas.pack(fill=tk.X)
-        canvas.bind("<Button-1>", self.on_click)
+        # canvas.bind("<Button-1>", self.on_click)
         # canvas.bind("<Configure>", self.on_resize)
         self.canvas = canvas
    
@@ -362,6 +369,17 @@ class TkinterGui():
         Callback function when clicking anywhere on the canvas
         """
         self.log.info("clicked at {} {}".format(event.x, event.y))
+        item = self.canvas.find_closest(event.x, event.y)
+        # print(item)
+        # print(self.canvas.type(item))
+
+    
+    def circle_click(self, event):
+        item = self.canvas.find_closest(event.x, event.y)
+        pin_id = self.canvas.gettags(item)[1]
+        device=self.interface.device
+        self.toggle_pin(device=device, pin_id=pin_id, value=1-device.pin_state[pin_id], thread=False)
+
 
     def preprocess(self, img, width):
         """
@@ -493,4 +511,4 @@ class TkinterGui():
         self.interface.close()
 
 
-    
+TkinterGui.toggle_pin = _toggle_pin
