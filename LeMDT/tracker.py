@@ -8,6 +8,7 @@ import time
 # Third party imports
 import coloredlogs
 import cv2
+import imutils
 import numpy as np
 import yaml
 from pathlib import Path
@@ -199,7 +200,10 @@ class Tracker():
         self.interface.frame_color = np.zeros((self.video_height, self.video_width, 3), np.uint8)
         self.interface.gray_color = np.zeros((self.video_height, self.video_width, 3), np.uint8)
         self.interface.gray_gui = np.zeros((self.video_height, self.video_width), np.uint8)
-        self.interface.stacked_arenas = np.zeros((self.video_height, self.video_width), np.uint8)
+        width = self.interface.cfg["arena"]["width"]
+        height = self.interface.cfg["arena"]["height"]        
+        empty_img = np.zeros(shape=(height*3, width*3, 3), dtype=np.uint8)
+        self.interface.stacked_arenas = [empty_img.copy() for i in range(self.interface.cfg["arena"]["targets"])]
 
 
     def rotate_frame(self, img, rotation=180):
@@ -507,9 +511,12 @@ class Tracker():
             ########################################
             ## End for loop over all putative arenas
 
-
             # Update GUI graphics
             self.interface.frame_color = frame_color
+            for i, arena in enumerate(sorted_arenas_br_to_tl_horizontally):
+                arena_crop = arena.crop(frame_color)
+                self.interface.stacked_arenas[i] = imutils.resize(arena_crop, width=arena_crop.shape[1]*3)
+
             # Save frame
             self.saver.save_img(frame_time.strftime("%Y-%m-%d_%H-%M-%S") + ".jpg", frame_color)
             self.saver.save_video()
@@ -563,39 +570,6 @@ class Tracker():
             kwargs={"interval_duration": 2}
         )
         sample_fps_thread.start()
-
-        
-        
-    # TODO
-    # MORE COMMENTS
-    def stack_arenas(self, arenas):
-
-        gray_color = self.interface.gray_color
-
-        
-        def draw_stacked(a):
-            # print(a.corners)
-            hhwws = np.array([a.corners[1,:] - a.corners[0,:] for key, a in arenas.items()])
-            max_h, max_w = np.max(hhwws, axis = 0)
-
-            ROI = gray_color[a.corners[0][0]:max_h, a.corners[0][1]:max_w]
-            if a.fly:
-                arena_crop = a.fly.draw(ROI, relative_to_arena = True)
-            else:
-                arena_crop = ROI
-            cv2.rectangle(arena_crop, (0, 0), arena_crop.shape, 128, 2)
-            return arena_crop
-
-        stacked_arenas = [draw_stacked(a) for key, a in arenas.items()]
-        stacked_arenas = np.stack(stacked_arenas, axis=0).reshape((10, 2))
-        return stacked_arenas
-
-        
-        # try: 
-        #     
-        # except:
-        #     self.log.debug(a.corners.shape)
-        #     
 
         
     def run(self):

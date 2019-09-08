@@ -29,10 +29,12 @@ def mixedomatic(cls):
     setattr(cls, '__init__', __init__)
     return cls
 
+# def if_record_event(interface):
 def if_record_event(f):
-    def wrapper(self, *args):
+    def wrapper(self, *args, **kwargs):
         is_set = self.tracker.interface.record_event.is_set()
         if not is_set:
             return True            
-        return f(self, *args)
+        return f(self, *args, **kwargs)
     return wrapper
+    # return _if_record_event

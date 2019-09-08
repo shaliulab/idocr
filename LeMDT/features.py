@@ -119,6 +119,9 @@ class Arena():
         #cv2.circle(img, (self.cx, self.cy), 2, blue, -1)
         
         return img
+    
+    def crop(self,img):
+        return cv2.cvtColor(img[self.box[0,1]:self.box[1,1], self.box[0,0]:self.box[2,0]], cv2.COLOR_BGR2RGB)
 
     def find_flies(self, transform, kernel):
         #transform = cv2.morphologyEx(transform, cv2.MORPH_OPEN, kernel)

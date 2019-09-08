@@ -19,6 +19,7 @@ from PIL import ImageTk, Image
 # Local application imports
 from lmdt_utils import setup_logging
 from LeMDT import PROJECT_DIR, ROOT_DIR, STATIC_DIR
+from decorators import if_record_event
 
 setup_logging()
 log = logging.getLogger(__name__)
@@ -103,7 +104,7 @@ class TkinterGui():
         root = tk.Tk()
         canvas = tk.Canvas(root, height=HEIGHT, width=WIDTH)
         canvas.pack()
-        
+        self.main_canvas = canvas
         
         # set initial size of window (800x800 and 500 pixels up)
         
@@ -157,6 +158,10 @@ class TkinterGui():
 
         self.log = log
 
+        self.arena_width = self.interface.cfg["arena"]["width"]
+        self.arena_height = self.interface.cfg["arena"]["height"]
+        
+
 
     def create(self):
         """
@@ -180,6 +185,10 @@ class TkinterGui():
         label = tk.Label(self.tracker_frame, image=self.preprocess(init_tracker_frame, wshape[1]//2))
         label.pack()
         self.panel['frame_color'] = label
+
+        # Init zoom tab
+        self.init_zoom_tab()
+
 
 
         # init arduino control
@@ -381,6 +390,20 @@ class TkinterGui():
         self.panel['frame_color'].configure(image=image)
         self.panel['frame_color'].image = image
 
+    def init_zoom_tab(self):
+        labels = [tk.Label(
+            self.zoom_frame, image=ImageTk.PhotoImage(Image.fromarray(image)),
+        ) for image in self.interface.stacked_arenas]
+
+        [l.pack(anchor="w") for i, l in enumerate(labels)]
+        
+        self.panel['stacked_arenas'] = labels
+
+    def update_zoom(self):
+        for i, image in enumerate(self.interface.stacked_arenas):
+            img = ImageTk.PhotoImage(Image.fromarray(image))
+            self.panel["stacked_arenas"][i].configure(image = img)
+            self.panel["stacked_arenas"][i].image = img
     
     def update_monitor(self, mapping):
         """
@@ -453,6 +476,7 @@ class TkinterGui():
         self.update_statusbar()
         if self.interface.track:
             self.update_widget(img=self.interface.frame_color)
+            self.update_zoom()
         
         if self.interface.arduino:
             self.update_monitor(self.interface.device.mapping)              
