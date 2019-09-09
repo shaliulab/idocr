@@ -1,3 +1,3 @@
 block,start,duration,times
 startup,0,999999999,1
-OCT_vs_MCH_SHORT_MEMORY_PostTest,0,15,1
+vibration_motor_test,0,8,1

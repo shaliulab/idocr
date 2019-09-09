@@ -1,6 +1,0 @@
-#!/usr/bin/env xdg-open
-[Desktop Entry]
-Name=Learning Memory
-Type=Application
-Terminal=true
-Categories=GTK;GNOME;Utility;
