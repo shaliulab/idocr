@@ -108,3 +108,5 @@ failed_arenas/*
 .vscode/*
 .pylintrc
 LeMDT.desktop
+node_modules
+LeMDT/static/semantic*

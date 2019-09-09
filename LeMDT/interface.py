@@ -31,12 +31,15 @@ GUIS = {'django': DjangoGui, 'tkinter': TkinterGui}
 
 config_yaml = Path(PROJECT_DIR, "config.yaml").__str__()
 
+
 # @mixedomatic
 class Interface():
 
-    def __init__(self, arduino=False, track=False, mapping=None, program=None, blocks=None, port=None,
-                 camera=None, video=None, reporting=False, config=config_yaml,
-                 duration=None, experimenter=None, gui=None):
+    def __init__(self, arduino=False, track=False,
+    mapping_path=None,
+    program_path=None,
+    blocks=None, port=None, camera=None, video=None, reporting=False, config=config_yaml,
+    duration=None, experimenter=None, gui=None):
 
         with open(config, 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
@@ -64,7 +67,8 @@ class Interface():
         self.arduino_stopped = None # becomes true if user stops the arduino controls prematurily with Control C       
         self.exit = None            # later assigned a threading.Event()
         self.stream_finished = None # becomes true if stream is finished (i.e more frames are not available)
-        self.camera_closed = None   # becomes true if user stops tracking with X/q      
+        self.camera_closed = None   # becomes true if user stops tracking with X/q
+        self.original_frame = None    
         self.gray_color = None
         self.frame_color = None
         self.gray_gui = None
@@ -110,10 +114,11 @@ class Interface():
         self.camera = camera
         self.video = video
 
-        self.mapping_path = mapping
-        self.default_mapping_path = Path(PROJECT_DIR, 'mappings', 'main.csv').__str__()
-        self.program_path = program
-        self.default_program_path = Path(PROJECT_DIR, "programs", 'ir.csv').__str__()
+        if mapping_path is None: mapping_path = Path(PROJECT_DIR, 'mappings', self.cfg["interface"]["filename"]).__str__()
+        if program_path is None: program_path = Path(PROJECT_DIR, "programs", 'ir.csv').__str__()
+
+        self.mapping_path = mapping_path
+        self.program_path = program_path
 
         self.blocks = blocks
         self.port = port
@@ -166,8 +171,8 @@ class Interface():
         self.log.info("Running interface.init_device")
         device = LearningMemoryDevice(
             interface=self,
-            mapping_path=self.default_mapping_path,
-            program_path=self.default_program_path,
+            mapping_path=self.mapping_path,
+            program_path=self.program_path,
         )
         device.connect_arduino_board(self.port)
         device.prepare('exit')
@@ -233,11 +238,14 @@ class Interface():
         This is the callback function of a button
         """
         
+        # Set the record_event so the data recording methods
+        # can run (if_record_event decorator)
         self.record_event.set()
         
-        
         self.record_start = datetime.datetime.now()
-        self.tracker.saver.set_store(self.cfg)
+        self.tracker.saver.init_record_start()
+        self.tracker.saver.init_output_files()
+        self.tracker.saver.save_paradigm()
         
         self.log.info("Pressed record")
         self.log.info("Savers will cache data and save it to csv files")

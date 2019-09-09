@@ -8,6 +8,7 @@ import time
 # Third party imports
 import coloredlogs
 import cv2
+import imutils
 import numpy as np
 import yaml
 from pathlib import Path
@@ -15,7 +16,7 @@ from sklearn.cluster import KMeans
 
 # Local application imports
 from features import Arena, Fly
-from streams import PylonStream, StandardStream, STREAMS
+from streams import STREAMS
 from lmdt_utils import setup_logging
 from decorators import export
 from saver import Saver
@@ -147,13 +148,10 @@ class Tracker():
         self.arenas = {}
         self.masks = {}
 
-
-
-        
-
     def set_saver(self):
         saver = Saver(
-            tracker=self, record_event=self.interface.record_event
+            tracker=self, cfg = self.interface.cfg,
+            record_event=self.interface.record_event
         )
 
         self.saver = saver
@@ -170,7 +168,6 @@ class Tracker():
             
             if self.video.is_file():
                 self.stream = STREAMS[self.camera](self.video.__str__())
-                print(self.stream)
             else:
                 self.log.error("Video under provided path not found. Check for typos")
         else:
@@ -203,7 +200,10 @@ class Tracker():
         self.interface.frame_color = np.zeros((self.video_height, self.video_width, 3), np.uint8)
         self.interface.gray_color = np.zeros((self.video_height, self.video_width, 3), np.uint8)
         self.interface.gray_gui = np.zeros((self.video_height, self.video_width), np.uint8)
-        self.interface.stacked_arenas = np.zeros((self.video_height, self.video_width), np.uint8)
+        width = self.interface.cfg["arena"]["width"]
+        height = self.interface.cfg["arena"]["height"]        
+        empty_img = np.zeros(shape=(height*3, width*3, 3), dtype=np.uint8)
+        self.interface.stacked_arenas = [empty_img.copy() for i in range(self.interface.cfg["arena"]["targets"])]
 
 
     def rotate_frame(self, img, rotation=180):
@@ -315,6 +315,8 @@ class Tracker():
                 return False
            
             frame = crop_stream(frame, self.crop)
+            self.interface.original_frame = frame.copy()
+
             # Make single channel i.e. grayscale
             if len(frame.shape) == 3:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -489,12 +491,12 @@ class Tracker():
 
                 if self.interface.device:
                 
-                    d["oct_left"] = self.interface.device.pin_state["ODOUR_A_OCT_LEFT"]
-                    d["oct_right"] = self.interface.device.pin_state["ODOUR_A_OCT_RIGHT"]
-                    d["mch_left"] = self.interface.device.pin_state["ODOUR_B_MCH_LEFT"]
-                    d["mch_right"] = self.interface.device.pin_state["ODOUR_B_MCH_LEFT"]
-                    d["eshock_left"] = self.interface.device.pin_state["ESHOCK_LEFT"]
-                    d["eshock_right"] = self.interface.device.pin_state["ESHOCK_RIGHT"]
+                    d["oct_left"] = self.interface.device.pin_state["ODOUR_A_LEFT"]
+                    d["oct_right"] = self.interface.device.pin_state["ODOUR_A_RIGHT"]
+                    d["mch_left"] = self.interface.device.pin_state["ODOUR_B_LEFT"]
+                    d["mch_right"] = self.interface.device.pin_state["ODOUR_B_LEFT"]
+                    d["eshock_left"] = self.interface.device.pin_state["EL_SHOCK_LEFT"]
+                    d["eshock_right"] = self.interface.device.pin_state["EL_SHOCK_RIGHT"]
                             
                 self.saver.process_row(d)
 
@@ -509,11 +511,15 @@ class Tracker():
             ########################################
             ## End for loop over all putative arenas
 
-
             # Update GUI graphics
             self.interface.frame_color = frame_color
+            for i, arena in enumerate(sorted_arenas_br_to_tl_horizontally):
+                arena_crop = arena.crop(frame_color)
+                self.interface.stacked_arenas[i] = imutils.resize(arena_crop, width=arena_crop.shape[1]*3)
+
             # Save frame
             self.saver.save_img(frame_time.strftime("%Y-%m-%d_%H-%M-%S") + ".jpg", frame_color)
+            self.saver.save_video()
 
             # TODO: Make into utils function
             #self.interface.stacked_arenas = self.stack_arenas(arenas_dict)
@@ -566,39 +572,6 @@ class Tracker():
         sample_fps_thread.start()
 
         
-        
-    # TODO
-    # MORE COMMENTS
-    def stack_arenas(self, arenas):
-
-        gray_color = self.interface.gray_color
-
-        
-        def draw_stacked(a):
-            # print(a.corners)
-            hhwws = np.array([a.corners[1,:] - a.corners[0,:] for key, a in arenas.items()])
-            max_h, max_w = np.max(hhwws, axis = 0)
-
-            ROI = gray_color[a.corners[0][0]:max_h, a.corners[0][1]:max_w]
-            if a.fly:
-                arena_crop = a.fly.draw(ROI, relative_to_arena = True)
-            else:
-                arena_crop = ROI
-            cv2.rectangle(arena_crop, (0, 0), arena_crop.shape, 128, 2)
-            return arena_crop
-
-        stacked_arenas = [draw_stacked(a) for key, a in arenas.items()]
-        stacked_arenas = np.stack(stacked_arenas, axis=0).reshape((10, 2))
-        return stacked_arenas
-
-        
-        # try: 
-        #     
-        # except:
-        #     self.log.debug(a.corners.shape)
-        #     
-
-        
     def run(self):
         """
         Start tracking in a while loop
@@ -622,9 +595,7 @@ class Tracker():
             # as opposed what would happen with time.sleep
             # where the timeout would always be 100% done
             #self.interface.exit.wait(.2)
-
-        self.saver.images_to_video()
-        
+      
         self.close()            
 
     def toprun(self):
@@ -649,10 +620,13 @@ class Tracker():
         If the exit event is not yet set, call interface.close()
         """
         self.stream.release()
+        self.saver.stop_video()
+
         self.log.info("Tracking stopped")
         self.log.info("{} arenas in {} frames analyzed".format(20 * self.frame_count, self.frame_count))
         self.log.info("Number of arenas that fly is not detected in is {}".format(self.missing_fly))
         self.saver.store_and_clear()
+
 
         if not self.interface.exit.is_set(): self.interface.close()
 

@@ -37,10 +37,9 @@ coloredlogs.install()
 setup_logging()
 log = logging.getLogger(__name__)
 
-
 interface = Interface(
     arduino = args["arduino"], track = args["track"],
-    mapping = args["mapping"], program = args["program"], port = args["port"],
+    mapping_path = args["mapping"], program_path = args["program"], port = args["port"],
     camera = args["camera"], video = args["video"],
     reporting = args["reporting"], duration = DURATION, gui = args["gui"]
 )

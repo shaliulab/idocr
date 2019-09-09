@@ -8,8 +8,9 @@ from pathlib import Path
 
 # Third party imports
 import cv2
+import numpy
 import pandas as pd
-
+# from skvideo.io import VideoWriter
 
 # Local application imports
 from lmdt_utils import setup_logging
@@ -25,7 +26,7 @@ max_len = 1000
 
 class Saver():
 
-    def __init__(self, tracker, cache={}, record_event=None):
+    def __init__(self, tracker, cfg, cache={}, record_event=None):
 
 
         self.cache = cache
@@ -45,43 +46,55 @@ class Saver():
         self.store_img = None
         self.out = None
 
-    def set_store(self, cfg):
-        """
-        Set the absolute path to the output file (without extension)
-        """
-
-        self.log.info("Setting the store path")
-        
-        
         self.path = cfg["saver"]["path"]
-        record_start = self.tracker.interface.record_start.strftime("%Y-%m-%d_%H-%M-%S")
+        self.video_format = cfg["saver"]["video_format"]
+        self.video_out_fps = cfg["saver"]["fps"]
+        print(type(self.video_out_fps))
+        print(self.video_out_fps)
         
-        
-        self.output_dir = Path(PROJECT_DIR, self.path, record_start)
-        filename = record_start+"_"+cfg["interface"]["machine_id"]
+        self.machine_id = cfg["interface"]["machine_id"]
+
+
+    def init_record_start(self):
+        """
+        Set absolute paths to output (depend on what time the record button is pressed)
+        and create directory structure if needed.
+        """
+        record_start_formatted = self.tracker.interface.record_start.strftime("%Y-%m-%d_%H-%M-%S")
+        filename = record_start_formatted + "_" + self.machine_id
+        self.output_dir = Path(PROJECT_DIR, self.path, record_start_formatted)
         self.store = Path(self.output_dir, filename)
-
-        video_format = "mp4"
-        self.store_video = self.store.as_posix() + "." + video_format
-        self.store_video2 = self.store.as_posix() + "2." + ".avi"
-
-
+        self.store_video = self.store.as_posix()
         self.store_img = Path(self.output_dir, "frames")
-        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-        fourcc2 = cv2.VideoWriter_fourcc(*'XVID')
-
-        self.out = cv2.VideoWriter(self.store_video, fourcc, 2, (500, 500))
-        self.out2 = cv2.VideoWriter(self.store_video2, fourcc, 2, (500, 500))
-
-        self.log.info("Creating dirs")
+        self.log.info("Creating output directory structures")
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.store_img.mkdir(parents=True, exist_ok=False)
 
+    def init_output_files(self):
+        """Initialize csv and avi files."""
+        video_out_fourcc = ['H264', 'XVID', 'MJPG', 'DIVX', 'FMP4', 'MP4V']
+        vifc = video_out_fourcc[3]
+        self.output_video_shape = (1000, 1000)
+        self.video_writers = [
+            cv2.VideoWriter(
+                self.store_video + suffix + self.video_format,
+                cv2.VideoWriter_fourcc(*vifc),
+                self.video_out_fps, self.output_video_shape
+            ) for suffix in ["_original.", "_annotated."]]
+
+
+        store_header = pd.DataFrame(columns=self.columns)
+        with open(self.store.as_posix() + ".csv", 'w') as store:
+            store_header.to_csv(store)
 
         return True
 
+    def save_paradigm(self):
+        """Save a copy of the paradigm for future reference"""
+        self.tracker.interface.device.paradigm.to_csv(os.path.join(self.output_dir, "paradigm.csv"), header=True)
 
 
+    @if_record_event
     def process_row(self, d, max_len=max_len):
         """
         Append row d to the store
@@ -91,8 +104,8 @@ class Saver():
     
         """
         
-        if not self.tracker.interface.record_event.is_set():
-            return True
+        # if not self.tracker.interface.record_event.is_set():
+        #     return True
         
         if len(self.lst) >= max_len:
             self.store_and_clear()
@@ -100,6 +113,7 @@ class Saver():
             self.lst.append(d)
             self.log.debug("Adding new datapoint to cache")      
 
+    @if_record_event
     def store_and_clear(self):
         """
         Convert the cache list to a DataFrame and append that to HDF5.
@@ -130,46 +144,34 @@ class Saver():
 
         # save to csv
         with open(self.store.as_posix() + ".csv", 'a') as store:
-            df.to_csv(store)
+            df.to_csv(store, header=False)
 
-
-        # try saving to hdf5
-        # try:
-        #     with pd.HDFStore(self.store + ".h5") as store:
-        #         store.append(key, df)
-        # except Exception as e:
-        #     self.log.info(key)
-        #     self.log.error("{} could not save cache to h5 file. Please investigate traceback. Is pytables available?".format(self.name))
-
-        #     self.log.info(df)
-        #     self.log.exception(e)
-
+    @if_record_event
     def save_img(self, filename, frame):
 
-        if not self.tracker.interface.record_event.is_set():
-            return True
+        # if not self.tracker.interface.record_event.is_set():
+            # return True
 
         full_path = Path(self.store_img, filename).as_posix()
         cv2.imwrite(full_path, frame)
 
+    @if_record_event
+    def save_video(self):
 
-    def images_to_video(self, clear_images=False):
+        # if not self.tracker.interface.record_event.is_set():
+            # return True
+        print("SAVING VIDEO")
 
-        if not self.tracker.interface.record_event.is_set():
-            return True
-  
-        image_list = glob.glob(f"{self.store_img.as_posix()}/*.jpg")
-        sorted_images = sorted(image_list, key=os.path.getmtime)
-        for file in sorted_images:
-            # print("Adding image")
-            # print(self.store_video)
-            image_frame = cv2.imread(file)
-            self.out.write(image_frame)
-            self.out2.write(image_frame)
-        if clear_images:
-            for file in image_list:
-                os.remove(file)
+        # self.video_writer.open()
+        # print(self.tracker.interface.original_frame)
 
+        # self.video_writer.write(self.tracker.interface.original_frame)
+        # self.video_writer.release()
+        imgs = [self.tracker.interface.original_frame, self.tracker.interface.frame_color]
+        [vw.write(cv2.resize(img, self.output_video_shape)) for img, vw in zip(imgs, self.video_writers)]
 
+    @if_record_event
+    def stop_video(self):
+        [vw.release() for vw in self.video_writers]
 
 
