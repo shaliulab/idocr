@@ -2,7 +2,7 @@
 #' @export
 #'
 #'  
-plot_trace_with_pin_events <- function(lemdt_result, pins_relevant = 1:4, colors=c("red", "blue")) {
+plot_trace_with_pin_events <- function(lemdt_result, pins_relevant = 1:4, colors=c("red", "blue"), arena_width_mm = 50) {
   
   
   ##################################

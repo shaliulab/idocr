@@ -1,6 +1,6 @@
 #' import data.table
 #' @export
-compute_side <- function(lemdt_result) {
+compute_side <- function(lemdt_result, arena_width_mm=50, decision_zone_mm=5) {
   lemdt_result[, position := "L"]
   left_border <- (arena_width_mm - decision_zone_mm) / 2
   right_border <- left_border + decision_zone_mm

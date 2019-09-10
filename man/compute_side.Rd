@@ -4,7 +4,7 @@
 \alias{compute_side}
 \title{import data.table}
 \usage{
-compute_side(lemdt_result)
+compute_side(lemdt_result, arena_width_mm = 50, decision_zone_mm = 5)
 }
 \description{
 import data.table
