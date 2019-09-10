@@ -1,0 +1,18 @@
+Package: LeMDTr
+Title: R code to analyze traces created in the FlySleepLab Learning Memory setup
+Date: 2019-08-30
+Version: 0.0.1
+Authors@R: c(
+    person("Antonio", "Ortega", role = c("aut", "cre"), email = "antonio.ortega@kuleuven.vib.be")
+    )
+Description: todo
+Depends: 
+    R (>= 3.00),
+    stringr
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+URL: https://gitlab.com/flysleeplab/learning-memory-feedback-and-tracking
+BugReports: https://gitlab.com/flysleeplab/learning-memory-feedback-and-tracking/issues
+RoxygenNote: 6.1.1
+Roxygen: list(markdown = TRUE)

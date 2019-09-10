@@ -230,7 +230,7 @@ class LearningMemoryDevice(ParadigmLoader):
             if not process.is_alive():
                 process.start(start_time=self.interface.arduino_start, duration=self.interface.duration)
             else:
-                self.log.info("thread % already started", process.name)
+                self.log.info("thread %  already started", process.name)
         
         self.log.debug('% waiting for slave threads', t.name)
 

@@ -109,3 +109,4 @@ failed_arenas/*
 .pylintrc
 node_modules
 LeMDT/static/semantic*
+.Rproj.user
