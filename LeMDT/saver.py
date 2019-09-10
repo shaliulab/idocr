@@ -36,7 +36,7 @@ class Saver():
         self.record_event = record_event
         self.columns = [
             "frame", "arena", "cx", "cy", "datetime", "t", \
-            "oct_left", "oct_right", "mch_left", "mch_right", \
+            "ODOUR_A_LEFT", "ODOUR_A_RIGHT", "ODOUR_B_LEFT", "ODOUR_B_RIGHT", \
             "eshock_left", "eshock_right"
             ]
         self.path = None

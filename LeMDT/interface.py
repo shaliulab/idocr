@@ -239,9 +239,6 @@ class Interface():
         # can run (if_record_event decorator)
         self.record_event.set()
 
-        if self.arduino:
-            self.device.toprun(self.device.threads["exit"])
-
         self.record_start = datetime.datetime.now()
         self.tracker.saver.init_record_start()
         self.tracker.saver.init_output_files()
