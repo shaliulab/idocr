@@ -1,7 +1,14 @@
 #' @export
-plot_trace <- function(experiment_folder) {
+preprocess_and_plot <- function(experiment_folder) {
   filename <- list.files(path = experiment_folder, pattern = '_LeMDTe27SL5a9e19f94de287e28f789825.csv')
-  lemdt_result <- na.omit(read.table(file = file.path(experiment_folder, filename), sep = ',', header = T, stringsAsFactors = F)[,-1])
+  
+  file_path <- file.path(experiment_folder, filename)
+  if (length(file_path) == 0) {
+    warning('Provided path to trace file does not exist')
+    return(1)
+  }
+  
+  lemdt_result <- na.omit(read.table(file = file_path, sep = ',', header = T, stringsAsFactors = F)[,-1])
   
   # transform from pixels to mm. Assume the whole chamber (125 pixes)
   # is 5 mm (50 mm)

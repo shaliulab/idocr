@@ -13,10 +13,9 @@ plot_trace_with_pin_events <- function(lemdt_result, pins_relevant = 1:4, colors
                     pi = preference_index(position)), by = .(arena, period)]
   
   
+  lemdt_result <- arrange(lemdt_result, period, period)
   
-  lemdt_result7 <- arrange(lemdt_result, period, period)
-  
-  rle_period <- rle(lemdt_result7$period)
+  rle_period <- rle(lemdt_result$period)
   
   
   rle_period_values_split <- strsplit(rle_period$values, split = "")
@@ -27,9 +26,9 @@ plot_trace_with_pin_events <- function(lemdt_result, pins_relevant = 1:4, colors
   
   
   starts <- cumsum(rev(rev(c(1,rle_period$lengths))[-1]))
-  time_starts <- lemdt_result7[starts, "t"]/60
+  time_starts <- lemdt_result[starts, "t"]/60
   ends <- cumsum(rle_period$lengths)
-  time_ends <- lemdt_result7[ends, "t"]/60
+  time_ends <- lemdt_result[ends, "t"]/60
   
   y_mins <- c(0, arena_width_mm/2)
   y_max <- c(arena_width_mm/2, arena_width_mm)
@@ -84,7 +83,7 @@ plot_trace_with_pin_events <- function(lemdt_result, pins_relevant = 1:4, colors
     geom_rect(data = rect_data, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = fill
     ),
     alpha = 0.5) +
-    geom_line(data = lemdt_result6, aes(y = mm_mean, x = t/60, group = arena), col = "black") + 
+    geom_line(data = lemdt_result, aes(y = mm_mean, x = t/60, group = arena), col = "black") + 
     scale_x_continuous(breaks = seq(1, max(lemdt_result$t), 1)) +
     scale_fill_discrete(name = "Odour", labels = names(colors)) +
     # guides(fill=F) +

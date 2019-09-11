@@ -1,6 +1,6 @@
 # arena to use as reference for the events (odours and eshock)
 
-#' @import data.table
+#' @import dplyr data.table
 #' @export
 define_unique_periods <- function(lemdt_result, ref_arena=1) {
   # In order to not mix data from different blocks exhibiting the same system state
