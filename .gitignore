@@ -110,3 +110,5 @@ failed_arenas/*
 LeMDT.desktop
 node_modules
 LeMDT/static/semantic*
+.Rproj.user
+.Rhistory

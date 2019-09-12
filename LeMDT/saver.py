@@ -10,18 +10,20 @@ from pathlib import Path
 import cv2
 import numpy
 import pandas as pd
+import subprocess
 # from skvideo.io import VideoWriter
 
 # Local application imports
 from lmdt_utils import setup_logging
 from decorators import if_record_event
 from LeMDT import PROJECT_DIR
+import threading
 
 # Set up package configurations
 setup_logging()
 
 # https://stackoverflow.com/questions/16740887/how-to-handle-incoming-real-time-data-with-python-pandas/17056022
-max_len = 1000
+max_len = 50
 
 
 class Saver():
@@ -36,7 +38,7 @@ class Saver():
         self.record_event = record_event
         self.columns = [
             "frame", "arena", "cx", "cy", "datetime", "t", \
-            "oct_left", "oct_right", "mch_left", "mch_right", \
+            "ODOUR_A_LEFT", "ODOUR_A_RIGHT", "ODOUR_B_LEFT", "ODOUR_B_RIGHT", \
             "eshock_left", "eshock_right"
             ]
         self.path = None
@@ -53,7 +55,7 @@ class Saver():
         print(self.video_out_fps)
         
         self.machine_id = cfg["interface"]["machine_id"]
-
+        self.t = None
 
     def init_record_start(self):
         """
@@ -160,7 +162,6 @@ class Saver():
 
         # if not self.tracker.interface.record_event.is_set():
             # return True
-        print("SAVING VIDEO")
 
         # self.video_writer.open()
         # print(self.tracker.interface.original_frame)
@@ -174,4 +175,15 @@ class Saver():
     def stop_video(self):
         [vw.release() for vw in self.video_writers]
 
+    def refresh_trace_plot(self):
+        print('Calling rscript')
+        self.t = threading.Thread(target=self.plot, name='trace_plot')
+        self.t.setDaemon(False)
+        self.t.run()
+        print('Finished calling rscript')
 
+    def plot(self):
+        subprocess.call([os.path.join(PROJECT_DIR, "Rscripts/main.R"), "-e", self.output_dir])
+        # p <- LeMDTr::preprocess_and_plot(experiment_folder = opt$experiment_folder)
+        # output_plot_path <- file.path(opt$experiment_folder, "trace_plot.png")
+        # ggplot2::ggsave(filename = output_plot_path, plot = p)

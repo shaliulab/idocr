@@ -185,6 +185,8 @@ class Interface():
         classes. Upon setting this event, these processes stop
         """
         self.exit.set()
+        self.tracker.saver.refresh_trace_plot()
+
         self.log.info("Running interface.close()")
         if signo is not None: self.log.info("Received %", signo)
         
@@ -214,9 +216,6 @@ class Interface():
         self.play_event.set()
         self.play_start = datetime.datetime.now()
         
-        if self.arduino:
-            self.device.toprun(self.device.threads["exit"])
-
         if self.track:
             try:
                 self.log.info("Running tracker")
@@ -241,7 +240,7 @@ class Interface():
         # Set the record_event so the data recording methods
         # can run (if_record_event decorator)
         self.record_event.set()
-        
+
         self.record_start = datetime.datetime.now()
         self.tracker.saver.init_record_start()
         self.tracker.saver.init_output_files()

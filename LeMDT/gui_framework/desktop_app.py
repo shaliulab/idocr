@@ -456,7 +456,9 @@ class TkinterGui():
                 main_block = active_blocks[-1]
                 passed = self.interface.timestamp - self.interface.device.paradigm.loc[main_block]['start']
                 left = self.interface.device.paradigm.loc[main_block]['end'] - self.interface.timestamp
-                time_position = np.round(np.array([passed, left]) / 60, 3)
+                # time_position = np.round(np.array() / 60, 3)
+                time_position = list(map(lambda x: datetime.timedelta(seconds=round(x)), [passed, left]))
+
                 text = 'Running ' + ' and '.join(active_blocks) + ' blocks'
                 text += ' {}m passed, {}m left'.format(*time_position)
                 self.statusbar['text'] = text

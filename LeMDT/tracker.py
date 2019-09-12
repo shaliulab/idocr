@@ -474,10 +474,10 @@ class Tracker():
                 self.log.debug("Fly {} in arena {} validated with area {} and length {}".format(fly.identity, fly.arena.identity, fly.area, fly.diagonal))
                 
                 d = {
-                    "oct_left" : None,
-                    "oct_right" : None,
-                    "mch_left" : None,
-                    "mch_right" : None,
+                    "ODOUR_A_LEFT" : None,
+                    "ODOUR_A_RIGHT" : None,
+                    "ODOUR_B_LEFT" : None,
+                    "ODOUR_B_RIGHT" : None,
                     "eshock_left" : None,
                     "eshock_right" : None,
                     "frame": self.frame_count,
@@ -491,10 +491,10 @@ class Tracker():
 
                 if self.interface.device:
                 
-                    d["oct_left"] = self.interface.device.pin_state["ODOUR_A_LEFT"]
-                    d["oct_right"] = self.interface.device.pin_state["ODOUR_A_RIGHT"]
-                    d["mch_left"] = self.interface.device.pin_state["ODOUR_B_LEFT"]
-                    d["mch_right"] = self.interface.device.pin_state["ODOUR_B_LEFT"]
+                    d["ODOUR_A_LEFT"] = self.interface.device.pin_state["ODOUR_A_LEFT"]
+                    d["ODOUR_A_RIGHT"] = self.interface.device.pin_state["ODOUR_A_RIGHT"]
+                    d["ODOUR_B_LEFT"] = self.interface.device.pin_state["ODOUR_B_LEFT"]
+                    d["ODOUR_B_RIGHT"] = self.interface.device.pin_state["ODOUR_B_RIGHT"]
                     d["eshock_left"] = self.interface.device.pin_state["EL_SHOCK_LEFT"]
                     d["eshock_right"] = self.interface.device.pin_state["EL_SHOCK_RIGHT"]
                             
