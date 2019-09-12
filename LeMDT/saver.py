@@ -111,7 +111,6 @@ class Saver():
         
         if len(self.lst) >= max_len:
             self.store_and_clear()
-            self.refresh_trace_plot()
         if self.record_event.is_set():
             self.lst.append(d)
             self.log.debug("Adding new datapoint to cache")      

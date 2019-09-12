@@ -185,6 +185,8 @@ class Interface():
         classes. Upon setting this event, these processes stop
         """
         self.exit.set()
+        self.tracker.saver.refresh_trace_plot()
+
         self.log.info("Running interface.close()")
         if signo is not None: self.log.info("Received %", signo)
         
