@@ -8,7 +8,6 @@ plot_trace_with_pin_events <- function(lemdt_result, pins_relevant = 1:4, colors
   ##################################
   ## Compute preference index
   ##################################
-  
   pindex <- lemdt_result[, .(n = count_exits(position)[[3]],
                     pi = preference_index(position)), by = .(arena, period)]
   
@@ -80,11 +79,8 @@ plot_trace_with_pin_events <- function(lemdt_result, pins_relevant = 1:4, colors
   
   
   p3 <- ggplot() +
-    geom_rect(data = rect_data, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = fill
-    ),
-    alpha = 0.5) +
     geom_line(data = lemdt_result, aes(y = mm_mean, x = t/60, group = arena), col = "black") + 
-    scale_x_continuous(breaks = seq(1, max(lemdt_result$t), 1)) +
+    scale_x_continuous(breaks = seq(0, max(lemdt_result$t/60), 0.5)) +
     scale_fill_discrete(name = "Odour", labels = names(colors)) +
     # guides(fill=F) +
     labs(x = "t (m)", y = "mm") + 
@@ -92,15 +88,23 @@ plot_trace_with_pin_events <- function(lemdt_result, pins_relevant = 1:4, colors
     theme_bw() +
     theme(panel.spacing = unit(3, "lines"), legend.position = "bottom",  legend.direction = "horizontal")
   
-  p3 <- p3 + geom_text(data = pi_data, aes(x = x, label = round(pref_index, digits = 2)), y = 1.15 * arena_width_mm) + 
-    theme(plot.margin = unit(c(1,3,1,1), "lines")) # This widens the right m 
-  p3 <- p3 + coord_flip(clip = "off") 
-  
+  if(nrow(rect_data) != 0) p3 <- p3 + geom_rect(
+    # data
+    data = rect_data,
+    # mapping
+    aes(
+      xmin = xmin, xmax = xmax,
+      ymin = ymin, ymax = ymax,
+      fill = fill),
+    # constant
+    alpha = 0.5)
 
-  p3
+  if(nrow(pi_data) != 0) {
+    p3 <- p3 + geom_text(data = pi_data, aes(x = x, label = round(pref_index, digits = 2)), y = 1.15 * arena_width_mm) +
+      theme(plot.margin = unit(c(1,3,1,1), "lines")) # This widens the right m
+  }
+    p3 <- p3 + coord_flip(clip = "off")
   
-    
-
-  return(p3)
+ return(p3)
 }
 
