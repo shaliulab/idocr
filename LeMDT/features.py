@@ -89,7 +89,7 @@ class Arena():
 
     def validate(self):
         
-        if self.area < self.min_arena_area:            
+        if self.area < self.min_arena_area * self.tracker.interface.fraction_area:            
             return False
         else:
             return True

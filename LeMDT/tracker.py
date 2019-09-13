@@ -97,6 +97,7 @@ class Tracker():
         self.interface = interface
         self.camera = camera
         self.video = video
+        self.failed_read_frame = 0
 
 
         # Results variables
@@ -309,6 +310,13 @@ class Tracker():
             # If ret is False, a new frame could not be read
             # Exit 
             if not success:
+                self.failed_read_frame =+ 1
+                self.log.info("Could not read frame")
+                self.track()
+
+
+
+            if self.failed_read_frame > 10:
                 self.log.info("Stream or video is finished. Closing")
                 self.close()
                 self.interface.stream_finished = True
@@ -376,11 +384,12 @@ class Tracker():
 
             
             found_arenas = np.sum([a is not None for a in arenas_list])
+
             if found_arenas != self.targets:
-                
                 self.log.debug("Number of arenas found not equal to target. Discarding frame")
                 self.frame_count += 1
                 self.interface.frame_color = gray_color
+                self.interface.fraction_area *= 0.99
                 status = self.track()
                 return status
 

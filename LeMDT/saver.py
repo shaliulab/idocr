@@ -168,7 +168,7 @@ class Saver():
         # self.video_writer.write(self.tracker.interface.original_frame)
         # self.video_writer.release()
         imgs = [self.tracker.interface.original_frame, self.tracker.interface.frame_color]
-        imgs_3_channels = [img if img.shape[2] == 3 else cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) for img in imgs]
+        imgs_3_channels = [img if len(img.shape) == 3 else cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) for img in imgs]
 
 
         if not self.video_writers is None:

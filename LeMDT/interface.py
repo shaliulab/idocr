@@ -135,6 +135,11 @@ class Interface():
         self.log.info('Interface initialized')
 
 
+        self.min_arena_area = self.cfg["arena"]["min_area"] 
+        self.fraction_area = 1
+
+
+
     def init_tracker(self):
         """
         Initialize a Tracker object that will provice camera controls

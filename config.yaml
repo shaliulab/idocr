@@ -1,5 +1,5 @@
 arena:
-    min_area: 750
+    min_area: 1000
     block_size: 9
     param1: 13
     kernel_factor: 5
