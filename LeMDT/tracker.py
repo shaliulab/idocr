@@ -526,7 +526,7 @@ class Tracker():
 
             # Print warning if number of flies in new frame is not the same as in previous
             if self.old_found != self.found_flies:
-                self.log.warning("Found {} flies in frame {}".format(self.found_flies, self.frame_count))
+                self.log.debug("Found {} flies in frame {}".format(self.found_flies, self.frame_count))
             self.old_found = self.found_flies
             self.found_flies = 0
 

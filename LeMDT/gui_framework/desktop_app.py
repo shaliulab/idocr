@@ -102,8 +102,9 @@ class TkinterGui():
         self.panel = {}
         self.statusbar_text = None
         self.circles = {}
+        self.zoom_frame_columns = None
 
-        root = tk.Tk()
+        root = tk.Tk(className='learningmemorysetup')
         canvas = tk.Canvas(root, height=HEIGHT, width=WIDTH)
         canvas.pack()
         self.main_canvas = canvas
@@ -256,7 +257,11 @@ class TkinterGui():
         
         zoom_frame = tk.Frame(self.nb, bg="#80c1ff", bd=self.bd)
         zoom_frame.place(relx=0, rely=0, relheight=1,relwidth=1)
-        
+        zoom_frame_first_column = tk.Frame(zoom_frame)
+        zoom_frame_first_column.place(relx=0,rely=0, relheight=1, relwidth=.5)
+        zoom_frame_second_column = tk.Frame(zoom_frame)
+        zoom_frame_second_column.place(relx=.5,rely=0, relheight=1, relwidth=.5)
+        self.zoom_frame_columns = [zoom_frame_first_column, zoom_frame_second_column]
         
         tracker_frame = tk.Frame(main_frame, bg = "#000000")
         arduino_frame = tk.Frame(main_frame, bg = "#F0D943")
@@ -409,12 +414,20 @@ class TkinterGui():
         self.panel['frame_color'].image = image
 
     def init_zoom_tab(self):
-        labels = [tk.Label(
-            self.zoom_frame, image=ImageTk.PhotoImage(Image.fromarray(image)),
-        ) for image in self.interface.stacked_arenas]
 
-        [l.pack(anchor="w") for i, l in enumerate(labels)]
-        
+        labels = [None,] * len(self.interface.stacked_arenas)
+
+        for i, image in enumerate(self.interface.stacked_arenas):
+            column = self.zoom_frame_columns[0]
+            if i > 9:
+                column = self.zoom_frame_columns[1]
+
+            label = tk.Label(
+                column, image=ImageTk.PhotoImage(Image.fromarray(image)),
+            )
+            label.pack(anchor="w")
+            labels[i] = label
+            
         self.panel['stacked_arenas'] = labels
 
     def update_zoom(self):
@@ -426,6 +439,9 @@ class TkinterGui():
     def update_monitor(self, mapping):
         """
         Update the arduino monitor
+        It goes through all the pins in the mapping
+        and fetches their state.
+        Then the corresponding circles are colored according to the stae
         """       
         for i, pin in enumerate(mapping.itertuples()):
 
@@ -441,31 +457,55 @@ class TkinterGui():
     
     def update_statusbar(self):
         '''
-        Update statusbar
+        Update statusbar with informative messages.
         '''
-        ## Improve messages in the statusbar
-        ## It should warn when the next event is coming
-        ## TODO REFACTOR
 
+        # WARNING
+        # This code is fragile because it relies on the index
+        # of program being the row number
+        # If that changes, the code breaks
+        # The bug shows up when running the first non startup block
+
+        # only if there is an arduino board and we are already recording
         if self.interface.arduino and self.interface.record_event.is_set():
-            c1 = self.interface.device.paradigm['start'] < self.interface.timestamp
-            c2 = self.interface.device.paradigm['end'] > self.interface.timestamp
-            selected_rows = c1 & c2
-            active_blocks = self.interface.device.paradigm.index[selected_rows].tolist()
-            if active_blocks:
-                main_block = active_blocks[-1]
-                passed = self.interface.timestamp - self.interface.device.paradigm.loc[main_block]['start']
-                left = self.interface.device.paradigm.loc[main_block]['end'] - self.interface.timestamp
-                # time_position = np.round(np.array() / 60, 3)
-                time_position = list(map(lambda x: datetime.timedelta(seconds=round(x)), [passed, left]))
 
-                text = 'Running ' + ' and '.join(active_blocks) + ' blocks'
+            if self.interface.cfg['interface']['mode'] == 'debug' and self.interface.tracker.frame_count == 100:
+                raise Exception
+
+            # find the block(s) being executed right now
+            # usually this is just startup (which runs always) and one other block
+            c1 = self.interface.device.program['start'] < self.interface.timestamp
+            c2 = self.interface.device.program['end'] > self.interface.timestamp
+            # only rows fulfilling both requirements are running now
+            selected_rows = c1 & c2
+            # get the index of these blocks
+            active_blocks = self.interface.device.program.index[selected_rows].tolist()
+            if active_blocks:
+                # usually there are two active blocks and startup is always the first
+                # pick the last one
+                main_block = active_blocks[-1]
+                # get their names (startup + x)
+                active_blocks_name = [self.interface.device.program['block'][b] for b in active_blocks]
+                
+                # find the start and end of this block
+                block_start = self.interface.device.program.loc[main_block]['start']
+                block_end = self.interface.device.program.loc[main_block]['end']
+
+                # based on that, compute how much time has passed since start
+                # and how much is left
+                time_passed = self.interface.timestamp - block_start
+                time_left = block_end - self.interface.timestamp
+                # transform the amount of seconds into HH:MM:SS format
+                time_position = list(map(lambda x: datetime.timedelta(seconds=round(x)), [time_passed, time_left]))
+
+                # Display a meaningful messaage
+                text = 'Running ' + ' and '.join(active_blocks_name) + ' blocks'
                 text += ' {}m passed, {}m left'.format(*time_position)
                 self.statusbar['text'] = text
             else:
                 self.statusbar['text'] = self.statusbar_text
         elif self.interface.arena_ok_event.is_set():
-            self.statusbar['text'] = "Fixing arena contours and stopping further detection"
+            self.statusbar['text'] = "Fixed arena contours. Detection of arenas is complete"
 
         elif self.interface.play_event.is_set():
             self.statusbar['text'] = 'Running tracker @ {} fps'.format(self.interface.tracker.sampled_fps)

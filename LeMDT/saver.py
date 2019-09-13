@@ -142,7 +142,7 @@ class Saver():
         # check the dataframe is not empty
         # could be empty if user closes before recording anything
            
-        self.log.info("Saving cache to {}".format(self.store.as_posix()))
+        self.log.debug("Saving cache to {}".format(self.store.as_posix()))
 
         # save to csv
         with open(self.store.as_posix() + ".csv", 'a') as store:
@@ -168,8 +168,11 @@ class Saver():
 
         # self.video_writer.write(self.tracker.interface.original_frame)
         # self.video_writer.release()
-        imgs = [self.tracker.interface.original_frame, self.tracker.interface.frame_color]
-        [vw.write(cv2.resize(img, self.output_video_shape)) for img, vw in zip(imgs, self.video_writers)]
+        imgs = [cv2.cvtColor(self.tracker.interface.original_frame, cv2.COLOR_GRAY2BGR), self.tracker.interface.frame_color]
+
+        for img, vw in zip(imgs, self.video_writers):
+            saved_frame = cv2.resize(img, self.output_video_shape)
+            vw.write(saved_frame)
 
     @if_record_event
     def stop_video(self):
@@ -183,6 +186,9 @@ class Saver():
         print('Finished calling rscript')
 
     def plot(self):
+        print(self.output_dir)
+        print(os.path.join(PROJECT_DIR, "Rscripts/main.R")) 
+
         subprocess.call([os.path.join(PROJECT_DIR, "Rscripts/main.R"), "-e", self.output_dir])
         # p <- LeMDTr::preprocess_and_plot(experiment_folder = opt$experiment_folder)
         # output_plot_path <- file.path(opt$experiment_folder, "trace_plot.png")

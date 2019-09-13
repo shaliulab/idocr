@@ -90,11 +90,11 @@ class LearningMemoryDevice(ParadigmLoader):
         (Pandas Loader) class
         """
 
-        print(mapping_path)
+        # print(mapping_path)
 
         ParadigmLoader.__init__(self, mapping_path, program_path)
-        print('paradigm')
-        print(self.paradigm)
+        # print('paradigm')
+        # print(self.paradigm)
 
 
 
@@ -160,7 +160,7 @@ class LearningMemoryDevice(ParadigmLoader):
         # print(self.paradigm)
 
 
-        print(self.paradigm.index)
+        # print(self.paradigm.index)
         
         events = self.paradigm.index.get_level_values('pin_id')
         count = {ev: 0 for ev in events}
@@ -181,7 +181,7 @@ class LearningMemoryDevice(ParadigmLoader):
             d_name = 'thread-{}-{}'.format(ev, count[ev])
 
             self.paradigm["thread_name"][event_index]= d_name
-            print(self.paradigm)
+            # print(self.paradigm)
 
             kwargs = {
                 "pin_number"   : d_pin_number,

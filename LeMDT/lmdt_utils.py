@@ -54,7 +54,7 @@ def _toggle_pin(self, device=None, pin_number=None, pin_id=None, value=0, freq=N
 
     if pin_number is None:
         pin_number = device.mapping["pin_number"].loc[device.mapping.index == pin_id].values[0]
-        print(pin_number)
+        # print(pin_number)
 
     d = threading.currentThread()
     
@@ -76,8 +76,9 @@ def _toggle_pin(self, device=None, pin_number=None, pin_id=None, value=0, freq=N
             pin_id, value
             ))   
 
-    x = value if not freq else freq
-    print("x")
-    print(x)
+    # x = value if not freq else freq
+    x = value
+    # print("x")
+    # print(x)
 
     device.pin_state[getattr(self, "pin_name", pin_id)] = x

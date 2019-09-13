@@ -35,47 +35,47 @@ plot_trace_with_pin_events <- function(lemdt_result, pins_relevant = 1:4, colors
   names(colors) <- odours
   
   pin_state_matrix <- do.call(rbind, rle_period_values_split)
-  rect_data <- data.frame(xmin=NULL, xmax=NULL, ymin=NULL, ymax=NULL, fill=NULL)
-  
-  
-  for (r in relevant) {
-    pins_on <- which(as.integer(pin_state_matrix[r,pins_relevant]) == 1)
-    t_start <- time_starts[r]
-    t_end <- time_ends[r]
-    for (p in pins_on)  {
-      odour <- odours[as.integer(p < 3)+1]
-      color <- colors[odour]
-      # side <- "left"
-      y_min <- arena_width_mm/2
-      y_max <- arena_width_mm
-      if (p %% 2 == 0) {
-        # side <- "right"
-        y_min <- 0
-        y_max <- arena_width_mm/2
-      }
-      
-      rect_data <- rbind(rect_data, data.frame(
-        xmin = t_start, xmax = t_end, ymin = y_min, ymax = y_max, fill = color
-      ))
-    }
-  }
+  # rect_data <- data.frame(xmin=NULL, xmax=NULL, ymin=NULL, ymax=NULL, fill=NULL)
+  # 
+  # 
+  # for (r in relevant) {
+  #   pins_on <- which(as.integer(pin_state_matrix[r,pins_relevant]) == 1)
+  #   t_start <- time_starts[r]
+  #   t_end <- time_ends[r]
+  #   for (p in pins_on)  {
+  #     odour <- odours[as.integer(p < 3)+1]
+  #     color <- colors[odour]
+  #     # side <- "left"
+  #     y_min <- arena_width_mm/2
+  #     y_max <- arena_width_mm
+  #     if (p %% 2 == 0) {
+  #       # side <- "right"
+  #       y_min <- 0
+  #       y_max <- arena_width_mm/2
+  #     }
+  #     
+  #     rect_data <- rbind(rect_data, data.frame(
+  #       xmin = t_start, xmax = t_end, ymin = y_min, ymax = y_max, fill = color
+  #     ))
+  #   }
+  # }
   
 
   
-  rect_data$fill <- factor(as.character(rect_data$fill), levels = colors)
+  # rect_data$fill <- factor(as.character(rect_data$fill), levels = colors)
   
   
-  pi_data <- data.frame(period=NULL, arena=NULL, x=NULL, pref_index=NULL)
-  
-  for (r in relevant) {
-    perd <- rle_period$values[r]
-    for (a in unique(lemdt_result$arena)) {
-      pi_data <- rbind(pi_data, data.frame(
-        period = perd, arena = a,
-        x = (time_starts[r] + time_ends[r]) / 2,
-        pref_index = pindex[arena == a & period == perd,]$pi))
-    }
-  }
+  # pi_data <- data.frame(period=NULL, arena=NULL, x=NULL, pref_index=NULL)
+  # 
+  # for (r in relevant) {
+  #   perd <- rle_period$values[r]
+  #   for (a in unique(lemdt_result$arena)) {
+  #     pi_data <- rbind(pi_data, data.frame(
+  #       period = perd, arena = a,
+  #       x = (time_starts[r] + time_ends[r]) / 2,
+  #       pref_index = pindex[arena == a & period == perd,]$pi))
+  #   }
+  # }
   
   
   p3 <- ggplot() +
@@ -85,25 +85,27 @@ plot_trace_with_pin_events <- function(lemdt_result, pins_relevant = 1:4, colors
     # guides(fill=F) +
     labs(x = "t (m)", y = "mm") + 
     facet_grid(. ~  arena) +
-    theme_bw() +
-    theme(panel.spacing = unit(3, "lines"), legend.position = "bottom",  legend.direction = "horizontal")
+    theme_bw()
   
-  if(nrow(rect_data) != 0) p3 <- p3 + geom_rect(
-    # data
-    data = rect_data,
-    # mapping
-    aes(
-      xmin = xmin, xmax = xmax,
-      ymin = ymin, ymax = ymax,
-      fill = fill),
-    # constant
-    alpha = 0.5)
-
-  if(nrow(pi_data) != 0) {
-    p3 <- p3 + geom_text(data = pi_data, aes(x = x, label = round(pref_index, digits = 2)), y = 1.15 * arena_width_mm) +
-      theme(plot.margin = unit(c(1,3,1,1), "lines")) # This widens the right m
-  }
-    p3 <- p3 + coord_flip(clip = "off")
+  
+  # p3 <- p3 + theme(panel.spacing = unit(3, "lines"), legend.position = "bottom",  legend.direction = "horizontal")
+  
+  # if(nrow(rect_data) != 0) p3 <- p3 + geom_rect(
+  #   # data
+  #   data = rect_data,
+  #   # mapping
+  #   aes(
+  #     xmin = xmin, xmax = xmax,
+  #     ymin = ymin, ymax = ymax,
+  #     fill = fill),
+  #   # constant
+  #   alpha = 0.5)
+  # 
+  # if(nrow(pi_data) != 0) {
+  #   p3 <- p3 + geom_text(data = pi_data, aes(x = x, label = round(pref_index, digits = 2)), y = 1.15 * arena_width_mm) +
+  #     theme(plot.margin = unit(c(1,3,1,1), "lines")) # This widens the right m
+  # }
+  p3 <- p3 + coord_flip(clip = "off")
   
  return(p3)
 }

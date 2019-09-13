@@ -38,8 +38,10 @@ class ArduinoThread(threading.Thread):
         event = getattr(self.device.interface, self.stop_event_name)
         if not event.is_set():
             event.wait(waiting_time)
-        else:
-            sys.exit(0)
+        
+        if event.is_set():
+            sys.exit(1)
+
 
         # if self.device.interface.pause:
             # self.log.info('Waiting for play button press')
