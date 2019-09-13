@@ -8,6 +8,7 @@ import time
 from tkinter import ttk
 import tkinter as tk
 from tkinter import filedialog
+from tkinter import simpledialog
 
 # Third party imports   
 import cv2
@@ -549,6 +550,8 @@ class TkinterGui():
         This is the callback function of the X button in the window
         Note: this is the only method that closes the GUI
         """
+
+        self.interface.answer = simpledialog.askstring('Save results?', 'Yes/No')
         self.root.quit()
         self.interface.close()
 

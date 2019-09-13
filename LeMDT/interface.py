@@ -126,7 +126,7 @@ class Interface():
             self.gui = GUIS[gui](interface=self)
 
         self.timestamp = 0
-        # self.duration = duration if duration else self.cfg["interface"]["duration"]
+        self.duration = duration if duration else self.cfg["interface"]["duration"]
         self.experimenter = experimenter if experimenter else self.cfg["tracker"]["experimenter"]
         self.log = logging.getLogger(__name__)
         

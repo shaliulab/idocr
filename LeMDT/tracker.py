@@ -10,6 +10,7 @@ import coloredlogs
 import cv2
 import imutils
 import numpy as np
+import shutil
 import yaml
 from pathlib import Path
 from sklearn.cluster import KMeans
@@ -630,12 +631,13 @@ class Tracker():
         """
         self.stream.release()
         self.saver.stop_video()
-
         self.log.info("Tracking stopped")
         self.log.info("{} arenas in {} frames analyzed".format(20 * self.frame_count, self.frame_count))
         self.log.info("Number of arenas that fly is not detected in is {}".format(self.missing_fly))
         self.saver.store_and_clear()
-
+        answer = self.interface.answer
+        if answer == 'No' or answer == 'no' or answer == 'n':
+            shutil.rmtree(self.saver.output_dir)
 
         if not self.interface.exit.is_set(): self.interface.close()
 
