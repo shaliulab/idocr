@@ -73,7 +73,7 @@ class Interface():
         self.frame_color = None
         self.gray_gui = None
         self.stacked_arenas = None
-
+        self.min_arena_area = None
         self.reporting = None
         self.camera = None
         self.video = None
@@ -126,7 +126,7 @@ class Interface():
             self.gui = GUIS[gui](interface=self)
 
         self.timestamp = 0
-        self.duration = duration if duration else self.cfg["interface"]["duration"]
+        # self.duration = duration if duration else self.cfg["interface"]["duration"]
         self.experimenter = experimenter if experimenter else self.cfg["tracker"]["experimenter"]
         self.log = logging.getLogger(__name__)
         
@@ -147,8 +147,11 @@ class Interface():
         # Setup camera tracking
         ###########################
         self.log.info("Running tracker.init_tracker")
-        print(self.camera)
-        print(self.video)
+        frame_source = np.array([self.camera, self.video])
+        frame_source = frame_source[[not e is None for e in frame_source]].tolist()[0]
+        
+        self.log.info('Frame source set to {}'.format(frame_source))
+
         self.tracker = Tracker(interface=self, camera=self.camera, video=self.video)
         self.tracker.set_saver()
         self.tracker.load_camera()

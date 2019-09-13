@@ -21,7 +21,7 @@ class Arena():
         """
         self.tracker = tracker
         self.contour = contour
-        self.min_arena_area = self.tracker.interface.cfg["arena"]["min_area"] 
+        self.min_arena_area = self.tracker.interface.min_arena_area
         self.area = None
         self.corners = None
         self.column = None
@@ -89,7 +89,7 @@ class Arena():
 
     def validate(self):
         
-        if self.area < self.min_arena_area:
+        if self.area < self.min_arena_area:            
             return False
         else:
             return True

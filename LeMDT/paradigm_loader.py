@@ -86,7 +86,7 @@ class ParadigmLoader():
         # Autocomplete start NaNs based on previous block
         program = self.infer_block_start_from_previous_block(program)  
         # Infer the end for each block
-        program["end"] = program["start"] + program["duration"] * program["times"]
+        # program["end"] = program["start"] + program["duration"] * program["times"]
 
         self.program = program
         
@@ -144,18 +144,22 @@ class ParadigmLoader():
         """
 
         expanded_blocks = [None,] * program.shape[0]
-        # For every block in the program file 
+        block_ends = np.array([None,] * program.shape[0])
+        # For every block in the program file
+        max_end = 0
         for i, block_row in enumerate(program.itertuples()):
             
             # Fetch the needed fields
             block_name = block_row.block # the block name
             start = block_row.start
             times = block_row.times
-            duration = block_row.duration
+            # duration = block_row.duration
+            
 
             # Read the block and format it the same way the program file was
             block = self.read_block(block_name)
             block = self.minutes_to_seconds(block)
+            DURATION = max(block['end'])
 
             # The program describes how many times a block has to be repeated.
             # This line implements this repetition
@@ -175,32 +179,50 @@ class ParadigmLoader():
             # as their time is relative to the block start
             # and not the program i.e. actual start 
             block_repeat.loc[:, "start"] += start
-            block_repeat.loc[:, "end"] += start
             
             # Add a new column stating what block this events come from
             block_repeat.loc[:, "block"] = block_name                
 
             # Finally, if there are iterations, we need to add the duration of 1 iterations
             # to the 2nd iteration, 2 durations to the 3rd iteration, and so forth
-            block_repeat["start"] = block_repeat["start"] + block_repeat["iterations"] * duration
+            block_repeat["start"] = block_repeat["start"] + block_repeat["iterations"] * DURATION
 
             # End will be either the one that would correspond based on the number of iterations and the duration
             # unless the block stops earlier than that i.e. the minimum is block.end so we need
             # to take the element-wise minimum of the event ends (end) and the block end (block.end)
-            end_column = (block_repeat["end"] + block_repeat["iterations"] * duration).values
+
+            if block_name != 'startup':
+                block_repeat.loc[:, "end"] += start
+                end_column = (block_repeat["end"] + block_repeat["iterations"] * DURATION).values
+            else:
+                end_column = np.array([max_end for i in range(block_repeat.shape[0])])
+                self.interface.duration = max_end
+
+
             block_end = np.array([block.end])
             
             end_column_corrected = np.minimum(block_end, end_column).T
             
+            block_end = np.max(end_column_corrected)
+            max_end = max(int(block_end), int(max_end))
+
             block_repeat.loc[:, "end"] = end_column_corrected
+
 
             # Add the dataframe to the corrresponding position of the expanded_blocks list
             expanded_blocks[i] = block_repeat
+            block_ends[i] = block_end
 
         # Concat all the dataframes in the list and return it
+        program['end'] = 0
+        for i, block_name in enumerate(program['block']):
+            print(block_name)
+            program.at[block_name, 'end'] = block_ends[i]
+        self.program = program
+
         paradigm = pd.concat(expanded_blocks, sort=True)
         paradigm.set_index('pin_id', inplace=True)
-        print(paradigm.index)
+        # print(paradigm.index)
 
         # Initialize the active and thread_name columns with default values
         # active will serve as a dynamic monitor

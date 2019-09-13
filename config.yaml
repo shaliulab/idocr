@@ -1,5 +1,5 @@
 arena:
-    min_area: 1000
+    min_area: 750
     block_size: 9
     param1: 13
     kernel_factor: 5
@@ -37,7 +37,6 @@ blocks:
     pattern: '.csv'
 
 interface:
-    duration: 200
     machine_id: "LeMDTe27SL5a9e19f94de287e28f789825"
     filename: "tkinter.csv"
     mode: 'deploy'

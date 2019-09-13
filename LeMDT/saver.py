@@ -51,8 +51,7 @@ class Saver():
         self.path = cfg["saver"]["path"]
         self.video_format = cfg["saver"]["video_format"]
         self.video_out_fps = cfg["saver"]["fps"]
-        print(type(self.video_out_fps))
-        print(self.video_out_fps)
+        self.log.info('FPS of output videos: {}'.format(self.video_out_fps))
         
         self.machine_id = cfg["interface"]["machine_id"]
         self.t = None
@@ -168,27 +167,32 @@ class Saver():
 
         # self.video_writer.write(self.tracker.interface.original_frame)
         # self.video_writer.release()
-        imgs = [cv2.cvtColor(self.tracker.interface.original_frame, cv2.COLOR_GRAY2BGR), self.tracker.interface.frame_color]
+        imgs = [self.tracker.interface.original_frame, self.tracker.interface.frame_color]
+        imgs_3_channels = [img if img.shape[2] == 3 else cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) for img in imgs]
 
-        for img, vw in zip(imgs, self.video_writers):
-            saved_frame = cv2.resize(img, self.output_video_shape)
-            vw.write(saved_frame)
+
+        if not self.video_writers is None:
+            for img, vw in zip(imgs_3_channels, self.video_writers):
+                saved_frame = cv2.resize(img, self.output_video_shape)
+                vw.write(saved_frame)
 
     @if_record_event
     def stop_video(self):
         [vw.release() for vw in self.video_writers]
 
     def refresh_trace_plot(self):
-        print('Calling rscript')
+        self.log.info('Creating traceplot')
         self.t = threading.Thread(target=self.plot, name='trace_plot')
         self.t.setDaemon(False)
-        self.t.run()
-        print('Finished calling rscript')
+        try:
+            self.t.run()
+            self.log.info('Traceplot creation successful')
+        except:
+            self.log.warning('Traceplot creation failed')
+
+
 
     def plot(self):
-        print(self.output_dir)
-        print(os.path.join(PROJECT_DIR, "Rscripts/main.R")) 
-
         subprocess.call([os.path.join(PROJECT_DIR, "Rscripts/main.R"), "-e", self.output_dir])
         # p <- LeMDTr::preprocess_and_plot(experiment_folder = opt$experiment_folder)
         # output_plot_path <- file.path(opt$experiment_folder, "trace_plot.png")

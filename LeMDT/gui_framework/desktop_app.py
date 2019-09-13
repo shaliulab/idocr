@@ -81,8 +81,8 @@ class BetterButton(tk.Button):
         return photoimage
 
     def push(self):
-        print("self.index/3")
-        print(self.index/3)
+        # print("self.index/3")
+        # print(self.index/3)
         self.place(relx=self.index/3, anchor="nw")
 
 
@@ -199,7 +199,7 @@ class TkinterGui():
             control_panel = pd.read_csv(self.control_panel_path, skip_blank_lines=True, comment="#")
             radius = 6
             sym = control_panel["sym"].values
-            print(sym)
+            # print(sym)
             pad_y = .05*self.canvas.height
 
             non_symmetric_pins = control_panel.loc[np.bitwise_not(sym)]

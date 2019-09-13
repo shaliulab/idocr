@@ -93,10 +93,6 @@ class LearningMemoryDevice(ParadigmLoader):
         # print(mapping_path)
 
         ParadigmLoader.__init__(self, mapping_path, program_path)
-        # print('paradigm')
-        # print(self.paradigm)
-
-
 
     def init_pin_state(self):
         """
@@ -156,12 +152,7 @@ class LearningMemoryDevice(ParadigmLoader):
  
         self.active_block = {k: False for k in self.program.index}
  
-        # They are not run throughout the lifetime of the program, just at some interval and without intermitency
-        # print(self.paradigm)
-
-
-        # print(self.paradigm.index)
-        
+        # They are not run throughout the lifetime of the program, just at some interval and without intermitency       
         events = self.paradigm.index.get_level_values('pin_id')
         count = {ev: 0 for ev in events}
         for event_index, ev in enumerate(events):
@@ -180,8 +171,9 @@ class LearningMemoryDevice(ParadigmLoader):
 
             d_name = 'thread-{}-{}'.format(ev, count[ev])
 
-            self.paradigm["thread_name"][event_index]= d_name
+
             # print(self.paradigm)
+            self.paradigm.at[ev, "thread_name"] = d_name
 
             kwargs = {
                 "pin_number"   : d_pin_number,

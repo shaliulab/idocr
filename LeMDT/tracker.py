@@ -376,7 +376,7 @@ class Tracker():
 
             
             found_arenas = np.sum([a is not None for a in arenas_list])
-            if found_arenas != self.targets and False:
+            if found_arenas != self.targets:
                 
                 self.log.debug("Number of arenas found not equal to target. Discarding frame")
                 self.frame_count += 1
