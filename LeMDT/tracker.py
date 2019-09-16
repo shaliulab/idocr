@@ -286,6 +286,40 @@ class Tracker():
         return arena_contours
 
 
+    def write_arena_zero(self):
+        '''
+        A dummy arena that will be always written to.
+        No fly will ever be there, but the pin state data can be
+        harnessed from it reliably when the csv is analysed'''
+
+        d = {
+            "ODOUR_A_LEFT" : None,
+            "ODOUR_A_RIGHT" : None,
+            "ODOUR_B_LEFT" : None,
+            "ODOUR_B_RIGHT" : None,
+            "eshock_left" : None,
+            "eshock_right" : None,
+            "frame": self.frame_count,
+            "t": self.interface.timestamp,
+            "arena": 0,
+            "cx": 0,
+            "cy": 0,
+            "datetime": datetime.datetime.now()
+            }
+
+        if self.interface.device:
+        
+            d["ODOUR_A_LEFT"] = self.interface.device.pin_state["ODOUR_A_LEFT"]
+            d["ODOUR_A_RIGHT"] = self.interface.device.pin_state["ODOUR_A_RIGHT"]
+            d["ODOUR_B_LEFT"] = self.interface.device.pin_state["ODOUR_B_LEFT"]
+            d["ODOUR_B_RIGHT"] = self.interface.device.pin_state["ODOUR_B_RIGHT"]
+            d["eshock_left"] = self.interface.device.pin_state["EL_SHOCK_LEFT"]
+            d["eshock_right"] = self.interface.device.pin_state["EL_SHOCK_RIGHT"]
+                    
+        self.saver.process_row(d)
+
+
+
     def track(self):
         targets = self.interface.cfg["arena"]["targets"]
 
@@ -361,6 +395,10 @@ class Tracker():
             # for every validated arena i.e. not on every loop iteration!
             id_arena = 1
             # For every arena contour detected
+
+
+            # write to arena_zero
+            self.write_arena_zero()
 
             for arena_contour in self.arena_contours:                       
                 

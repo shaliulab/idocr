@@ -75,9 +75,10 @@ class ParadigmLoader():
         ###########################################################################
         
         # Should look like this
-        # block,start,duration,times
-        # clean,0,240,1
+        # block,start,times
+        # clean,0,1
 
+        print(program_path)
         program = pd.read_csv(program_path)       
         program.set_index('block')
 
@@ -160,6 +161,7 @@ class ParadigmLoader():
             block = self.read_block(block_name)
             block = self.minutes_to_seconds(block)
             DURATION = max(block['end'])
+            print(times)
 
             # The program describes how many times a block has to be repeated.
             # This line implements this repetition
@@ -183,27 +185,44 @@ class ParadigmLoader():
             # Add a new column stating what block this events come from
             block_repeat.loc[:, "block"] = block_name                
 
-            # Finally, if there are iterations, we need to add the duration of 1 iterations
-            # to the 2nd iteration, 2 durations to the 3rd iteration, and so forth
-            block_repeat["start"] = block_repeat["start"] + block_repeat["iterations"] * DURATION
 
-            # End will be either the one that would correspond based on the number of iterations and the duration
-            # unless the block stops earlier than that i.e. the minimum is block.end so we need
-            # to take the element-wise minimum of the event ends (end) and the block end (block.end)
 
             if block_name != 'startup':
+                # print('start')
+                # print(start)
+                
+                # add the start of the block (from the program file) to the ends
                 block_repeat.loc[:, "end"] += start
+                # if there are iterations, add the durations of the block
+
+                # Finally, if there are iterations, we need to add the duration of 1 iterations
+                # to the 2nd iteration, 2 durations to the 3rd iteration, and so forth
+                block_repeat["start"] = block_repeat["start"] + block_repeat["iterations"] * DURATION
+
+                # End will be either the one that would correspond based on the number of iterations and the duration
+                # unless the block stops earlier than that i.e. the minimum is block.end so we need
+                # to take the element-wise minimum of the event ends (end) and the block end (block.end)
                 end_column = (block_repeat["end"] + block_repeat["iterations"] * DURATION).values
+
                 block_end = np.array([block.end])
-                end_column_corrected = np.minimum(block_end, end_column).T
-                block_end = np.max(end_column_corrected)
+
+                # end_column_corrected = np.minimum(block_end, end_column).T
+                block_end = np.max(end_column)
+                # print('block_name')
+                # print(block_name)
+
+                # print('block_end')
+                # print(block_end)
+
                 max_end = max(int(block_end), int(max_end))
                 self.interface.duration = max_end
+                # print('max_end')
+                # print(max_end)
+
                 
             else:
                 end_column_corrected = np.array([max_end for i in range(block_repeat.shape[0])])
-                
-            block_repeat.loc[:, "end"] = end_column_corrected
+                block_repeat.loc[:, "end"] = end_column_corrected
 
 
             # Add the dataframe to the corrresponding position of the expanded_blocks list

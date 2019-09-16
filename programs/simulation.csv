@@ -1,3 +1,5 @@
-block,start,duration,times
-simulation,0,5,1
-startup,0,-1,1
+block,start,times
+simulation1,0,1
+simulation2,10/60,1
+simulation3,20/60,1
+startup,0,1

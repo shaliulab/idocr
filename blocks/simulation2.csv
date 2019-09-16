@@ -1,0 +1,5 @@
+pin_id,start,end,on,off,block
+ODOUR_B_LEFT,0,10/60,NaN,NaN,
+ODOUR_A_RIGHT,0,10/60,NaN,NaN,
+EL_SHOCK_LEFT,0,10/60,1/60,4/60
+EL_SHOCK_RIGHT,0,10/60,1/60,4/60

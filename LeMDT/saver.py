@@ -193,7 +193,10 @@ class Saver():
 
 
     def plot(self):
-        subprocess.call([os.path.join(PROJECT_DIR, "Rscripts/main.R"), "-e", self.output_dir])
+        
+        # Comment this out when it is not fragile anymore
+        # subprocess.call([os.path.join(PROJECT_DIR, "Rscripts/main.R"), "-e", self.output_dir])
         # p <- LeMDTr::preprocess_and_plot(experiment_folder = opt$experiment_folder)
         # output_plot_path <- file.path(opt$experiment_folder, "trace_plot.png")
         # ggplot2::ggsave(filename = output_plot_path, plot = p)
+        pass
