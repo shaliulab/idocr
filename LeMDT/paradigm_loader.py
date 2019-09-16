@@ -194,18 +194,15 @@ class ParadigmLoader():
             if block_name != 'startup':
                 block_repeat.loc[:, "end"] += start
                 end_column = (block_repeat["end"] + block_repeat["iterations"] * DURATION).values
-            else:
-                end_column = np.array([max_end for i in range(block_repeat.shape[0])])
+                block_end = np.array([block.end])
+                end_column_corrected = np.minimum(block_end, end_column).T
+                block_end = np.max(end_column_corrected)
+                max_end = max(int(block_end), int(max_end))
                 self.interface.duration = max_end
-
-
-            block_end = np.array([block.end])
-            
-            end_column_corrected = np.minimum(block_end, end_column).T
-            
-            block_end = np.max(end_column_corrected)
-            max_end = max(int(block_end), int(max_end))
-
+                
+            else:
+                end_column_corrected = np.array([max_end for i in range(block_repeat.shape[0])])
+                
             block_repeat.loc[:, "end"] = end_column_corrected
 
 

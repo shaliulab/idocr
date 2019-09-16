@@ -137,6 +137,7 @@ class Interface():
 
         self.min_arena_area = self.cfg["arena"]["min_area"] 
         self.fraction_area = 1
+        self.answer = "Yes"
 
 
 
@@ -185,6 +186,8 @@ class Interface():
         device.connect_arduino_board(self.port)
         device.prepare('exit')
         self.device = device
+        print(device.paradigm)
+        print(self.duration)
     
     def close(self, signo=None, _frame=None):
         """

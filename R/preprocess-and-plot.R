@@ -1,5 +1,5 @@
 #' @export
-preprocess_and_plot <- function(experiment_folder) {
+preprocess_and_plot <- function(experiment_folder, decision_zone_mm=5) {
   filename <- list.files(path = experiment_folder, pattern = '_LeMDTe27SL5a9e19f94de287e28f789825.csv')
   
   file_path <- file.path(experiment_folder, filename)
@@ -43,11 +43,12 @@ preprocess_and_plot <- function(experiment_folder) {
   ##################################
   ## Compute position L/D/R based on mm
   ##################################
-  lemdt_result6 <- compute_side(lemdt_result5)
+  borders <- compute_borders()
+  lemdt_result6 <- compute_side(lemdt_result5, borders)
   
   ##################################
   ## Plot
   #################################
-  p <- plot_trace_with_pin_events(lemdt_result = lemdt_result6)
+  p <- plot_trace_with_pin_events(lemdt_result = lemdt_result6, borders=borders)
   return(p)
 }
