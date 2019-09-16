@@ -19,11 +19,12 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=5) {
   ## Add period column
   ##################################
   lemdt_result <- add_period_column(lemdt_result)
-  
+  table(lemdt_result$period)
   ##################################
   ## Define periods/blocks
   ##################################
   lemdt_result2 <- define_unique_periods(lemdt_result)
+  lemdt_result2 <- lemdt_result2[arena != 0,]
   
   ##################################
   ## Set a time series frequency  ##
@@ -46,9 +47,18 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=5) {
   borders <- compute_borders()
   lemdt_result6 <- compute_side(lemdt_result5, borders)
   
+  
+  ##################################
+  ## Compute preference index
+  ##################################
+  lemdt_result <- lemdt_result6
+  pindex <- lemdt_result[, .(n = count_exits(position)[[3]],
+                             pi = preference_index(position)), by = .(arena, period)]
+  
   ##################################
   ## Plot
   #################################
-  p <- plot_trace_with_pin_events(lemdt_result = lemdt_result6, borders=borders)
-  return(p)
+  p <- plot_trace_with_pin_events(lemdt_result = lemdt_result, borders=borders, pindex = pindex)
+  
+  return(list(plot = p, preference_index = pindex))
 }

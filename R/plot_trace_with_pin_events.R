@@ -2,25 +2,26 @@
 #' @export
 #'
 #'  
-plot_trace_with_pin_events <- function(lemdt_result, borders, pins_relevant = 1:4, colors=c("red", "blue"), arena_width_mm = 50) {
+plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relevant = 1:4, colors=c("red", "blue"), arena_width_mm = 50) {
   
-  
-  ##################################
-  ## Compute preference index
-  ##################################
-  pindex <- lemdt_result[, .(n = count_exits(position)[[3]],
-                    pi = preference_index(position)), by = .(arena, period)]
-  
-  
-  
-  lemdt_result <- arrange(lemdt_result, period, period)
+  if(interactive()) {
+    pins_relevant <- 1:4
+    colors <- c('red','blue')
+    arena_width_mm <- 50
+    library(ggplot2)
+    library(LeMDTr)
+  }
+
+  lemdt_result <- as.data.table(arrange(lemdt_result, period, period))
   
   rle_period <- rle(lemdt_result$period)
   
   
   rle_period_values_split <- strsplit(rle_period$values, split = "")
   
-  relevant <- lapply(rle_period_values_split, function(x) {sum(as.integer(x)[pins_relevant]) == 2}) %>% unlist %>% which
+  relevant <- lapply(rle_period_values_split, function(x) {
+      sum(as.integer(x)[pins_relevant]) == 2
+    }) %>% unlist %>% which
   
   number_different_events <- length(unique(rle_period$values[relevant]))
   
@@ -36,13 +37,19 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pins_relevant = 1:
   names(colors) <- odours
   
   pin_state_matrix <- do.call(rbind, rle_period_values_split)
+  
+  
+  ########################
+  # Prepare rect_data
+  ########################
+  
   rect_data <- data.frame(xmin=NULL, xmax=NULL, ymin=NULL, ymax=NULL, fill=NULL)
 
 
   for (r in relevant) {
     pins_on <- which(as.integer(pin_state_matrix[r,pins_relevant]) == 1)
-    t_start <- time_starts[r]
-    t_end <- time_ends[r]
+    t_start <- unlist(time_starts[r])
+    t_end <- unlist(time_ends[r,])
     for (p in pins_on)  {
       odour <- odours[as.integer(p < 3)+1]
       color <- colors[odour]
@@ -66,6 +73,10 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pins_relevant = 1:
   rect_data$fill <- factor(as.character(rect_data$fill), levels = colors)
   
   
+  ########################
+  # Prepare preference_index data
+  ########################
+  
   pi_data <- data.frame(period=NULL, arena=NULL, x=NULL, pref_index=NULL)
 
   for (r in relevant) {
@@ -73,27 +84,40 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pins_relevant = 1:
     for (a in unique(lemdt_result$arena)) {
       pi_data <- rbind(pi_data, data.frame(
         period = perd, arena = a,
-        x = (time_starts[r] + time_ends[r]) / 2,
+        x = (unlist(time_starts[r]) + unlist(time_ends[r])) / 2,
         pref_index = pindex[arena == a & period == perd,]$pi))
     }
   }
   
   
+  
+  ## Base plot
+  
   p3 <- ggplot() +
-    geom_line(data = lemdt_result, aes(y = mm_mean, x = t/60, group = arena), col = "black") + 
+    geom_line(data = lemdt_result, aes(y = mm_mean, x = t/60, group = arena), col = "black") +
+    # geom_point(data = lemdt_result, aes(y = mm_mean, x = t/60, group = arena), col = "black") + 
+    # geom_text(data = lemdt_result, aes(y = mm_mean, x = t/60, group = arena, label = position), col = "black") +
+    
+    
     scale_x_continuous(breaks = seq(0, max(lemdt_result$t/60), 0.5)) +
     scale_fill_discrete(name = "Odour", labels = names(colors)) +
     # guides(fill=F) +
     labs(x = "t (m)", y = "mm") + 
-    facet_grid(. ~  arena) +
+    facet_wrap(. ~ arena, nrow = 2) +
     theme_bw() +
     geom_hline(yintercept = borders[[1]]) +
-    geom_hline(yintercept = borders[[2]])
-    
+    geom_hline(yintercept = borders[[2]]) +
+    scale_x_continuous(breaks = seq(0, max(lemdt_result$t)/60, by = max(lemdt_result$t)/600))
   
+  ## Add exit points
+  exits_dataframe <- get_exits_dataframe(lemdt_result, borders)
+  if(nrow(exits_dataframe) > 0) {
+    # browser()
+    p3 <- p3 + geom_point(data = exits_dataframe, mapping = aes(x = t/60, y = x), col = 'blue')
+  }
+  p3
   
-  p3 <- p3 + theme(panel.spacing = unit(3, "lines"), legend.position = "bottom",  legend.direction = "horizontal")
-
+  ## Add rectangles
   if(nrow(rect_data) != 0) p3 <- p3 + geom_rect(
     # data
     data = rect_data,
@@ -105,19 +129,18 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pins_relevant = 1:
     # constant
     alpha = 0.5)
 
+  ## Add preference index data
   if(nrow(pi_data) != 0) {
     p3 <- p3 + geom_text(data = pi_data, aes(x = x, label = round(pref_index, digits = 2)), y = 1.15 * arena_width_mm) +
       theme(plot.margin = unit(c(1,3,1,1), "lines")) # This widens the right m
   }
   
-  
-  exits_dataframe <- get_exits_dataframe(lemdt_result, borders)
-  if(nrow(exits_dataframe) > 0) {
-    # browser()
-    p3 <- p3 + geom_point(data = exits_dataframe, mapping = aes(x = t/60, y = x))
-  }
-  
-  p3 <- p3 + coord_flip(clip = "off")
+ 
+  p3 <- p3 + coord_flip(clip = "off")  + theme(
+    panel.spacing = unit(3, "lines"),
+    legend.position = "bottom",
+    legend.direction = "horizontal"
+    )
   
  return(p3)
 }

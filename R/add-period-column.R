@@ -5,8 +5,8 @@ add_period_column <- function(lemdt_result) {
   lemdt_result$period <- lemdt_result %>%
     apply(., 1, function(x) paste(x[c(
       'ODOUR_A_LEFT', 'ODOUR_A_RIGHT',
-      'ODOUR_B_LEFT', 'ODOUR_B_RIGHT'
-      # 'eshock_left', 'eshock_right'
+      'ODOUR_B_LEFT', 'ODOUR_B_RIGHT',
+      'eshock_left', 'eshock_right'
       )
       ],
       collapse = '')

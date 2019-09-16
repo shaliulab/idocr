@@ -2,7 +2,7 @@
 
 #' @import dplyr data.table
 #' @export
-define_unique_periods <- function(lemdt_result, ref_arena=1) {
+define_unique_periods <- function(lemdt_result, ref_arena=0) {
   # In order to not mix data from different blocks exhibiting the same system state
   # i.e. the period var is the same
   # we need to differentiate them
@@ -10,6 +10,10 @@ define_unique_periods <- function(lemdt_result, ref_arena=1) {
   # change to arena0, a proxy arena showing the state with the desired frequency
   # independent of whether the fly is tracked or not
   # right now, we have no info on the state if the arena did not find a fly
+  
+  if (!(0 %in% lemdt_result$arena)) ref_arena <- as.integer(names(which.max(table(lemdt_result$arena))))
+
+  
   period_map <- lemdt_result[arena==ref_arena, rle(period)]
   periods_ts <- lemdt_result[arena==ref_arena]$period
   periods_t <- lemdt_result[arena==ref_arena]$t

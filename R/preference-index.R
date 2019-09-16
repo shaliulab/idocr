@@ -1,22 +1,37 @@
 #' @export
 get_exits_dataframe <- function(lemdt_result, borders) {
-  exit_time <- when_exit_happened(lemdt_result)
-  browser()
-  result <- rbind(
-    data.frame(x = borders[[1]], arena = exit_time$left$arena, t = exit_time$left$t, side = "left"),
-    data.frame(x = borders[[2]], arena = exit_time$right$arena, t = exit_time$right$t, side = "right")
-  )
+  
+  arenas_with_data <- unique(lemdt_result$arena)
+  setkeyv(lemdt_result, c('arena', 't'))
+  
+  
+  # browser()
+  result <- data.frame(x = NULL, arena = NULL, t = NULL, side = NULL)
+  
+    for (i in 1:length(arenas_with_data)) {
+      # browser()
+      lr <- lemdt_result[arena == arenas_with_data[i],]
+      
+      exit_time <- when_exit_happened(lr)
+      result <- rbind(
+        result,
+        data.frame(x = borders[[1]], arena = arenas_with_data[i], t = exit_time$left, side = "left"),
+        data.frame(x = borders[[2]], arena = arenas_with_data[i], t = exit_time$right, side = "right")
+      )
+    }
+    
   return(result)
 }
 
 #' @export
-when_exit_happened <- function(lemdt_result) {
-  lemdt_result <- as.data.table(lemdt_result)
-  pos <- lemdt_result$position
+when_exit_happened <- function(lr) {
+  # lemdt_result <- as.data.table(lemdt_result)
+  # lr <- lemdt_result[arena == a]
+  pos <- lr$position
   pos_string <- paste(pos, collapse = '')
-  exit_right_time <- lemdt_result[gregexpr(pattern = "DR",text = pos_string)[[1]], t, by = arena]
-  exit_left_time <- lemdt_result[gregexpr(pattern = "DL",text = pos_string)[[1]], t, by = arena]
-  return(list(left = exit_left_time, right = exit_left_time))
+  exit_right_time <- lr[gregexpr(pattern = "DR",text = pos_string)[[1]], t]
+  exit_left_time <- lr[gregexpr(pattern = "DL",text = pos_string)[[1]], t]
+  return(list(left = exit_left_time, right = exit_right_time))
 }
 
 
@@ -73,7 +88,7 @@ preference_index <- function(pos, min_exits_required=5, min_length=10) {
   total_exits <- exits[[3]]
   
   if(total_exits < min_exits_required)
-    pi <- -1
+    pi <- -9
   else
     pi <- (exit_right - exit_left) / total_exits
   return(pi)
