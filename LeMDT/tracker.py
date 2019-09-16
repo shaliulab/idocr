@@ -326,11 +326,11 @@ class Tracker():
     # THIS FUNCTION NEEDS TO BE SPLIT INTO AT LEAST 2
         
         if not self.interface.exit.is_set():
-            # Check if experiment is over
-            if self.interface.timestamp > self.interface.duration:
-                self.log.info("Experiment duration is reached. Closing")
-                #self.save_record()
-                return False
+            # # Check if experiment is over
+            # if self.interface.timestamp > self.interface.duration:
+            #     self.log.info("Experiment duration is reached. Closing")
+            #     #self.save_record()
+            #     return False
 
             # How much time has passed since we started tracking?
             if self.interface.record_start:
@@ -643,7 +643,7 @@ class Tracker():
             # as opposed what would happen with time.sleep
             # where the timeout would always be 100% done
             #self.interface.exit.wait(.2)
-      
+
         self.close()            
 
     def toprun(self):
@@ -677,7 +677,7 @@ class Tracker():
         if answer == 'No' or answer == 'no' or answer == 'n':
             shutil.rmtree(self.saver.output_dir)
 
-        if not self.interface.exit.is_set(): self.interface.close()
+        # if not self.interface.exit.is_set(): self.interface.close()
 
     def merge_masks(self):
     

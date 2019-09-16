@@ -1,5 +1,5 @@
 block,start,times
 simulation1,0,1
-simulation2,10/60,1
-simulation3,20/60,1
+simulation2,1.5,1
+simulation1,3,1
 startup,0,1

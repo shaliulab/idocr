@@ -14,8 +14,14 @@ option_list <- list(
 # otherwise if options not found on command line then set defaults, 
 opt <- parse_args(OptionParser(option_list=option_list))
 # experiment_folder <- 'lemdt_results/LeMDTe27SL5a9e19f94de287e28f789825/LEARNER_001/2019-09-11_10-50-53/'
-print(opt$experiment_folder)
-p <- LeMDTr::preprocess_and_plot(experiment_folder = opt$experiment_folder)
+experiment_folder <- opt$experiment_folder
 
-output_plot_path <- file.path(opt$experiment_folder, "trace_plot.png")
+result <- LeMDTr::preprocess_and_plot(experiment_folder = experiment_folder)
+p <- result$plot
+pindex <- result$preference_index
+
+output_plot_path <- file.path(experiment_folder, "trace_plot.png")
+output_pindex_path <- file.path(experiment_folder, "pindex.csv")
 ggplot2::ggsave(filename = output_plot_path, plot = p)
+data.table::fwrite(x = pindex, file = output_pindex_path)
+

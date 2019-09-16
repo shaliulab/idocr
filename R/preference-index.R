@@ -28,9 +28,23 @@ when_exit_happened <- function(lr) {
   # lemdt_result <- as.data.table(lemdt_result)
   # lr <- lemdt_result[arena == a]
   pos <- lr$position
+  # browser()
   pos_string <- paste(pos, collapse = '')
-  exit_right_time <- lr[gregexpr(pattern = "DR",text = pos_string)[[1]], t]
-  exit_left_time <- lr[gregexpr(pattern = "DL",text = pos_string)[[1]], t]
+  right_rows <- gregexpr(pattern = "DR",text = pos_string)[[1]]
+  left_rows <- gregexpr(pattern = "DL",text = pos_string)[[1]]
+  
+  if(right_rows == -1) {
+    exit_right_time <- NA
+  } else {
+    exit_right_time <- lr[right_rows, t]
+  }
+  
+  if(left_rows == -1) {
+    exit_left_time <- NA
+  } else {
+    exit_left_time <- lr[left_rows, t]
+  }
+  
   return(list(left = exit_left_time, right = exit_right_time))
 }
 
@@ -49,12 +63,6 @@ when_exit_happened <- function(lr) {
 #' 
 count_exits <- function(pos) {
  
-  pos_string <- paste(pos, collapse = '')
-  exit_right_time <- lemdt_result[gregexpr(pattern = "DR",text = pos_string)[[1]], t]
-  exit_left_time <- lemdt_result[gregexpr(pattern = "DL",text = pos_string)[[1]], t]
-
-  
-  
   rle_result <- rle(pos)
   rle_result$lengths
   rle_string <- paste(rle_result$values, collapse = '')
@@ -80,7 +88,7 @@ count_exits <- function(pos) {
 preference_index <- function(pos, min_exits_required=5, min_length=10) {
   
   if(length(pos) < min_length)
-    return(-1)
+    return(NA_real_)
   
   exits <- count_exits(pos)
   exit_left <- exits[[1]]
@@ -88,7 +96,7 @@ preference_index <- function(pos, min_exits_required=5, min_length=10) {
   total_exits <- exits[[3]]
   
   if(total_exits < min_exits_required)
-    pi <- -9
+    pi <- NA_real_
   else
     pi <- (exit_right - exit_left) / total_exits
   return(pi)

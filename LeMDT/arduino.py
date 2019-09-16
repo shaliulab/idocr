@@ -260,9 +260,10 @@ class LearningMemoryDevice(ParadigmLoader):
         self.power_pins_off()
 
         self.interface.arduino_done.set()
+
         # NEEDED?
         # if the exit event is not set yet and this is the stop event of the threads, activate the interface close method
-        if not self.interface.exit.is_set() and self.stop_event_name == 'exit': self.interface.close()
+        # if not self.interface.exit.is_set() and self.stop_event_name == 'exit': self.interface.close()
         return True
  
 

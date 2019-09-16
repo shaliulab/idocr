@@ -468,7 +468,11 @@ class TkinterGui():
         # The bug shows up when running the first non startup block
 
         # only if there is an arduino board and we are already recording
-        if self.interface.arduino and self.interface.record_event.is_set():
+
+        if self.interface.arduino_done.is_set():
+            self.statusbar['text'] = 'Paradigm DONE'
+
+        elif self.interface.arduino and self.interface.record_event.is_set():
 
             if self.interface.cfg['interface']['mode'] == 'debug' and self.interface.tracker.frame_count == 100:
                 raise Exception
@@ -476,9 +480,8 @@ class TkinterGui():
             # find the block(s) being executed right now
             # usually this is just startup (which runs always) and one other block
             c1 = self.interface.device.program['start'] < self.interface.timestamp
-            c2 = self.interface.device.program['end'] > self.interface.timestamp
             # only rows fulfilling both requirements are running now
-            selected_rows = c1 & c2
+            selected_rows = c1
             # get the index of these blocks
             active_blocks = self.interface.device.program.index[selected_rows].tolist()
             if active_blocks:

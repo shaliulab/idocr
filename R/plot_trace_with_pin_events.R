@@ -19,11 +19,16 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
   
   rle_period_values_split <- strsplit(rle_period$values, split = "")
   
-  relevant <- lapply(rle_period_values_split, function(x) {
-      sum(as.integer(x)[pins_relevant]) == 2
-    }) %>% unlist %>% which
+  rle_period_values_split_unique <- lapply(rle_period_values_split, function(x) {
+      as.integer(x)[pins_relevant]
+    }) %>% unique
   
-  number_different_events <- length(unique(rle_period$values[relevant]))
+  
+  relevant_periods <- rle_period_values_split_unique %>%
+      lapply(function(x) sum(x) == 2) %>% unlist %>% which
+  
+  
+  number_different_events <- length(unique(rle_period_values_split_unique[relevant_periods]))
   
   
   starts <- cumsum(rev(rev(c(1,rle_period$lengths))[-1]))
@@ -46,7 +51,7 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
   rect_data <- data.frame(xmin=NULL, xmax=NULL, ymin=NULL, ymax=NULL, fill=NULL)
 
 
-  for (r in relevant) {
+  for (r in relevant_periods) {
     pins_on <- which(as.integer(pin_state_matrix[r,pins_relevant]) == 1)
     t_start <- unlist(time_starts[r])
     t_end <- unlist(time_ends[r,])
@@ -79,7 +84,8 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
   
   pi_data <- data.frame(period=NULL, arena=NULL, x=NULL, pref_index=NULL)
 
-  for (r in relevant) {
+  for (r in relevant_periods) {
+    print(r)
     perd <- rle_period$values[r]
     for (a in unique(lemdt_result$arena)) {
       pi_data <- rbind(pi_data, data.frame(
@@ -107,7 +113,7 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
     theme_bw() +
     geom_hline(yintercept = borders[[1]]) +
     geom_hline(yintercept = borders[[2]]) +
-    scale_x_continuous(breaks = seq(0, max(lemdt_result$t)/60, by = max(lemdt_result$t)/600))
+    scale_x_continuous(breaks = round(seq(0, max(lemdt_result$t)/60, by = max(lemdt_result$t)/600), digits=3))
   
   ## Add exit points
   exits_dataframe <- get_exits_dataframe(lemdt_result, borders)
@@ -131,11 +137,13 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
 
   ## Add preference index data
   if(nrow(pi_data) != 0) {
-    p3 <- p3 + geom_text(data = pi_data, aes(x = x, label = round(pref_index, digits = 2)), y = 1.15 * arena_width_mm) +
+    pi_data$pref_index <- as.character(round(pi_data$pref_index, digits = 2))
+    pi_data$pref_index[is.na(pi_data$pref_index)] <- 'NA'
+    
+    p3 <- p3 + geom_label(data = pi_data, aes(x = x, label = pref_index), y = .9 * arena_width_mm) +
       theme(plot.margin = unit(c(1,3,1,1), "lines")) # This widens the right m
   }
   
- 
   p3 <- p3 + coord_flip(clip = "off")  + theme(
     panel.spacing = unit(3, "lines"),
     legend.position = "bottom",

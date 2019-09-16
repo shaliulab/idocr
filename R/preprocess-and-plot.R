@@ -1,5 +1,11 @@
 #' @export
-preprocess_and_plot <- function(experiment_folder, decision_zone_mm=5) {
+preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10) {
+ 
+  # if(interactive()) {
+    decision_zone_mm=10
+    # experiment_folder='/home/antortjim/MEGAsync/Gitlab/LeMDT/lemdt_results/LeMDTe27SL5a9e19f94de287e28f789825/LEARNER_001/2019-09-16_17-46-34'
+    experiment_folder = '/home/antortjim/MEGAsync/Gitlab/LeMDT/lemdt_results/LeMDTe27SL5a9e19f94de287e28f789825/LEARNER_001/2019-09-16_16-04-19'
+  # }
   filename <- list.files(path = experiment_folder, pattern = '_LeMDTe27SL5a9e19f94de287e28f789825.csv')
   
   file_path <- file.path(experiment_folder, filename)
@@ -44,16 +50,20 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=5) {
   ##################################
   ## Compute position L/D/R based on mm
   ##################################
-  borders <- compute_borders()
-  lemdt_result6 <- compute_side(lemdt_result5, borders)
+  borders <- compute_borders(decision_zone_mm = decision_zone_mm)
+  lemdt_result6 <- compute_side(lemdt_result5, borders, decision_zone_mm=decision_zone_mm)
   
   
   ##################################
   ## Compute preference index
   ##################################
   lemdt_result <- lemdt_result6
-  pindex <- lemdt_result[, .(n = count_exits(position)[[3]],
-                             pi = preference_index(position)), by = .(arena, period)]
+  # browser()
+  pindex <- lemdt_result[, .(
+    n = count_exits(position)[[3]],
+    pi = preference_index(position)
+    ), by = .(arena, period)]
+ 
   
   ##################################
   ## Plot
