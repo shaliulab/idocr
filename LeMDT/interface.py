@@ -318,6 +318,19 @@ class Interface():
         empty_img = np.zeros(shape=(height*3, width*3, 3), dtype=np.uint8)
         self.stacked_arenas = [empty_img.copy() for i in range(self.cfg["arena"]["targets"])]
 
+    
+    def load_and_apply_config(self, config=None):
+            if config is None:
+                config = self.config
+            else:
+                self.config = config
+    
+            self.load_config()
+            # Init zoom tab
+            self.gui.init_zoom_tab()
+            self.init_components()
+
+
     def init_components(self):
  
         self.init_control_c_handler()

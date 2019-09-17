@@ -15,6 +15,7 @@ pip install LeMDT*.whl
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 PYTHON_EXECUTABLE=`which python`
+PYTHON_DIR=$(dirname `which python`)
 cd $DIR
 printf '#!/usr/bin/env xdg-open
 [Desktop Entry]
@@ -24,7 +25,8 @@ Terminal=true
 Categories=GTK;GNOME;Utility;
 ' > learningmemorysetup.desktop
 
-echo "Exec=bash -c '$PYTHON_EXECUTABLE -m LeMDT --track --camera pylon --arduino'" >> learningmemorysetup.desktop
+ 
+echo "Exec=bash -c 'LD_LIBRARY_PATH=$PYTHON_DIR/../lib/ $PYTHON_EXECUTABLE -m LeMDT --track --camera pylon --arduino'" >> learningmemorysetup.desktop
 echo "Icon=$DIR/LeMDT/static/fly.png" >> learningmemorysetup.desktop
 chmod +x learningmemorysetup.desktop
 

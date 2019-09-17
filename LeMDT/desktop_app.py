@@ -288,7 +288,7 @@ class TkinterGui():
         Called by __init__
         """
         
-        loadConfigButton = BetterButton(self.button_frame, 'start', self.interface.load_config, 0)
+        loadConfigButton = BetterButton(self.button_frame, 'start', self.interface.load_and_apply_config, 0)
         playButton = BetterButton(self.button_frame, 'play', self.play, 1)
         okButton = BetterButton(self.button_frame, 'ok_arena', self.interface.ok_arena, 2)
         recordButton = BetterButton(self.button_frame, 'record', self.interface.record, 3)
@@ -320,22 +320,7 @@ class TkinterGui():
             filetypes = (("yaml files","*.yaml"),("all files","*.*"))
             )
         
-        self.load_config(config)
-
-    def load_config(self, config=None):
-
-        if config is None:
-            config = self.interface.config
-        else:
-            self.interface.config = config
-
-        self.interface.load_config()
-        # Init zoom tab
-        self.init_zoom_tab()
-        self.interface.init_components()
-
-
-            
+        self.interface.load_and_apply_config(config)          
 
     def ask_program(self):
         """
