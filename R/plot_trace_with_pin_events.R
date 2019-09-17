@@ -18,14 +18,16 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
   
   
   rle_period_values_split <- strsplit(rle_period$values, split = "")
+  names(rle_period_values_split) <- unlist(lapply(rle_period_values_split, function(x) paste(x, collapse = '')))
+  rle_period_values_split <- rle_period_values_split[unique(rle_period$values)]
   
   rle_period_values_split_unique <- lapply(rle_period_values_split, function(x) {
-      as.integer(x)[pins_relevant]
+      as.integer(x)
     }) %>% unique
   
   
   relevant_periods <- rle_period_values_split_unique %>%
-      lapply(function(x) sum(x) == 2) %>% unlist %>% which
+      lapply(function(x) sum(x[pins_relevant]) == 2) %>% unlist %>% which
   
   
   number_different_events <- length(unique(rle_period_values_split_unique[relevant_periods]))
@@ -113,7 +115,7 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
     theme_bw() +
     geom_hline(yintercept = borders[[1]]) +
     geom_hline(yintercept = borders[[2]]) +
-    scale_x_continuous(breaks = round(seq(0, max(lemdt_result$t)/60, by = max(lemdt_result$t)/600), digits=3))
+    scale_x_continuous(breaks = round(seq(0, max(lemdt_result$t)/60, by = 0.5), digits=3))
   
   ## Add exit points
   exits_dataframe <- get_exits_dataframe(lemdt_result, borders)
