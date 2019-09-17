@@ -16,7 +16,7 @@ then
  python3 -m pip uninstall -y LeMDT
 fi
 
-python3 -m pip install LeMDT*.whl
+python3 -m pip install dist/LeMDT*.whl
 
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"

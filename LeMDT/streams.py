@@ -61,8 +61,6 @@ class PylonStream(StandardStream):
         finally:
             pass
 
-            
-
         # Print the model name of the camera.
         device_info = cap.GetDeviceInfo()
         self.log.info("Using device {}".format(device_info.GetModelName()))
@@ -119,7 +117,7 @@ class PylonStream(StandardStream):
         return height
 
     def set_fps(self, fps):
-        self.stream.AcquisitionFrameRateAbs.SetValue(fps)
+        self.cap.AcquisitionFrameRateAbs.SetValue(fps)
 
     def read_frame(self):
         # Wait for an image and then retrieve it. A timeout of 5000 ms is used.

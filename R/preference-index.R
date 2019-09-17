@@ -33,17 +33,17 @@ when_exit_happened <- function(lr) {
   right_rows <- gregexpr(pattern = "DR",text = pos_string)[[1]]
   left_rows <- gregexpr(pattern = "DL",text = pos_string)[[1]]
   
-  if(right_rows == -1) {
+  suppressWarnings(if(right_rows == -1) {
     exit_right_time <- NA
   } else {
     exit_right_time <- lr[right_rows, t]
-  }
+  })
   
-  if(left_rows == -1) {
+  suppressWarnings(if(left_rows == -1) {
     exit_left_time <- NA
   } else {
     exit_left_time <- lr[left_rows, t]
-  }
+  })
   
   return(list(left = exit_left_time, right = exit_right_time))
 }

@@ -119,6 +119,7 @@ class ParadigmLoader():
 
     def read_block(self, block_name):
         """Read the correct block file ignoring comments and blank lines."""
+        print(self.interface.blocks_folder)
         block = pd.read_csv(Path(self.interface.blocks_folder, self.blocks[block_name]), skip_blank_lines=True, comment="#")
         block.set_index('pin_id')
         return block
@@ -218,7 +219,8 @@ class ParadigmLoader():
 
                 
             else:
-                end_column_corrected = np.array([max_end for i in range(block_repeat.shape[0])])
+                status_end = max_end
+                end_column_corrected = np.array([status_end for i in range(block_repeat.shape[0])])
                 block_repeat.loc[:, "end"] = end_column_corrected
 
 
@@ -244,4 +246,5 @@ class ParadigmLoader():
         # thread_name will be filled in this function
         paradigm["active"] = False
         paradigm["thread_name"] = None
+        print(paradigm)
         return paradigm

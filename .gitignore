@@ -112,3 +112,4 @@ node_modules
 LeMDT/static/semantic*
 .Rproj.user
 .Rhistory
+*.avi

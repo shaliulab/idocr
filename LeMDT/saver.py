@@ -48,6 +48,7 @@ class Saver():
         self.store_video = None
         self.store_img = None
         self.out = None
+        self.video_writers = None
 
         self.path = self.tracker.interface.output_path
         if self.path is None: self.path = self.tracker.interface.cfg["saver"]["path"]

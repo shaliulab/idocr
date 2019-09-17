@@ -566,8 +566,9 @@ class TkinterGui():
         Note: this is the only method that closes the GUI
         """
         self.interface.answer = self.ask_save_results()
-        self.root.quit()
-        self.interface.close()
+        if not self.interface.answer is None:
+            self.root.quit()
+            self.interface.close()
 
 
 TkinterGui.toggle_pin = _toggle_pin
