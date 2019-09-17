@@ -1,0 +1,5 @@
+block,start,times
+A_right_B_left,1,1
+B_right_A_left,3,1
+end,5,1
+startup,0,1
