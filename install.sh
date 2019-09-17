@@ -1,8 +1,14 @@
 #! /bin/bash
 
-rm pypylon*.whl
-wget https://github.com/basler/pypylon/releases/download/1.4.0/pypylon-1.4.0-cp37-cp37m-linux_x86_64.whl
-pip install pypylon*whl
+
+INSTALLED=$(pip list | grep pypylon | wc -l)
+if [ $INSTALLED -eq 0 ]
+then
+  rm pypylon*.whl
+  https://github.com/basler/pypylon/releases/download/1.4.0/pypylon-1.4.0-cp37-cp37m-linux_x86_64.whl
+  pip install pypylon*whl
+fi
+
 INSTALLED=$(pip list | grep LeMDT | wc -l)
 if [ $INSTALLED -eq 1 ]
 then
