@@ -12,15 +12,15 @@ import os
 # Third party imports
 import numpy as np
 import pandas as pd
+from pyfirmata import ArduinoMega, Arduino
 import serial
 import yaml
 
 # Local application imports
-from pyfirmata import ArduinoMega, Arduino
-from dummy_arduino import Dummy
-from paradigm_loader import ParadigmLoader
-from lmdt_utils import setup_logging
-from arduino_threading import ArduinoThread
+from .dummy_arduino import Dummy
+from .paradigm_loader import ParadigmLoader
+from .lmdt_utils import setup_logging
+from .arduino_threading import ArduinoThread
 
 # Set up package configurations
 setup_logging()
@@ -153,27 +153,30 @@ class LearningMemoryDevice(ParadigmLoader):
         self.active_block = {k: False for k in self.program.index}
  
         # They are not run throughout the lifetime of the program, just at some interval and without intermitency       
-        events = self.paradigm.index.get_level_values('pin_id')
+        events = self.paradigm['pin_id']
         count = {ev: 0 for ev in events}
         for event_index, ev in enumerate(events):
+
+            pin_event_row = self.paradigm.iloc[event_index]
+
             d_pin_number = np.asscalar(self.mapping.loc[ev]["pin_number"])
             x0 = count[ev]
             x1 = count[ev]+1
 
-            d_start =      np.asscalar(self.paradigm.loc[[ev]].iloc[x0:x1, :]["start"])
-            d_end =        np.asscalar(self.paradigm.loc[[ev]].iloc[x0:x1, :]["end"])
+            d_start =      np.asscalar(pin_event_row["start"])
+            d_end =        np.asscalar(pin_event_row["end"])
 
             if d_end <= d_start:
                 continue
-            d_on =         np.asscalar(self.paradigm.loc[[ev]].iloc[x0:x1, :]["on"])
-            d_off =        np.asscalar(self.paradigm.loc[[ev]].iloc[x0:x1, :]["off"])
-            block =        np.asscalar(self.paradigm.loc[[ev]].iloc[x0:x1, :].index)
+            d_on =         np.asscalar(pin_event_row["on"])
+            d_off =        np.asscalar(pin_event_row["off"])
+            block =        pin_event_row["block"]
 
             d_name = 'thread-{}-{}'.format(ev, count[ev])
 
 
             # print(self.paradigm)
-            self.paradigm.at[ev, "thread_name"] = d_name
+            self.paradigm.at[event_index, "thread_name"] = d_name
 
             kwargs = {
                 "pin_number"   : d_pin_number,
@@ -298,7 +301,7 @@ class LearningMemoryDevice(ParadigmLoader):
 if __name__ == "__main__":
     
     import signal
-    from interface import Interface
+    from .interface import Interface
     
     # Arguments to follow the command, adding video, etc options
     ap = argparse.ArgumentParser()

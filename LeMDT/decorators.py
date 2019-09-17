@@ -32,8 +32,29 @@ def mixedomatic(cls):
 # def if_record_event(interface):
 def if_record_event(f):
     def wrapper(self, *args, **kwargs):
-        is_set = self.tracker.interface.record_event.is_set()
+        is_set = self.interface.record_event.is_set()
         if not is_set:
+            return True            
+        return f(self, *args, **kwargs)
+    return wrapper
+    # return _if_record_event
+
+
+def if_play_event(f):
+    def wrapper(self, *args, **kwargs):
+        is_set = self.interface.play_event.is_set()
+        if not is_set:
+            return True            
+        return f(self, *args, **kwargs)
+    return wrapper
+    # return _if_record_event
+
+# def if_record_event(interface):
+def if_config_loaded(f):
+    def wrapper(self, *args, **kwargs):
+        config_loaded = not self.interface.config is None
+        if not config_loaded:
+            print('config is not loaded')
             return True            
         return f(self, *args, **kwargs)
     return wrapper

@@ -7,7 +7,7 @@ import yaml
 import numpy as np
 import coloredlogs
 import threading
-from decorators import export
+from .decorators import export
 
 class ReadConfigMixin():
 

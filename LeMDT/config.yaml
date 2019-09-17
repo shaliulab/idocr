@@ -33,10 +33,9 @@ saver:
     fps: 2
 
 blocks:
-    folder: LeMDT/blocks/
+    folder: blocks/
     pattern: '.csv'
 
 interface:
     machine_id: "LeMDTe27SL5a9e19f94de287e28f789825"
-    filename: "tkinter.csv"
     mode: 'deploy'

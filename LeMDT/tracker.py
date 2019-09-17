@@ -16,12 +16,12 @@ from pathlib import Path
 from sklearn.cluster import KMeans
 
 # Local application imports
-from features import Arena, Fly
-from streams import STREAMS
-from lmdt_utils import setup_logging
-from decorators import export
-from saver import Saver
-from LeMDT import PROJECT_DIR
+from .features import Arena, Fly
+from .streams import STREAMS
+from .lmdt_utils import setup_logging
+from .decorators import export
+from .saver import Saver
+from . import PROJECT_DIR
 
 # Set up package configurations
 cv2_version = cv2.__version__
@@ -152,7 +152,7 @@ class Tracker():
 
     def set_saver(self):
         saver = Saver(
-            tracker=self, cfg = self.interface.cfg,
+            tracker=self,
             record_event=self.interface.record_event
         )
 
@@ -202,10 +202,7 @@ class Tracker():
         self.interface.frame_color = np.zeros((self.video_height, self.video_width, 3), np.uint8)
         self.interface.gray_color = np.zeros((self.video_height, self.video_width, 3), np.uint8)
         self.interface.gray_gui = np.zeros((self.video_height, self.video_width), np.uint8)
-        width = self.interface.cfg["arena"]["width"]
-        height = self.interface.cfg["arena"]["height"]        
-        empty_img = np.zeros(shape=(height*3, width*3, 3), dtype=np.uint8)
-        self.interface.stacked_arenas = [empty_img.copy() for i in range(self.interface.cfg["arena"]["targets"])]
+ 
 
 
     def rotate_frame(self, img, rotation=180):

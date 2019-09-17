@@ -18,9 +18,9 @@ import pandas as pd
 from PIL import ImageTk, Image
 
 # Local application imports
-from lmdt_utils import setup_logging, _toggle_pin
-from LeMDT import PROJECT_DIR, ROOT_DIR, STATIC_DIR
-from decorators import if_record_event
+from .lmdt_utils import setup_logging, _toggle_pin
+from . import PROJECT_DIR, STATIC_DIR
+from .decorators import if_record_event, if_config_loaded, if_play_event
 
 
 setup_logging()
@@ -124,8 +124,6 @@ class TkinterGui():
 
         self.root = root
         self.interface = interface
-        self.control_panel_path = Path(PROJECT_DIR, 'arduino_panel', self.interface.cfg["interface"]["filename"]).__str__()
-
         self.bd = 1
 
         ####################################
@@ -142,6 +140,7 @@ class TkinterGui():
         file_menu = tk.Menu(self.menu)
         # add a command to the menu option, calling it exit, and the
         # command it runs on event is client_exit
+        file_menu.add_command(label="Config", command=self.ask_config)
         file_menu.add_command(label="Program", command=self.load_program)
         file_menu.add_command(label="Mapping", command=self.ask_mapping)
         # add "file" to our menu
@@ -161,11 +160,6 @@ class TkinterGui():
         self.finished = False
 
         self.log = log
-
-        self.arena_width = self.interface.cfg["arena"]["width"]
-        self.arena_height = self.interface.cfg["arena"]["height"]
-        
-
 
     def create(self):
         """
@@ -190,14 +184,10 @@ class TkinterGui():
         label.pack()
         self.panel['frame_color'] = label
 
-        # Init zoom tab
-        self.init_zoom_tab()
-
-
 
         # init arduino control
         if self.interface.arduino:
-            control_panel = pd.read_csv(self.control_panel_path, skip_blank_lines=True, comment="#")
+            control_panel = pd.read_csv(self.interface.control_panel_path, skip_blank_lines=True, comment="#")
             radius = 6
             sym = control_panel["sym"].values
             # print(sym)
@@ -287,6 +277,10 @@ class TkinterGui():
         self.nb.add(self.main_frame, text = "Monitor")
         self.nb.add(self.zoom_frame, text = "Zoom")
 
+    @if_config_loaded
+    def play(self):
+        self.interface.play()
+
     
     def configure_buttons(self):
         """
@@ -294,11 +288,12 @@ class TkinterGui():
         Called by __init__
         """
         
-        playButton = BetterButton(self.button_frame, 'play', self.interface.play, 0)
-        okButton = BetterButton(self.button_frame, 'ok_arena', self.interface.ok_arena, 1)
-        recordButton = BetterButton(self.button_frame, 'record', self.interface.record, 2)
+        loadConfigButton = BetterButton(self.button_frame, 'start', self.interface.load_config, 0)
+        playButton = BetterButton(self.button_frame, 'play', self.play, 1)
+        okButton = BetterButton(self.button_frame, 'ok_arena', self.interface.ok_arena, 2)
+        recordButton = BetterButton(self.button_frame, 'record', self.interface.record, 3)
 
-        buttons = [playButton, okButton, recordButton]
+        buttons = [loadConfigButton, playButton, okButton, recordButton]
         [b.pack(side="left", expand=True, padx=10) for b in buttons]
 
     
@@ -314,7 +309,34 @@ class TkinterGui():
         # canvas.bind("<Button-1>", self.on_click)
         # canvas.bind("<Configure>", self.on_resize)
         self.canvas = canvas
-   
+
+    
+    def ask_config(self):
+        print(PROJECT_DIR)
+
+        config = tk.filedialog.askopenfilename(
+            initialdir = PROJECT_DIR,
+            title = "Select config file",
+            filetypes = (("yaml files","*.yaml"),("all files","*.*"))
+            )
+        
+        self.load_config(config)
+
+    def load_config(self, config=None):
+
+        if config is None:
+            config = self.interface.config
+        else:
+            self.interface.config = config
+
+        self.interface.load_config()
+        # Init zoom tab
+        self.init_zoom_tab()
+        self.interface.init_components()
+
+
+            
+
     def ask_program(self):
         """
         Select a file in the /program dir to provide a program or paradigm
@@ -414,9 +436,10 @@ class TkinterGui():
         self.panel['frame_color'].configure(image=image)
         self.panel['frame_color'].image = image
 
+
     def init_zoom_tab(self):
 
-        labels = [None,] * len(self.interface.stacked_arenas)
+        labels = [None,] * self.interface.cfg['arena']['targets']
 
         for i, image in enumerate(self.interface.stacked_arenas):
             column = self.zoom_frame_columns[0]
@@ -523,6 +546,7 @@ class TkinterGui():
         ## needed to close the window with X
         self.root.update()
 
+    @if_play_event
     def run(self):
         '''
         Run the tkinter GUI
@@ -545,16 +569,18 @@ class TkinterGui():
         if self.interface.arduino:
             self.update_monitor(self.interface.device.mapping)              
 
-        self.apply_updates()
-    
+    @if_record_event
+    def ask_save_results(self):
+        answer = simpledialog.askstring('Save results?', 'Yes/No')
+        return answer
+
     def close(self):
         """
         Quit the GUI and run the interface.close() method
         This is the callback function of the X button in the window
         Note: this is the only method that closes the GUI
         """
-
-        self.interface.answer = simpledialog.askstring('Save results?', 'Yes/No')
+        self.interface.answer = self.ask_save_results()
         self.root.quit()
         self.interface.close()
 

@@ -11,13 +11,13 @@ import cv2
 import numpy
 import pandas as pd
 import subprocess
+import threading
 # from skvideo.io import VideoWriter
 
 # Local application imports
-from lmdt_utils import setup_logging
-from decorators import if_record_event
-from LeMDT import PROJECT_DIR
-import threading
+from .lmdt_utils import setup_logging
+from .decorators import if_record_event
+from . import PROJECT_DIR
 
 # Set up package configurations
 setup_logging()
@@ -28,11 +28,12 @@ max_len = 50
 
 class Saver():
 
-    def __init__(self, tracker, cfg, cache={}, record_event=None):
+    def __init__(self, tracker, cache={}, record_event=None):
 
 
         self.cache = cache
         self.tracker = tracker
+        self.interface = self.tracker.interface
         self.log = logging.getLogger(__name__)
         self.lst = []
         self.record_event = record_event
@@ -48,12 +49,16 @@ class Saver():
         self.store_img = None
         self.out = None
 
-        self.path = cfg["saver"]["path"]
-        self.video_format = cfg["saver"]["video_format"]
-        self.video_out_fps = cfg["saver"]["fps"]
+        self.path = self.tracker.interface.output_path
+        if self.path is None: self.path = self.tracker.interface.cfg["saver"]["path"]
+        print('path')
+        print(self.path)
+
+        self.video_format = self.tracker.interface.cfg["saver"]["video_format"]
+        self.video_out_fps = self.tracker.interface.cfg["saver"]["fps"]
         self.log.info('FPS of output videos: {}'.format(self.video_out_fps))
         
-        self.machine_id = cfg["interface"]["machine_id"]
+        self.machine_id = self.tracker.interface.cfg["interface"]["machine_id"]
         self.t = None
 
     def init_record_start(self):
@@ -63,7 +68,8 @@ class Saver():
         """
         record_start_formatted = self.tracker.interface.record_start.strftime("%Y-%m-%d_%H-%M-%S")
         filename = record_start_formatted + "_" + self.machine_id
-        self.output_dir = Path(PROJECT_DIR, self.path, record_start_formatted)
+        self.output_dir = Path(self.path, record_start_formatted)
+        print(self.output_dir)
         self.store = Path(self.output_dir, filename)
         self.store_video = self.store.as_posix()
         self.store_img = Path(self.output_dir, "frames")

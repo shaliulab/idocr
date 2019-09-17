@@ -11,14 +11,20 @@ import coloredlogs
 import numpy as np
 import psutil
 
-from decorators import export 
-from lmdt_utils import setup_logging
-from LeMDT import ROOT_DIR, UTILS_DIR
+from .decorators import export 
+from .lmdt_utils import setup_logging
+from . import UTILS_DIR
 
 setup_logging()
 
 
 class StandardStream():
+
+    def get_width(self):
+        raise Exception
+    
+    def get_height(self):
+        raise Exception
 
     def get_dimensions(self):
         return self.get_width(), self.get_height()

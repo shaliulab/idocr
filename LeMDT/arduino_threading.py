@@ -9,7 +9,7 @@ import warnings
 import numpy as np
 
 # Local application imports
-from lmdt_utils import setup_logging, _toggle_pin
+from .lmdt_utils import setup_logging, _toggle_pin
 
 # Set up package configurations
 setup_logging()
@@ -139,8 +139,8 @@ class ArduinoThread(threading.Thread):
         # pin_id = self.mapping.query('pin_number == "{}"'.format(pin_number)).index[0]
 
         ##############
-        # It's time to activate the Arduino
-        self.device.paradigm.iloc[event_index,:]["active"] = True
+        # It's time to activate the Arduino       
+        self.device.paradigm.at[event_index,"active"] = True
 
         self.device.active_block[block] = True
 

@@ -8,7 +8,7 @@ import yaml
 import numpy as np
 import pandas as pd
 
-from lmdt_utils import setup_logging
+from .lmdt_utils import setup_logging
 
 setup_logging()
 
@@ -46,13 +46,11 @@ class ParadigmLoader():
         # A dictionary mapping a block name to its csv file
         ###########################################################################
 
-        # Read what is the block folder
-        self.blocks_folder = self.interface.cfg["blocks"]["folder"]
         # Define a string pattern that will be matched to filenames
         pattern = self.interface.cfg["blocks"]["pattern"]
         # Fetch blocks available (filenames in the folder without the extension)
         # A block is an ensemble of events with a practical function eg. testing, conditioning,
-        self.blocks = {f.split(".")[0]: f for f in os.listdir(self.blocks_folder) if f.endswith(pattern)}
+        self.blocks = {f.split(".")[0]: f for f in os.listdir(self.interface.blocks_folder) if f.endswith(pattern)}
                 
         ###########################################################################
         # READ MAPPING
@@ -78,7 +76,6 @@ class ParadigmLoader():
         # block,start,times
         # clean,0,1
 
-        print(program_path)
         program = pd.read_csv(program_path)       
         program.set_index('block')
 
@@ -122,7 +119,7 @@ class ParadigmLoader():
 
     def read_block(self, block_name):
         """Read the correct block file ignoring comments and blank lines."""
-        block = pd.read_csv(Path(self.blocks_folder, self.blocks[block_name]), skip_blank_lines=True, comment="#")
+        block = pd.read_csv(Path(self.interface.blocks_folder, self.blocks[block_name]), skip_blank_lines=True, comment="#")
         block.set_index('pin_id')
         return block
 
@@ -237,7 +234,9 @@ class ParadigmLoader():
         self.program = program
 
         paradigm = pd.concat(expanded_blocks, sort=True)
-        paradigm.set_index('pin_id', inplace=True)
+        # paradigm.set_index('pin_id', inplace=True)
+        paradigm.reset_index(inplace=True, drop='index')
+
         # print(paradigm.index)
 
         # Initialize the active and thread_name columns with default values

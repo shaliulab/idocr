@@ -15,12 +15,12 @@ import numpy as np
 import yaml
 
 # Local application imports
-from arduino import LearningMemoryDevice
-from lmdt_utils import setup_logging
-from orevent import OrEvent
-from gui_framework.desktop_app import TkinterGui
-from tracker import Tracker
-from LeMDT import ROOT_DIR, PROJECT_DIR
+from .arduino import LearningMemoryDevice
+from .lmdt_utils import setup_logging
+from .orevent import OrEvent
+from .desktop_app import TkinterGui
+from .tracker import Tracker
+from . import PROJECT_DIR
 
 DjangoGui = None
 
@@ -29,7 +29,7 @@ setup_logging()
 
 GUIS = {'django': DjangoGui, 'tkinter': TkinterGui}
 
-config_yaml = Path(PROJECT_DIR, "config.yaml").__str__()
+# config_yaml = Path(PROJECT_DIR, "../config.yaml").__str__()
 
 
 # @mixedomatic
@@ -38,11 +38,11 @@ class Interface():
     def __init__(self, arduino=False, track=False,
     mapping_path=None,
     program_path=None,
-    blocks=None, port=None, camera=None, video=None, reporting=False, config=config_yaml,
+    blocks=None, port=None, camera=None,
+    video=None, reporting=False,
+    config=None,
+    output_path=None,
     duration=None, experimenter=None, gui=None):
-
-        with open(config, 'r') as ymlfile:
-            self.cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
 
         ## Initialization of attributes
@@ -50,6 +50,8 @@ class Interface():
         self.interface_start = None  # Instantation of the Interface class 
         self.arduino_start = None # Right before .start() the arduino threads
         self.tracking_start = None
+        self.config = None
+        self.cfg = None
 
         # Framework used to show graphics
         self.gui = None
@@ -109,13 +111,14 @@ class Interface():
         self.play_start = None
         self.record_start = None
 
+        self.config = config
+        print('config')
+        print(self.config)
+
 
         self.reporting = reporting
         self.camera = camera
         self.video = video
-
-        if mapping_path is None: mapping_path = Path(PROJECT_DIR, 'mappings', self.cfg["interface"]["filename"]).__str__()
-        if program_path is None: program_path = Path(PROJECT_DIR, "programs", 'ir.csv').__str__()
 
         self.mapping_path = mapping_path
         self.program_path = program_path
@@ -126,16 +129,19 @@ class Interface():
             self.gui = GUIS[gui](interface=self)
 
         self.timestamp = 0
-        self.duration = duration if duration else self.cfg["interface"]["duration"]
-        self.experimenter = experimenter if experimenter else self.cfg["tracker"]["experimenter"]
+        self.duration = duration
+        self.experimenter = experimenter
+
+
         self.log = logging.getLogger(__name__)
         
         self.log.info("Start time: {}".format(self.interface_start.strftime("%Y%m%d-%H%M%S")))
         self.interface_initialized = False
         self.log.info('Interface initialized')
 
+        self.output_path = output_path
+        self.control_panel_path = Path(PROJECT_DIR, 'arduino_panel', 'tkinter.csv').__str__()
 
-        self.min_arena_area = self.cfg["arena"]["min_area"] 
         self.fraction_area = 1
         self.answer = "Yes"
 
@@ -196,8 +202,6 @@ class Interface():
         classes. Upon setting this event, these processes stop
         """
         self.exit.set()
-        self.tracker.saver.refresh_trace_plot()
-
         self.log.info("Running interface.close()")
         if signo is not None: self.log.info("Received %", signo)
         
@@ -282,18 +286,48 @@ class Interface():
         self.arena_ok_event.set()
 
     
-    def init_components(self):
+    def load_config(self):
         
+        with open(self.config, 'r') as ymlfile:
+            self.cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
+
+        if self.mapping_path is None:
+            self.mapping_path = Path(PROJECT_DIR, 'mappings', 'tkinter.csv').__str__()
+        else:
+            self.mapping_path = Path(PROJECT_DIR, self.mapping_path).__str__()
+
+        if self.program_path is None:
+            self.program_path = Path(PROJECT_DIR, "programs", 'ir.csv').__str__()
+        else:
+            self.program_path = Path(PROJECT_DIR, self.program_path).__str__()
+
+        print(self.mapping_path)
+        print(self.program_path)
+        
+        # if self.duration is None: self.duration = self.cfg["interface"]["duration"]
+        if self.experimenter is None: self.experimenter = self.cfg["tracker"]["experimenter"]
+        self.min_arena_area = self.cfg["arena"]["min_area"] 
+        # self.control_panel_path = Path(PROJECT_DIR, 'arduino_panel', self.cfg["interface"]["filename"]).__str__()
+        self.arena_width = self.cfg["arena"]["width"]
+        self.arena_height = self.cfg["arena"]["height"]
+
+        self.blocks_folder = Path(PROJECT_DIR, self.cfg["blocks"]["folder"]).__str__()
+        
+        width = self.cfg["arena"]["width"]
+        height = self.cfg["arena"]["height"]        
+        empty_img = np.zeros(shape=(height*3, width*3, 3), dtype=np.uint8)
+        self.stacked_arenas = [empty_img.copy() for i in range(self.cfg["arena"]["targets"])]
+
+    def init_components(self):
+ 
         self.init_control_c_handler()
         if self.arduino:
+            self.log.info('Initializing Arduino board')
             self.init_device()
     
         if self.track:
+            self.log.info('Initializing tracker')
             self.init_tracker()
-
-        self.gui.create()
-
-
     
     def start(self):
         """
@@ -301,8 +335,10 @@ class Interface():
         as long as there is a GUI selected
         and the exit event has not been set
         """
+        self.gui.create()
 
-        self.init_components()
         while not self.exit.is_set() and self.gui is not None:
             # print(type(self.device.mapping))
             self.gui.run()
+            self.gui.apply_updates()
+
