@@ -87,13 +87,18 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
   pi_data <- data.frame(period=NULL, arena=NULL, x=NULL, pref_index=NULL)
 
   for (r in relevant_periods) {
-    print(r)
     perd <- rle_period$values[r]
+    print(paste0('period ', perd))
+    
     for (a in unique(lemdt_result$arena)) {
+      print(paste0('arena ', a))
+      pref_index <- pindex[arena == a & period == perd,]$pi
+      if(length(pref_index) == 0) pref_index <- NA
+      
       pi_data <- rbind(pi_data, data.frame(
         period = perd, arena = a,
         x = (unlist(time_starts[r]) + unlist(time_ends[r])) / 2,
-        pref_index = pindex[arena == a & period == perd,]$pi))
+        pref_index = pref_index))
     }
   }
   

@@ -6,6 +6,8 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
     # experiment_folder='/home/antortjim/MEGAsync/Gitlab/LeMDT/lemdt_results/LeMDTe27SL5a9e19f94de287e28f789825/LEARNER_001/2019-09-16_17-46-34'
     # experiment_folder = '/home/antortjim/MEGAsync/Gitlab/LeMDT/lemdt_results/LeMDTe27SL5a9e19f94de287e28f789825/LEARNER_001/2019-09-16_16-04-19'
     # experiment_folder = '~/2019-09-17_20-23-18'
+   # experiment_folder <- '/home/luna.kuleuven.be/u0120864/2019-09-17_21-05-56'
+  
     # }
   filename <- list.files(path = experiment_folder, pattern = '_LeMDTe27SL5a9e19f94de287e28f789825.csv')
   
