@@ -11,3 +11,5 @@ include LeMDT/arduino_panel/*.csv
 include LeMDT/config.yaml
 include LeMDT/logging.yaml
 include LeMDT/videos/video_draft.avi
+include LeMDT/utils/open_camera.sh
+
