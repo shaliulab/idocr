@@ -1,5 +1,4 @@
 block,start,times
-A_right_B_left,1,1
-B_right_A_left,3,1
-end,10,1
+co2_preference_test_two,0,1
+end,20,1
 startup,0,1
