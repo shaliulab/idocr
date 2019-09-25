@@ -33,7 +33,6 @@ saver:
     fps: 2
 
 blocks:
-    folder: blocks/
     pattern: '.csv'
 
 interface:

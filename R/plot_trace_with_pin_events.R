@@ -2,7 +2,7 @@
 #' @export
 #'
 #'  
-plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relevant = 1:4, colors=c("red", "blue"), arena_width_mm = 50) {
+plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relevant = 1:4, colors=c("red", "blue"), arena_width_mm = 50, A='A', B = 'B') {
   
   if(interactive()) {
     pins_relevant <- 1:4
@@ -27,7 +27,7 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
   
   
   relevant_periods <- rle_period_values_split_unique %>%
-      lapply(function(x) sum(x[pins_relevant]) == 2) %>% unlist %>% which
+      lapply(function(x) sum(x[pins_relevant]) %in% c(2,0)) %>% unlist %>% which
   
   
   number_different_events <- length(unique(rle_period_values_split_unique[relevant_periods]))
@@ -40,7 +40,7 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
   
   y_mins <- c(0, arena_width_mm/2)
   y_max <- c(arena_width_mm/2, arena_width_mm)
-  odours <-  c("A", "B")
+  odours <-  c(A, B)
   names(colors) <- odours
   
   pin_state_matrix <- do.call(rbind, rle_period_values_split)

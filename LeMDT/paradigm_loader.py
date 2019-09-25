@@ -50,7 +50,10 @@ class ParadigmLoader():
         pattern = self.interface.cfg["blocks"]["pattern"]
         # Fetch blocks available (filenames in the folder without the extension)
         # A block is an ensemble of events with a practical function eg. testing, conditioning,
-        self.blocks = {f.split(".")[0]: f for f in os.listdir(self.interface.blocks_folder) if f.endswith(pattern)}
+        self.program_path = program_path
+        programs_folder = os.path.dirname(self.program_path)
+        self.blocks_folder = os.path.join(programs_folder, '..', 'blocks')
+        self.blocks = {f.split(".")[0]: f for f in os.listdir(self.blocks_folder) if f.endswith(pattern)}
                 
         ###########################################################################
         # READ MAPPING
@@ -87,6 +90,7 @@ class ParadigmLoader():
         # program["end"] = program["start"] + program["duration"] * program["times"]
 
         self.program = program
+
         
         # Take a snapshot of the program and save it in overview
         # overview = program
@@ -119,8 +123,7 @@ class ParadigmLoader():
 
     def read_block(self, block_name):
         """Read the correct block file ignoring comments and blank lines."""
-        print(self.interface.blocks_folder)
-        block = pd.read_csv(Path(self.interface.blocks_folder, self.blocks[block_name]), skip_blank_lines=True, comment="#")
+        block = pd.read_csv(Path(self.blocks_folder, self.blocks[block_name]), skip_blank_lines=True, comment="#")
         block.set_index('pin_id')
         return block
 

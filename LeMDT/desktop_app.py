@@ -20,7 +20,7 @@ from PIL import ImageTk, Image
 # Local application imports
 from .lmdt_utils import setup_logging, _toggle_pin
 from . import PROJECT_DIR, STATIC_DIR
-from .decorators import if_record_event, if_config_loaded, if_play_event
+from .decorators import if_record_event, if_config_loaded, if_play_event, if_not_record_event
 
 
 setup_logging()
@@ -140,7 +140,7 @@ class TkinterGui():
         file_menu = tk.Menu(self.menu)
         # add a command to the menu option, calling it exit, and the
         # command it runs on event is client_exit
-        file_menu.add_command(label="Config", command=self.ask_config)
+        # file_menu.add_command(label="Config", command=self.ask_config)
         file_menu.add_command(label="Program", command=self.load_program)
         file_menu.add_command(label="Mapping", command=self.ask_mapping)
         # add "file" to our menu
@@ -288,12 +288,15 @@ class TkinterGui():
         Called by __init__
         """
         
-        loadConfigButton = BetterButton(self.button_frame, 'start', self.interface.load_and_apply_config, 0)
+        # loadConfigButton = BetterButton(self.button_frame, 'start', self.interface.load_and_apply_config, 0)
         playButton = BetterButton(self.button_frame, 'play', self.play, 1)
         okButton = BetterButton(self.button_frame, 'ok_arena', self.interface.ok_arena, 2)
         recordButton = BetterButton(self.button_frame, 'record', self.interface.record, 3)
 
-        buttons = [loadConfigButton, playButton, okButton, recordButton]
+        buttons = [
+            #loadConfigButton,
+            playButton, okButton, recordButton
+        ]
         [b.pack(side="left", expand=True, padx=10) for b in buttons]
 
     
@@ -312,7 +315,6 @@ class TkinterGui():
 
     
     def ask_config(self):
-        print(PROJECT_DIR)
 
         config = tk.filedialog.askopenfilename(
             initialdir = PROJECT_DIR,
@@ -351,11 +353,20 @@ class TkinterGui():
 
         if program_path is None:
             program_path = self.ask_program()
+            print('PROGRAM PATH')
+            print(program_path)
+            
+        if program_path is None:
+            return
+            
         if program_path != ():
             self.interface.load_program_event.set()
-            self.interface.device.program_path = program_path
+            self.interface.program_path = program_path
+            print('self.interface.program_path')
+            print(self.interface.program_path)
+
             threads = self.interface.device.prepare('exit')
-            self.log.info('Loading program {}'.format(self.interface.device.program_path))
+            self.log.info('Loading program {}'.format(self.interface.program_path))
             return threads
 
 
@@ -387,6 +398,7 @@ class TkinterGui():
         # print(self.canvas.type(item))
 
     
+    # @if_not_record_event
     def circle_click(self, event):
         item = self.canvas.find_closest(event.x, event.y)
         pin_id = self.canvas.gettags(item)[1]

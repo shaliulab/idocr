@@ -14,4 +14,10 @@ cap.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
 grabResult = cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
 img = grabResult.Array
 
+# set the exposure time
+cap.ExposureTimeAbs.SetValue(35000)
+
+# set the fps!
+cap.AcquisitionFrameRateAbs.SetValue(20) 
+
 ipdb.set_trace()

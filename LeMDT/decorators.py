@@ -39,6 +39,17 @@ def if_record_event(f):
     return wrapper
     # return _if_record_event
 
+# def if_record_event(interface):
+def if_not_record_event(f):
+    def wrapper(self, *args, **kwargs):
+        is_set = self.interface.record_event.is_set()
+        if is_set:
+            return True            
+        return f(self, *args, **kwargs)
+    return wrapper
+    # return _if_record_event
+
+
 
 def if_play_event(f):
     def wrapper(self, *args, **kwargs):

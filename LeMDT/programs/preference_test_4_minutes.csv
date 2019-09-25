@@ -1,0 +1,8 @@
+block,start,times
+A_right_B_left_30s,1,1
+B_right_A_left_30s,150/60,1
+# again
+A_right_B_left_30s,4,1
+B_right_A_left_30s,330/60,1
+end,10,1
+startup,0,1

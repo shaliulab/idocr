@@ -38,3 +38,5 @@ chmod +x learningmemorysetup.desktop
 
 ln -f learningmemorysetup.desktop ~/.local/share/applications
 dconf write /org/gnome/shell/favorite-apps "`dconf read /org/gnome/shell/favorite-apps | sed 's/]/, '\''learningmemorysetup.desktop'\'']/'`"
+
+#echo 'export LD_LIBRARY_PATH=~/anaconda3/envs/py37/lib/' >> ~/.bashrc

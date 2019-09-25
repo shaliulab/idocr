@@ -185,9 +185,7 @@ class Interface():
 
         self.log.info("Running interface.init_device")
         device = LearningMemoryDevice(
-            interface=self,
-            mapping_path=self.mapping_path,
-            program_path=self.program_path,
+            interface=self
         )
         device.connect_arduino_board(self.port)
         device.prepare('exit')
@@ -310,9 +308,7 @@ class Interface():
         # self.control_panel_path = Path(PROJECT_DIR, 'arduino_panel', self.cfg["interface"]["filename"]).__str__()
         self.arena_width = self.cfg["arena"]["width"]
         self.arena_height = self.cfg["arena"]["height"]
-
-        self.blocks_folder = Path(PROJECT_DIR, self.cfg["blocks"]["folder"]).__str__()
-        
+       
         width = self.cfg["arena"]["width"]
         height = self.cfg["arena"]["height"]        
         empty_img = np.zeros(shape=(height*3, width*3, 3), dtype=np.uint8)
@@ -349,6 +345,8 @@ class Interface():
         and the exit event has not been set
         """
         self.gui.create()
+        config = os.path.join(PROJECT_DIR, 'config.yaml')
+        self.load_and_apply_config(config)
 
         while not self.exit.is_set() and self.gui is not None:
             # print(type(self.device.mapping))

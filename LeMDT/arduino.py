@@ -29,7 +29,7 @@ BOARDS = {"Arduino": Arduino, "ArduinoMega": ArduinoMega, "Dummy": Dummy}
 
 class LearningMemoryDevice(ParadigmLoader):
 
-    def __init__(self, interface, mapping_path, program_path):
+    def __init__(self, interface):
 
         ## Initialization
         self.mapping = None
@@ -49,10 +49,6 @@ class LearningMemoryDevice(ParadigmLoader):
         self.interface = interface
 
         self.interface.arduino_stopped = False
-
-
-        self.mapping_path = mapping_path
-        self.program_path = program_path
 
         # Inherited from interface
         self.reporting = self.interface.reporting
@@ -110,7 +106,7 @@ class LearningMemoryDevice(ParadigmLoader):
         """
 
         self.log.debug('Loading program')
-        self.load_program(mapping_path=self.mapping_path, program_path=self.program_path)
+        self.load_program(mapping_path=self.interface.mapping_path, program_path=self.interface.program_path)
 
         # power off any pins if any
         self.power_pins_off(shutdown=False, ir=True)

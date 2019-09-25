@@ -1,5 +1,5 @@
 #' @export
-preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FALSE) {
+preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FALSE, A='A', B='B', min_exits_required=5) {
  
   # if(interactive()) {
     # decision_zone_mm=10
@@ -69,14 +69,14 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
   # browser()
   pindex <- lemdt_result[, .(
     n = count_exits(position)[[3]],
-    pi = preference_index(position)
+    pi = preference_index(pos = position, min_exits_required = min_exits_required)
     ), by = .(arena, period)]
  
   
   ##################################
   ## Plot
   #################################
-  p <- plot_trace_with_pin_events(lemdt_result = lemdt_result, borders=borders, pindex = pindex)
+  p <- plot_trace_with_pin_events(lemdt_result = lemdt_result, borders=borders, pindex = pindex, A=A,B=B)
   
   return(list(plot = p, preference_index = pindex))
 }
