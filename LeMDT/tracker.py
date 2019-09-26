@@ -58,6 +58,7 @@ class Tracker():
         #                                ) + "\n"]
         
 
+        self.recursive_calls = 0
         self.interface = None
         self.camera = None
         self.video = None
@@ -344,6 +345,7 @@ class Tracker():
             if not success:
                 self.failed_read_frame =+ 1
                 self.log.info("Could not read frame")
+                self.log.warning('Recursive call to track() {}'.format(self.recursive_calls))
                 self.track()
 
 
@@ -505,9 +507,9 @@ class Tracker():
 
                 if len(putative_flies) == 0:
                     self.missing_fly += 1
-                    fname = str(self.record_frame_count) + "_" + str(arena.identity) + ".tiff"
-                    gray_crop = gray[arena.tl_corner[1]:arena.br_corner[1], arena.tl_corner[0]:arena.br_corner[0]]
-                    cv2.imwrite(Path(self.failed_arena_path, fname).__str__(), gray_crop)
+                    # fname = str(self.record_frame_count) + "_" + str(arena.identity) + ".tiff"
+                    # gray_crop = gray[arena.tl_corner[1]:arena.br_corner[1], arena.tl_corner[0]:arena.br_corner[0]]
+                    # cv2.imwrite(Path(self.failed_arena_path, fname).__str__(), gray_crop)
                     continue
                 elif len(putative_flies) > 1:
                     self.log.debug("Arena {} in frame {}. Multiple flies found".format(arena.identity, self.frame_count))             
@@ -633,6 +635,7 @@ class Tracker():
         while self.status and not self.interface.exit.is_set(): 
             self.merge_masks()
             self.interface.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
+            self.recursive_calls += 1
             self.status = self.track()
             # NEEDED?
             # we neet to event.wait so that Python listens to the
