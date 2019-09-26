@@ -19,6 +19,8 @@ from .arduino import LearningMemoryDevice
 from .lmdt_utils import setup_logging
 from .orevent import OrEvent
 from .desktop_app import TkinterGui
+from .cli_app import CLIGui
+
 from .tracker import Tracker
 from . import PROJECT_DIR
 
@@ -27,7 +29,7 @@ DjangoGui = None
 # Set up package configurations
 setup_logging()
 
-GUIS = {'django': DjangoGui, 'tkinter': TkinterGui}
+GUIS = {'django': DjangoGui, 'tkinter': TkinterGui, 'cli': CLIGui}
 
 # config_yaml = Path(PROJECT_DIR, "../config.yaml").__str__()
 
@@ -42,7 +44,7 @@ class Interface():
     video=None, reporting=False,
     config=None,
     output_path=None,
-    duration=None, experimenter=None, gui=None):
+    duration=None, experimenter=None, gui_name=None):
 
 
         ## Initialization of attributes
@@ -54,7 +56,7 @@ class Interface():
         self.cfg = None
 
         # Framework used to show graphics
-        self.gui = None
+        self.gui_name = None
 
         # Boolean flags indicating if arduino and or track are active
         self.arduino = None
@@ -94,7 +96,7 @@ class Interface():
         self.statusbar = None
 
         ## Assignment of attributes
-        self.gui = gui
+        self.gui_name = gui_name
         self.arduino = arduino
         self.track = track
         self.interface_start = datetime.datetime.now()
@@ -125,8 +127,11 @@ class Interface():
 
         self.blocks = blocks
         self.port = port
-        if gui:
-            self.gui = GUIS[gui](interface=self)
+        
+        self.gui = None
+        if gui_name:
+            self.gui = GUIS[gui_name](interface=self)
+        
 
         self.timestamp = 0
         self.duration = duration
@@ -316,15 +321,17 @@ class Interface():
 
     
     def load_and_apply_config(self, config=None):
-            if config is None:
-                config = self.config
-            else:
-                self.config = config
+        if config is None:
+            config = self.config
+        else:
+            self.config = config
+
+        self.load_config()
+        # Init zoom tab
+        self.init_components()
     
-            self.load_config()
-            # Init zoom tab
-            self.gui.init_zoom_tab()
-            self.init_components()
+        self.log.info('Config applied successfully')
+
 
 
     def init_components(self):
@@ -337,6 +344,10 @@ class Interface():
         if self.track:
             self.log.info('Initializing tracker')
             self.init_tracker()
+        if self.gui_name in ['tkinter', 'opencv', 'cli']:
+            self.gui.create()
+            self.log.info('Initializing gui')
+
     
     def start(self):
         """
@@ -344,11 +355,10 @@ class Interface():
         as long as there is a GUI selected
         and the exit event has not been set
         """
-        self.gui.create()
         config = os.path.join(PROJECT_DIR, 'config.yaml')
         self.load_and_apply_config(config)
 
-        while not self.exit.is_set() and self.gui is not None:
+        while not self.exit.is_set():
             # print(type(self.device.mapping))
             self.gui.run()
             self.gui.apply_updates()

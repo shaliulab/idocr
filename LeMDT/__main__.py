@@ -19,7 +19,7 @@ ap.add_argument("--config", default = Path(PROJECT_DIR, 'config.yaml').__str__()
 ap.add_argument("-d", "--duration", type = float, default = 200,          help="How long should it last? (minutes)")
 ap.add_argument("-e", "--experimenter", type = str, default="Sayed",      help="Add name of the experimenter/operator")
 ap.add_argument("-f", "--fps", type = int, help="Frames per second in the opened stream. Default as stated in the __init__ method in Tracker, is set to 2")
-ap.add_argument("-g", "--gui",       type = str,  default = "tkinter", choices=['opencv', 'tkinter'], help="tkinter/opencv")
+ap.add_argument("-g", "--gui_name",       type = str,  choices=['opencv', 'tkinter', 'cli'], help="tkinter/opencv")
 ap.add_argument("-l", "--log_dir",  type = str, default = ".",            help="Absolute path to directory where log files will be stored")
 ap.add_argument("-o", "--output_path",  type = str, default = ".",            help="Absolute path to directory where output files will be stored")
 ap.add_argument("-m", "--mapping", type = str,                            help="Absolute path to csv providing pin number-pin name mapping", )
@@ -47,7 +47,7 @@ interface = Interface(
     mapping_path = args["mapping"], program_path = args["program"], port = args["port"],
     camera = args["camera"], video = args["video"], config = args["config"],
     reporting = args["reporting"], output_path = args["output_path"],
-    duration = DURATION, gui = args["gui"]
+    duration = DURATION, gui_name = args["gui_name"]
 )
 
 interface.start()

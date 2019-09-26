@@ -170,6 +170,10 @@ class TkinterGui():
         Called by interface.init_components() method,
         upon starting the Python software
         """
+        
+        self.init_zoom_tab()
+
+
         self.log.info('Initializing graphical interface')
         self.root.wm_title("LeMDT")
         self.root.wm_protocol("WM_DELETE_WINDOW", self.close)
