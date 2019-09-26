@@ -5,6 +5,7 @@
 import argparse
 import logging
 import coloredlogs
+import sys
 from pathlib import Path
 from .lmdt_utils import setup_logging
 from .interface import Interface
