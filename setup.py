@@ -19,7 +19,7 @@ setuptools.setup(
         "Operating System :: Ubuntu 18.04",
     ],
     include_package_data=True,
-    install_requires = ['imutils', 'Pillow', 'psutil', 'pyfirmata', 'opencv-python', 'coloredlogs','numpy', 'pandas', 'sklearn', 'pyyaml'],
+    install_requires = ['imutils', 'Pillow', 'psutil', 'pyfirmata', 'opencv-python', 'coloredlogs','numpy', 'pandas', 'sklearn', 'pyyaml', 'ipdb'],
     dependency_links=[
         'https://github.com/basler/pypylon/releases/download/1.4.0/pypylon-1.4.0-cp37-cp37m-linux_x86_64.whl'],
     python_requires='>=3.7.0',
