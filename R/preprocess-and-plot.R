@@ -40,6 +40,12 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
     return(0)
   }
   
+  
+  elshock_periods <- lemdt_result2[(lemdt_result2$eshock_left + lemdt_result2$eshock_right) > 0,unique(period)]
+  
+  
+  lemdt_result2$period
+  
   ##################################
   ## Set a time series frequency  ##
   ##################################
@@ -76,7 +82,7 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
   ##################################
   ## Plot
   #################################
-  p <- plot_trace_with_pin_events(lemdt_result = lemdt_result, borders=borders, pindex = pindex, A=A,B=B)
+  p <- plot_trace_with_pin_events(lemdt_result = lemdt_result, borders=borders, pindex = pindex, A=A,B=B, elshock_periods = elshock_periods)
   
   return(list(plot = p, preference_index = pindex))
 }

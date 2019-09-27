@@ -2,7 +2,7 @@
 #' @export
 #'
 #'  
-plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relevant = 1:4, colors=c("red", "blue"), arena_width_mm = 50, A='A', B = 'B') {
+plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relevant = 1:4, colors=c("red", "blue"), arena_width_mm = 50, A='A', B = 'B', elshock_periods = character()) {
   
   if(interactive()) {
     pins_relevant <- 1:4
@@ -49,17 +49,21 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
   ########################
   # Prepare rect_data
   ########################
+
   
-  rect_data <- data.frame(xmin=NULL, xmax=NULL, ymin=NULL, ymax=NULL, fill=NULL)
+  rect_data <- data.frame(xmin=NULL, xmax=NULL, ymin=NULL, ymax=NULL, fill=NULL, annotation=character())
 
 
   for (r in relevant_periods) {
     pins_on <- which(as.integer(pin_state_matrix[r,pins_relevant]) == 1)
     t_start <- unlist(time_starts[r])
     t_end <- unlist(time_ends[r,])
+    annotation <- ''
+    if(rle_period$values[r] %in% elshock_periods) annotation <- '*'
+    
     for (p in pins_on)  {
       odour <- odours[as.integer(p < 3)+1]
-      color <- colors[odour]
+      fill <- colors[odour]
       # side <- "left"
       y_min <- borders[[1]]
       y_max <- arena_width_mm
@@ -70,7 +74,8 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
       }
 
       rect_data <- rbind(rect_data, data.frame(
-        xmin = t_start, xmax = t_end, ymin = y_min, ymax = y_max, fill = color
+        xmin = t_start, xmax = t_end, ymin = y_min, ymax = y_max, fill = fill,
+        annotation = annotation
       ))
     }
   }
@@ -103,7 +108,7 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
   }
   
   
-  
+ 
   ## Base plot
   
   p3 <- ggplot() +
@@ -138,10 +143,14 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
     aes(
       xmin = xmin, xmax = xmax,
       ymin = ymin, ymax = ymax,
-      fill = fill),
+      fill = fill,
+      # color = as.character(color),
+      ),
     # constant
-    alpha = 0.5)
-
+    alpha = 0.5, size = 3) +
+    geom_text(data = rect_data, aes(label = annotation, x = (xmin+xmax)/2),  y = .95 * arena_width_mm) +
+    geom_text(data = rect_data, aes(label = annotation, x = (xmin+xmax)/2),  y = .05 * arena_width_mm)
+  
   ## Add preference index data
   if(nrow(pi_data) != 0) {
     pi_data$pref_index <- as.character(round(pi_data$pref_index, digits = 2))

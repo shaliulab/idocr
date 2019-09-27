@@ -118,18 +118,25 @@ class PylonStream(StandardStream):
 
     def set_fps(self, fps):
         self.cap.AcquisitionFrameRateAbs.SetValue(fps)
-
-    def read_frame(self):
-        # Wait for an image and then retrieve it. A timeout of 5000 ms is used.
-        self.log.debug('Reading frame')
+    
+    def retrieve_result(self):
         while True:
             try:
                 grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
                 break
             except Exception as e:
                 self.log.exception(e)
+
+        self.grabResult = grabResult        
+        return grabResult
+
+
+    def read_frame(self):
+        # Wait for an image and then retrieve it. A timeout of 5000 ms is used.
+        self.log.debug('Reading frame')
+
+        grabResult = self.retrieve_result()      
         
-        self.grabResult = grabResult
         # Image grabbed successfully?
         ret = False
         count = 1
@@ -137,8 +144,8 @@ class PylonStream(StandardStream):
         while not ret and count < 10:
             count += 1
             self.log.warning("Pylon could not fetch next frame. Trial no {}".format(count))
-            grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
-            self.grabResult = grabResult
+            grabResult = self.retrieve_result()
+
             ret = grabResult.GrabSucceeded()
         if count == 10:
             self.log.error("Tried reading next frame 10 times and none worked. Exiting :(")

@@ -67,7 +67,7 @@ class CLIGui():
             
             try:
                 cv2.imwrite(self.live_feed_path, self.interface.frame_color)
-                time.sleep(1)
+                time.sleep(.2)
             except Exception as e:
                 self.log.exception(e)
                 print(self.interface.frame_color)
