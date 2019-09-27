@@ -344,7 +344,7 @@ class Interface():
         if self.track:
             self.log.info('Initializing tracker')
             self.init_tracker()
-        if self.gui_name in ['tkinter', 'opencv', 'cli']:
+        if self.gui_name in ['tkinter', 'django', 'cli']:
             self.gui.create()
             self.log.info('Initializing gui')
 

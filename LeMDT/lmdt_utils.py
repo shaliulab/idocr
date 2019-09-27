@@ -66,15 +66,16 @@ def _toggle_pin(self, device=None, pin_number=None, pin_id=None, value=0, freq=N
     if self.log.info:
         f = self.log.info
         
-        if thread:
-            f("{} - {}".format(
-            d._kwargs["d_name"],
-            value
-            ))
-        else:
-            f("{} - {}".format(
-            pin_id, value
-            ))   
+        if pin_number != 13:
+            if thread:
+                f("{} ---> {}".format(
+                d._kwargs["d_name"],
+                value
+                ))
+            else:
+                f("{} ---> {}".format(
+                pin_id, value
+                ))   
 
     # x = value if not freq else freq
     x = value

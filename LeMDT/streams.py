@@ -122,7 +122,13 @@ class PylonStream(StandardStream):
     def read_frame(self):
         # Wait for an image and then retrieve it. A timeout of 5000 ms is used.
         self.log.debug('Reading frame')
-        grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
+        while True:
+            try:
+                grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
+                break
+            except Exception as e:
+                self.log.exception(e)
+        
         self.grabResult = grabResult
         # Image grabbed successfully?
         ret = False
