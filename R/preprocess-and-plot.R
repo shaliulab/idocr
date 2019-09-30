@@ -1,5 +1,5 @@
 #' @export
-preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FALSE, A='A', B='B', min_exits_required=5) {
+preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FALSE, A='A', B='B', min_exits_required=5, max_time_minutes=Inf) {
  
   # if(interactive()) {
     # decision_zone_mm=10
@@ -18,6 +18,8 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
   }
   
   lemdt_result <- na.omit(read.table(file = file_path, sep = ',', header = T, stringsAsFactors = F)[,-1])
+  lemdt_result <- lemdt_result[lemdt_result$t < max_time_minutes*60,]
+
   
   # transform from pixels to mm. Assume the whole chamber (125 pixes)
   # is 5 mm (50 mm)
