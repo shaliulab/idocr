@@ -21,7 +21,7 @@ ap.add_argument("-e", "--experimenter", type = str, default="Sayed",      help="
 ap.add_argument("-f", "--fps", type = int, help="Frames per second in the opened stream. Default as stated in the __init__ method in Tracker, is set to 2")
 ap.add_argument("-g", "--gui_name",       type = str,  choices=['opencv', 'tkinter', 'cli'], help="tkinter/opencv")
 ap.add_argument("-l", "--log_dir",  type = str, default = ".",            help="Absolute path to directory where log files will be stored")
-ap.add_argument("-o", "--output_path",  type = str, default = ".",            help="Absolute path to directory where output files will be stored")
+ap.add_argument("-o", "--output_path",  type = str, default = "lemdt_results",            help="Absolute path to directory where output files will be stored")
 ap.add_argument("-m", "--mapping", type = str,                            help="Absolute path to csv providing pin number-pin name mapping", )
 ap.add_argument("-p", "--port",     type = str, default = "/dev/ttyACM0", help="Absolute path to the Arduino port. Usually '/dev/ttyACM0' in Linux and COM in Windows")
 ap.add_argument("--program", type = str,                                  help="Absolute path to csv providing the Arduino top level program")
