@@ -85,7 +85,11 @@ count_exits <- function(pos) {
 #' @examples
 #' pos <- c('L','L','L','D','D','D','L','L',"L",'D','D','R','R','R','D')
 #' preference_index(pos)
-preference_index <- function(pos, min_exits_required=5, min_length=10) {
+preference_index <- function(pos=NULL, min_exits_required=5, min_length=10) {
+  
+  if(is.null(pos)) {
+    return('preference_index')
+  }
   
   if(length(pos) < min_length)
     return(NA_real_)
@@ -99,7 +103,11 @@ preference_index <- function(pos, min_exits_required=5, min_length=10) {
     pi <- NA_real_
   else
     pi <- (exit_right - exit_left) / total_exits
-  return(pi)
+  
+  n <- count_exits(pos)[[3]]
+  
+  
+  return(list(pi, n))
 }
 
 

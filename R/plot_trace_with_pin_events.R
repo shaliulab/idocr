@@ -2,7 +2,7 @@
 #' @export
 #'
 #'  
-plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relevant = 1:4, colors=c("red", "blue"), arena_width_mm = 50, A='A', B = 'B', elshock_periods = character()) {
+plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pins_relevant = 1:4, colors=c("red", "blue"), arena_width_mm = 50, A='A', B = 'B', elshock_periods = character()) {
   
   if(interactive()) {
     pins_relevant <- 1:4
@@ -95,9 +95,10 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
     perd <- rle_period$values[r]
     print(paste0('period ', perd))
     
+    # browser()
     for (a in unique(lemdt_result$arena)) {
       print(paste0('arena ', a))
-      pref_index <- pindex[arena == a & period == perd,]$pi
+      pref_index <- index_dataset[arena == a & period == perd,]$V1
       if(length(pref_index) == 0) pref_index <- NA
       
       pi_data <- rbind(pi_data, data.frame(
@@ -156,7 +157,7 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, pindex, pins_relev
     pi_data$pref_index <- as.character(round(pi_data$pref_index, digits = 2))
     pi_data$pref_index[is.na(pi_data$pref_index)] <- 'NA'
     
-    p3 <- p3 + geom_label(data = pi_data, aes(x = x, label = pref_index), y = .9 * arena_width_mm) +
+    p3 <- p3 + geom_text(data = pi_data, aes(x = x, label = pref_index), y = .95 * arena_width_mm, size = 3) +
       theme(plot.margin = unit(c(1,3,1,1), "lines")) # This widens the right m
   }
   

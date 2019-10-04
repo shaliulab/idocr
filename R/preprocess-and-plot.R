@@ -1,6 +1,8 @@
 #' @export
-preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FALSE, A='A', B='B', min_exits_required=5, max_time_minutes=Inf) {
- 
+preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FALSE, A='A', B='B', min_exits_required=5, max_time_minutes=Inf, annotation = '', index_function = LeMDTr::preference_index) {
+  
+  # experiment_folder <- '/home/vibflysleep/VIBFlySleep/LeMDT/lemdt_results/2019-10-04_12-46-49/'
+  
   # if(interactive()) {
     # decision_zone_mm=10
     # experiment_folder='/home/antortjim/MEGAsync/Gitlab/LeMDT/lemdt_results/LeMDTe27SL5a9e19f94de287e28f789825/LEARNER_001/2019-09-16_17-46-34'
@@ -10,7 +12,6 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
   
     # }
   filename <- list.files(path = experiment_folder, pattern = '_LeMDTe27SL5a9e19f94de287e28f789825.csv')
-  
   file_path <- file.path(experiment_folder, filename)
   if (length(file_path) == 0) {
     warning('Provided path to trace file does not exist')
@@ -46,8 +47,6 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
   elshock_periods <- lemdt_result2[(lemdt_result2$eshock_left + lemdt_result2$eshock_right) > 0,unique(period)]
   
   
-  lemdt_result2$period
-  
   ##################################
   ## Set a time series frequency  ##
   ##################################
@@ -57,34 +56,91 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
   ## Clean mistracked datapoints
   ##################################
   lemdt_result3 <- clean_mistracked_points(lemdt_result2)
+  table(lemdt_result3$period)
+  
+  
+  borders <- compute_borders(decision_zone_mm = decision_zone_mm)
   
   ##################################
   ## Impute missing datapoints
   ##################################
-  lemdt_result5 <- impute_missing_point(lemdt_result3)
-  
-  ##################################
-  ## Compute position L/D/R based on mm
-  ##################################
-  borders <- compute_borders(decision_zone_mm = decision_zone_mm)
-  lemdt_result6 <- compute_side(lemdt_result5, borders, decision_zone_mm=decision_zone_mm)
-  
-  
-  ##################################
-  ## Compute preference index
-  ##################################
-  lemdt_result <- lemdt_result6
-  # browser()
-  pindex <- lemdt_result[, .(
-    n = count_exits(position)[[3]],
-    pi = preference_index(pos = position, min_exits_required = min_exits_required)
+  result <- tryCatch({
+    lemdt_result5 <- impute_missing_point(lemdt_result3)
+    table(lemdt_result5$period)
+    
+    ##################################
+    ## Compute position L/D/R based on mm
+    ##################################
+    lemdt_result6 <- compute_side(lemdt_result5, borders, decision_zone_mm=decision_zone_mm)
+    table(lemdt_result6$period)
+    
+    
+    ##################################
+    ## Compute preference index
+    ##################################
+    lemdt_result <- lemdt_result6
+    # browser()
+    # p <- '01101'
+    # lemdt_result[arena == a & period == p, position]
+    # 
+    # for (i in 1:length(unique(lemdt_result$arena))) {
+    #   for (j in 1:length(unique(lemdt_result$period))) {
+    #     a <- unique(lemdt_result$arena)[i]
+    #     p <- unique(lemdt_result$period)[j]
+    #     res <- index_function(lemdt_result[arena == a & period == p, position], min_exits_required = min_exits_required)
+    #     print(a)
+    #     print(p)
+    #     print(res)
+    #   }
+    # }
+    # browser()
+    index_dataset <- lemdt_result[, .(
+      V1 = index_function(pos = position, min_exits_required = min_exits_required)[[1]],
+      V2 = index_function(pos = position, min_exits_required = min_exits_required)[[2]]
     ), by = .(arena, period)]
- 
+    
+    p <- plot_trace_with_pin_events(lemdt_result = lemdt_result, borders=borders, index_dataset = index_dataset, A=A,B=B, elshock_periods = elshock_periods)
+    
+    
+    
+    result <- list(p = p, index_dataset = index_dataset)
+    result
+    
+   }, error = function(e) {
+      message(e)
+      if(debug) {
+        index_dataset <- data.table(n = 0, V1 = NA, V2 = NA, arena = 0, period = "00001")
+        lemdt_result6 <- compute_side(lemdt_result3, borders, decision_zone_mm=decision_zone_mm)
+        p <- plot_trace_with_pin_events(lemdt_result = lemdt_result6, borders=borders, index_dataset = index_dataset, A=A,B=B)
+        result <- list(p = p, index_dataset = index_dataset)
+        result 
+      } else(
+        return(0)
+      )
+      
+    })
+  
+  title <- basename(experiment_folder)
+  
+  program_name <- data.table::fread(file = file.path(experiment_folder, 'paradigm.csv'))[, .(block = unique(block))]$block %>%
+    grep(pattern = 'end', invert = T, value = T) %>%
+    grep(pattern = 'startup', invert = T, value = T)
+  
+  p <- result$p + ggtitle(label = title, subtitle = paste(
+    '  /  Program:',   program_name,
+    '  /  min exits:', min_exits_required,
+    '  /  decision zone (mm):', decision_zone_mm,
+    '  /  index:', index_function(),
+    '  /  ', annotation))
+  index_dataset <- result$index_dataset
+  ggsave(filename = file.path(experiment_folder, paste0(index_function(), '.pdf')), plot = p, width = 12, height = 8)
+  ggsave(filename = file.path(experiment_folder, paste0(index_function(), '.png')), plot = p, width = 12, height = 8)
   
   ##################################
   ## Plot
   #################################
-  p <- plot_trace_with_pin_events(lemdt_result = lemdt_result, borders=borders, pindex = pindex, A=A,B=B, elshock_periods = elshock_periods)
   
-  return(list(plot = p, preference_index = pindex))
+  print(filename)
+  
+  return(list(plot = p, index_dataset = index_dataset))
 }
