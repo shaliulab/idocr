@@ -1,3 +1,0 @@
-pin_id,start,end,on,off,block
-ONBOARD_LED,5/60,15/60,0.1/60,0.1/60,train
-
