@@ -114,3 +114,6 @@ LeMDT/static/semantic*
 .Rhistory
 *.avi
 lemdt_results/*
+*.desktop
+wheels/LeMDT*
+scripts/make_app.sh
