@@ -107,12 +107,13 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
     lemdt_result[, reversed := period == '0110']
     
     reversed_pos <- c('R' = 'L', 'L' = 'R', 'D' = 'D')
-    lemdt_result[(reversed), position := reversed_pos[position]]
+    lemdt_result[,rev_position := position]
+    lemdt_result[(reversed), rev_position := reversed_pos[position]]
     
     
     index_dataset <- lemdt_result[, .(
-      V1 = index_function(pos = position, min_exits_required = min_exits_required)[[1]],
-      V2 = index_function(pos = position, min_exits_required = min_exits_required)[[2]]
+      V1 = index_function(pos = rev_position, min_exits_required = min_exits_required)[[1]],
+      V2 = index_function(pos = rev_position, min_exits_required = min_exits_required)[[2]]
     ), by = .(arena, subseting_column)]
     
     p <- plot_trace_with_pin_events(lemdt_result = lemdt_result, borders=borders, index_dataset = index_dataset, A=A,B=B)
@@ -147,7 +148,10 @@ p <- result$p + ggtitle(label = title, subtitle = paste(
   '  /  min exits:', min_exits_required,
   '  /  decision zone (mm):', decision_zone_mm,
   '  /  index:', index_function(),
-  '  /  ', annotation))
+  '  /  ', annotation, '\n',
+  '+ -> B, - -> A'
+  )
+)
 index_dataset <- result$index_dataset
 ggsave(filename = file.path(experiment_folder, paste0(index_function(), '.pdf')), plot = p, width = 12, height = 8)
 ggsave(filename = file.path(experiment_folder, paste0(index_function(), '.png')), plot = p, width = 12, height = 8)
