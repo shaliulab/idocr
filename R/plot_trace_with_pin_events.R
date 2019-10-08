@@ -1,7 +1,6 @@
-#' @import data.table ggplot2
+#' @import data.table ggplot2 ggnewscale RColorBrewer
 #' @export
 #'
-#'  
 plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pins_relevant = 1:4, colors=c("red", "blue"), arena_width_mm = 50, A='A', B = 'B', elshock_periods = character(), annot_on_side = FALSE) {
  
   if(interactive()) {
@@ -180,11 +179,11 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pin
      p3 <- p3 + geom_text(data = pi_data, aes(x = x, label = pref_index), y = .95 * arena_width_mm, size = 3) + theme(plot.margin = unit(c(1,3,1,1), "lines")) # This widens the right m
    } else {
      pi_data$pref_index_numeric <- as.numeric(pi_data$pref_index)
-     myPalette <- colorRampPalette(rev(RColorBrewer::brewer.pal(11, "Spectral")))
+     myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
     
      
      p3 <- p3 +
-       ggnewscale::new_scale_fill() +
+       new_scale_fill() +
        geom_label(data = pi_data,
                            aes(label = pref_index, fill = pref_index_numeric),
                            fontface = 'bold', color = 'black', x =  x_limits[2], y = arena_width_mm/2, size = 5) +

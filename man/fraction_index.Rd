@@ -4,7 +4,7 @@
 \alias{fraction_index}
 \title{Compute the fraction of time spent in the right side for each period}
 \usage{
-fraction_index(pos, min_exits_required = NA, min_length = 10)
+fraction_index(pos = NULL, min_exits_required = NA, min_length = 10)
 }
 \arguments{
 \item{pos}{A character vector encoding the position of the fly in the chamber (L/D/R)}
