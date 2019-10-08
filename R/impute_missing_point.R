@@ -19,13 +19,22 @@ impute_missing_point <- function(lemdt_result) {
       method = "linear")(1:nrow(ts_subset))
     )
    
-    period_imputed <- c(period_imputed, na.locf(na.locf(zoo(ts_subset$period), na.rm=FALSE), fromLast=TRUE))
+    # period_imputed <- c(
+      # period_imputed,
+      
+    #   na.locf(na.locf(zoo(ts_subset$period), na.rm=FALSE), fromLast=TRUE)
+    #   )
+    
+    
     
   }
   
+  period_imputed <- rep(lemdt_result[arena==0, period], times = 21)
+  period_id_imputed <- rep(lemdt_result[arena==0, period_id], times = 21)
   lemdt_result <- as.data.table(arrange(lemdt_result, by = arena))
   lemdt_result[, mm_mean := mm_mean_imputed]
   lemdt_result[, period := period_imputed]
+  lemdt_result[, period_id := period_id_imputed]
   return(lemdt_result)
   
 }
