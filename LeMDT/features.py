@@ -1,14 +1,11 @@
 import numpy as np
 import cv2
 
-from .lmdt_utils import setup_logging
-
 white = (255, 255, 255)
 yellow = (0, 255, 255)
 red = (0, 0, 255)
 blue = (255, 0, 0)
 
-setup_logging()
 cv2_version = cv2.__version__
  
 

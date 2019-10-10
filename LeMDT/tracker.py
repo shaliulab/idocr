@@ -10,7 +10,6 @@ import coloredlogs
 import cv2
 import imutils
 import numpy as np
-import shutil
 import yaml
 from pathlib import Path
 from sklearn.cluster import KMeans
@@ -18,14 +17,12 @@ from sklearn.cluster import KMeans
 # Local application imports
 from .features import Arena, Fly
 from .streams import STREAMS
-from .lmdt_utils import setup_logging
 from .decorators import export
 from .saver import Saver
 from . import PROJECT_DIR
 
 # Set up package configurations
 cv2_version = cv2.__version__
-setup_logging()
 coloredlogs.install()
 
 def crop_stream(img, crop):
@@ -127,7 +124,7 @@ class Tracker():
         self.kernel = np.ones((self.kernel_factor, self.kernel_factor), np.uint8)
         self.N = self.interface.cfg["tracker"]["N"] 
 
-        self.log = logging.getLogger(__name__)
+        self.log = self.interface.getLogger(__name__)
 
               
         
@@ -170,11 +167,11 @@ class Tracker():
             self.video = Path(self.video)
             
             if self.video.is_file():
-                self.stream = STREAMS[self.camera](self.video.__str__())
+                self.stream = STREAMS[self.camera](self, self.video.__str__())
             else:
                 self.log.error("Video under provided path not found. Check for typos")
         else:
-            self.stream = STREAMS[self.camera](0)
+            self.stream = STREAMS[self.camera](self, 0)
 
         if self.fps and self.video:
             # Set the FPS of the camera
@@ -673,9 +670,6 @@ class Tracker():
         self.log.info("{} arenas in {} frames analyzed".format(20 * self.frame_count, self.frame_count))
         self.log.info("Number of arenas that fly is not detected in is {}".format(self.missing_fly))
         self.saver.store_and_clear()
-        answer = self.interface.answer
-        if answer == 'No' or answer == 'no' or answer == 'n':
-            shutil.rmtree(self.saver.output_dir)
 
         # if not self.interface.exit.is_set(): self.interface.close()
 

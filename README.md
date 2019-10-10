@@ -1,4 +1,4 @@
-# LMDT
+# LeMDT
 Learning Memory Device and Tracking
 
  * [Introduction](#introduction)
@@ -11,19 +11,19 @@ Learning Memory Device and Tracking
     
  
 ## Introduction
-**LMDT** (**L**earning **M**emory **D**evice and **T**racking)
+**LeMDT** (**Le**arning **M**emory **D**evice and **T**racking)
 
 A Python interface to monitor and interact with flies in an olfactory memory setup, together with an R package for analysis of the resulting data.
 
 
 ## Documentation
 
-#### 1 Login 
+### 1 Login 
 
 Username: **FSL**
 Password: **flysleep1**
 
-#### 2 Open program
+### 2 Open software
 
 * **Open a terminal**
 You can do it thre ways
@@ -32,6 +32,32 @@ a) Press on the terminal icon on the launcher to the left
 
 b) Press **windows key** and type **terminal**. Then press **enter**
 c) Press Control+Alt+T
+
+* **Call the software from the terminal**
+
+* Go to the folder containing the code and execute the software
+
+```
+# Change Directory (cd) to the following folder:
+cd /home/vibflysleep/VIBFlySleep/LeMDT
+
+# Launch the software with a default program
+python -q -X faulthandler -m LeMDT
+# OR
+python -q -X faulthandler -m LeMDT --program program1.csv
+```
+
+A list of programs is available in:
+
+```
+/home/vibflysleep/VIBFlySleep/LeMDT/LeMDT/programs
+```
+you can refer to them by typing the filename after `--program`.
+Learn more about programs and blocks in the reference.md
+
+After running that command, you will get something that looks like this
+
+![](LeMDT/static/launch.png) 
 
 
 
@@ -43,7 +69,7 @@ Type this after entering the folder you have downloaded (with `cd`)
 ```
 This will trigger the opening of the following window
 
-![](LeMDT/static/readme/startup.png) 
+
 
 loaded with the following settings:
 

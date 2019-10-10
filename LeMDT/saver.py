@@ -5,6 +5,7 @@ import os
 import os.path
 import datetime
 from pathlib import Path
+import shutil
 
 # Third party imports
 import cv2
@@ -15,12 +16,10 @@ import threading
 # from skvideo.io import VideoWriter
 
 # Local application imports
-from .lmdt_utils import setup_logging
 from .decorators import if_record_event
 from . import PROJECT_DIR
 
 # Set up package configurations
-setup_logging()
 
 # https://stackoverflow.com/questions/16740887/how-to-handle-incoming-real-time-data-with-python-pandas/17056022
 max_len = 50
@@ -34,7 +33,7 @@ class Saver():
         self.cache = cache
         self.tracker = tracker
         self.interface = self.tracker.interface
-        self.log = logging.getLogger(__name__)
+        self.log = self.tracker.interface.getLogger(__name__)
         self.lst = []
         self.record_event = record_event
         self.columns = [
@@ -52,8 +51,6 @@ class Saver():
 
         self.path = self.tracker.interface.output_path
         if self.path is None: self.path = self.tracker.interface.cfg["saver"]["path"]
-        print('path')
-        print(self.path)
 
         self.video_format = self.tracker.interface.cfg["saver"]["video_format"]
         self.video_out_fps = self.tracker.interface.cfg["saver"]["fps"]
@@ -99,8 +96,24 @@ class Saver():
 
     def save_paradigm(self):
         """Save a copy of the paradigm for future reference"""
-        self.tracker.interface.device.paradigm.to_csv(os.path.join(self.output_dir, "paradigm.csv"), header=True)
+        self.tracker.interface.device.paradigm_human_readable.to_csv(os.path.join(self.output_dir, "paradigm.csv"), header=True)
 
+    def save_odors(self, odor_A, odor_B):
+        path2file = os.path.join(self.output_dir, "odors.csv")
+        handle = open(path2file, 'w')
+        handle.write('odor_A,odor_B\n')
+        handle.write('{},{}\n'.format(odor_A,odor_B))
+        handle.close()
+
+    def copy_logs(self, config):
+        try:
+            src_files = [config['handlers'][v]['filename'] for v in config['handlers'].keys() if v[:5] == 'file_']
+            dest = self.tracker.saver.output_dir 
+            for full_file_name in src_files:
+                if os.path.isfile(full_file_name):
+                    shutil.copy(full_file_name, dest)
+        except Exception as e:
+            self.log.warning(e)
 
     @if_record_event
     def process_row(self, d, max_len=max_len):
@@ -151,8 +164,12 @@ class Saver():
         self.log.debug("Saving cache to {}".format(self.store.as_posix()))
 
         # save to csv
-        with open(self.store.as_posix() + ".csv", 'a') as store:
-            df.to_csv(store, header=False)
+        try:
+            with open(self.store.as_posix() + ".csv", 'a') as store:
+                df.to_csv(store, header=False)
+        except FileNotFoundError:
+            self.log.warning('File already removed. Not saving cache')
+            
 
     @if_record_event
     def save_img(self, filename, frame):

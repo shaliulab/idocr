@@ -9,17 +9,14 @@ import warnings
 import numpy as np
 
 # Local application imports
-from .lmdt_utils import setup_logging, _toggle_pin
-
-# Set up package configurations
-setup_logging()
+from .lmdt_utils import _toggle_pin
 
 class ArduinoThread(threading.Thread):
 
     def __init__(self, device, kwargs, name = None, stop_event_name = 'exit'):
 
-        self.device = device
-        self.log = logging.getLogger(__name__)
+        self.device = device 
+        self.log = self.device.interface.getLogger(name=__name__)
         self.pin_name =  name.split('-')[1]
         self.stop_event_name = stop_event_name
         super(ArduinoThread, self).__init__(name = name, target = self.pin_thread, kwargs = kwargs)

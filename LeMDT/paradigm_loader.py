@@ -8,9 +8,6 @@ import yaml
 import numpy as np
 import pandas as pd
 
-from .lmdt_utils import setup_logging
-
-setup_logging()
 
 def convert(s):
     try:
@@ -18,8 +15,6 @@ def convert(s):
     except ValueError:
         num, denom = s.split('/')
         return np.float(num) / np.float(denom)
-
-log = logging.getLogger(__name__)
 
 class ParadigmLoader():
     """A class to provide paradigm creation functionality to other classes by inheritance
@@ -35,7 +30,7 @@ class ParadigmLoader():
         if getattr(self, "interface", False):
             self.interface = self.interface
         else:
-            log.error("Inheriting class of ParadigmLoader does not have an interface attribute")
+            self.log.error("Inheriting class of ParadigmLoader does not have an interface attribute")
             raise Exception
 
         # Loaded becomes true when __init__ is finished
@@ -100,7 +95,7 @@ class ParadigmLoader():
         # self.overview = overview
         # self.block_names = block_names
         self.loaded = True
-        log.info('Paradigm is read')
+        self.log.info('Paradigm is read')
 
     def infer_block_start_from_previous_block(self, program):
         """Infer the start field of a block if NaN is given by assuming it follows right after the previous block."""
@@ -161,8 +156,12 @@ class ParadigmLoader():
             # Read the block and format it the same way the program file was
             block = self.read_block(block_name)
             block = self.minutes_to_seconds(block)
-            DURATION = max(block['end'])
-            print(times)
+            
+            x = np.array([0], dtype=np.float64)
+            y = block['end'].values
+            
+            
+            # print(times)
 
             # The program describes how many times a block has to be repeated.
             # This line implements this repetition
@@ -189,6 +188,11 @@ class ParadigmLoader():
 
 
             if block_name != 'startup':
+
+                # import ipdb; ipdb.set_trace()
+
+                DURATION = max(x, max(y))
+
                 # print('start')
                 # print(start)
                 
@@ -204,6 +208,9 @@ class ParadigmLoader():
                 # unless the block stops earlier than that i.e. the minimum is block.end so we need
                 # to take the element-wise minimum of the event ends (end) and the block end (block.end)
                 end_column = (block_repeat["end"] + block_repeat["iterations"] * DURATION).values
+                # print(block_name)
+                # print(end_column)
+                
 
                 block_end = np.array([block.end])
 
@@ -234,7 +241,7 @@ class ParadigmLoader():
         # Concat all the dataframes in the list and return it
         program['end'] = 0
         for i, block_name in enumerate(program['block']):
-            print(block_name)
+            # print(block_name)
             program.at[block_name, 'end'] = block_ends[i]
         self.program = program
 
@@ -249,5 +256,5 @@ class ParadigmLoader():
         # thread_name will be filled in this function
         paradigm["active"] = False
         paradigm["thread_name"] = None
-        print(paradigm)
+        # print(paradigm)
         return paradigm

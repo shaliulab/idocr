@@ -15,42 +15,59 @@ handlers:
   console_basic:
     class: logging.StreamHandler
     formatter: basic
-    level: INFO 
+    level: DEBUG 
     stream: ext://sys.stdout
 
-  file_arduino:
-    class: logging.FileHandler
-    level: CRITICAL 
-    formatter: simple
-    filename: arduino.log
-  file_tracker:
-    class: logging.FileHandler
+  file_general:
+    class:  logging.handlers.RotatingFileHandler
     level: DEBUG 
     formatter: simple
-    filename: tracker.log
+    filename: general
+    maxBytes: 10485760 # 10MB
+    backupCount: 3
+    encoding: utf8
+
+  file_arduino:
+    class:  logging.handlers.RotatingFileHandler
+    level: DEBUG 
+    formatter: simple
+    filename: arduino
+    maxBytes: 10485760 # 10MB
+    backupCount: 3
+    encoding: utf8
+
+  file_tracker:
+    class:  logging.handlers.RotatingFileHandler
+    level: DEBUG 
+    formatter: simple
+    filename: tracker
+    maxBytes: 10485760 # 10MB
+    backupCount: 3
+    encoding: utf8
+
+
 
 loggers:
-  tracker:
+  LeMDT.tracker:
     handlers: [console, file_tracker]
-    level: DEBUG
     propagate: no
-  arduino:
+  LeMDT.arduino:
     handlers: [console, file_arduino]
-    level: DEBUG
     propagate: no
-  tkinter_gui:
-    handlers: [console]
-    level: DEBUG
+  LeMDT.cli_gui:
+    handlers: [console, file_general]
     propagate: no
-  interface:
-    handlers: [console]
-    level: DEBUG
+  LeMDT.cli_gui:
+    handlers: [console, file_general]
     propagate: no
-  saver:
-    handlers: [console]
-    level: DEBUG
+  LeMDT.interface:
+    handlers: [console, file_general]
     propagate: no
+  LeMDT.saver:
+    handlers: [console, file_general]
+    propagate: no
+  LeMDT.streams:
+    handlers: [console, file_general]
+    propagate: no
+    
 
-root:
-  level: DEBUG
-  handlers: [console]

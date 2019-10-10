@@ -1,2 +1,2 @@
 pin_id,start,end,on,off,block
-ONBOARD_LED, 01,02,0.5/60,0.5/60,
+ONBOARD_LED, 0,1,0.5/60,0.5/60,

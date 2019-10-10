@@ -3,20 +3,26 @@ import argparse
 import datetime
 import logging
 from pathlib import Path
+import os
 import os.path
 import sys
 import threading
 import time
+import shutil
 import signal
+import ipdb
+import tempfile
+
 
 # Third party imports
 import cv2
 import numpy as np
 import yaml
+import pandas as pd
+pd.options.mode.chained_assignment = None
 
 # Local application imports
 from .arduino import LearningMemoryDevice
-from .lmdt_utils import setup_logging
 from .orevent import OrEvent
 from .desktop_app import TkinterGui
 from .cli_app import CLIGui
@@ -26,8 +32,7 @@ from . import PROJECT_DIR
 
 DjangoGui = None
 
-# Set up package configurations
-setup_logging()
+# Set up logging configurations
 
 GUIS = {'django': DjangoGui, 'tkinter': TkinterGui, 'cli': CLIGui}
 
@@ -42,17 +47,25 @@ class Interface():
     program_path=None,
     blocks=None, port=None, camera=None,
     video=None, reporting=False,
-    config=None,
+    config_file=None,
     output_path=None,
-    duration=None, experimenter=None, gui_name=None):
+    # duration=None,
+    experimenter=None, gui_name=None):
 
+        
 
         ## Initialization of attributes
         # Timestamps for important events
+
+        self.config_file = None
+        self.config = None
+
+        self.setup_logging()
+        self.log = self.getLogger(name=__name__)
+
         self.interface_start = None  # Instantation of the Interface class 
         self.arduino_start = None # Right before .start() the arduino threads
         self.tracking_start = None
-        self.config = None
         self.cfg = None
 
         # Framework used to show graphics
@@ -92,9 +105,11 @@ class Interface():
         self.timestamp = None
         self.duration = None
         self.experimenter = None
-        self.log = None
         self.statusbar = None
-
+        
+        self.odor_A = None
+        self.odor_B = None
+        
         ## Assignment of attributes
         self.gui_name = gui_name
         self.arduino = arduino
@@ -113,9 +128,7 @@ class Interface():
         self.play_start = None
         self.record_start = None
 
-        self.config = config
-        print('config')
-        print(self.config)
+        self.config_file = config_file
 
 
         self.reporting = reporting
@@ -134,12 +147,8 @@ class Interface():
         
 
         self.timestamp = 0
-        self.duration = duration
         self.experimenter = experimenter
-
-
-        self.log = logging.getLogger(__name__)
-        
+      
         self.log.info("Start time: {}".format(self.interface_start.strftime("%Y%m%d-%H%M%S")))
         self.interface_initialized = False
         self.log.info('Interface initialized')
@@ -149,6 +158,10 @@ class Interface():
 
         self.fraction_area = 1
         self.answer = "Yes"
+
+        self.odor_A = 'A'
+        self.odor_B = 'B'
+
 
 
 
@@ -195,9 +208,51 @@ class Interface():
         device.connect_arduino_board(self.port)
         device.prepare('exit')
         self.device = device
-        print(device.paradigm)
-        print(self.duration)
-    
+        self.log.info('Arduino will be run for {}'.format(datetime.timedelta(seconds= self.duration)))
+        paradigm_human_readable = device.paradigm[['pin_id', 'start', 'end', 'iterations', 'on', 'off']]
+        
+        paradigm_starts = paradigm_human_readable['start'].values
+        paradigm_ends = paradigm_human_readable['end'].values
+        paradigm_human_readable.drop(['start', 'end'], axis=1)
+        paradigm_human_readable.loc[:,'start'] = np.array([str(datetime.timedelta(seconds = v)) for v in paradigm_starts])
+        paradigm_human_readable.loc[:,'end'] = np.array([str(datetime.timedelta(seconds = v)) for v in  paradigm_ends])   
+        device.paradigm_human_readable = paradigm_human_readable
+        self.log.info('\n{}'.format(paradigm_human_readable))
+
+
+    def setup_logging(self, default_path='LeMDT/logging.yaml', default_level=logging.INFO, env_key='LOG_CFG'):
+        """
+        Setup logging configuration
+        """
+        path = default_path
+        value = os.getenv(env_key, None)
+        if value:
+            path = value
+        if os.path.exists(path):
+            with open(path, 'rt') as f:
+                config = yaml.safe_load(f.read())
+
+            file_handlers = [v for v in config['handlers'].keys() if v[:5] == 'file_']
+            for h in file_handlers:
+                # config['handlers'][f]['filename'] = tempfile.NamedTemporaryFile(prefix=config['handlers'][f]['filename'], suffix=".log").name
+                filename = os.path.join(PROJECT_DIR, 'logs', config['handlers'][h]['filename']+".log")
+                if os.path.exists(filename): os.remove(filename)
+                config['handlers'][h]['filename'] = filename
+
+            logging.config.dictConfig(config)
+
+        else:
+            self.log.warning('Could not find logging config file under {}'.format(path))
+            logging.basicConfig(level=default_level)
+            
+        
+        self.logging = logging
+        self.config = config 
+
+    def getLogger(self, name):
+        return self.logging.getLogger(name)
+
+        
     def close(self, signo=None, _frame=None):
         """
         Set the exit event
@@ -205,6 +260,20 @@ class Interface():
         classes. Upon setting this event, these processes stop
         """
         self.exit.set()
+        answer = self.save_results_answer
+        if answer == 'N':
+            try:
+                shutil.rmtree(self.tracker.saver.output_dir)
+            # in case the output_dir is not declared yet
+            # because we are closing early
+            except TypeError:
+                pass
+        else:
+            # ipdb.set_trace( )
+            self.tracker.saver.copy_logs(self.config)
+            
+
+
         self.log.info("Running interface.close()")
         if signo is not None: self.log.info("Received %", signo)
         
@@ -263,6 +332,7 @@ class Interface():
         self.tracker.saver.init_record_start()
         self.tracker.saver.init_output_files()
         self.tracker.saver.save_paradigm()
+        self.tracker.saver.save_odors(self.odor_A, self.odor_B)
         
         self.log.info("Pressed record")
         self.log.info("Savers will cache data and save it to csv files")
@@ -291,7 +361,7 @@ class Interface():
     
     def load_config(self):
         
-        with open(self.config, 'r') as ymlfile:
+        with open(self.config_file, 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
         if self.mapping_path is None:
@@ -300,12 +370,15 @@ class Interface():
             self.mapping_path = Path(PROJECT_DIR, self.mapping_path).__str__()
 
         if self.program_path is None:
-            self.program_path = Path(PROJECT_DIR, "programs", 'ir.csv').__str__()
+            self.program_path = Path(PROJECT_DIR, "programs", 'test.csv').__str__()
         else:
-            self.program_path = Path(PROJECT_DIR, self.program_path).__str__()
+            self.program_path = Path(PROJECT_DIR, "programs", self.program_path).__str__()
 
-        print(self.mapping_path)
-        print(self.program_path)
+
+        self.log.info('Mapping path:')
+        self.log.info(self.mapping_path)
+        self.log.info('Program path:')
+        self.log.info(self.program_path)
         
         # if self.duration is None: self.duration = self.cfg["interface"]["duration"]
         if self.experimenter is None: self.experimenter = self.cfg["tracker"]["experimenter"]
@@ -320,11 +393,11 @@ class Interface():
         self.stacked_arenas = [empty_img.copy() for i in range(self.cfg["arena"]["targets"])]
 
     
-    def load_and_apply_config(self, config=None):
-        if config is None:
-            config = self.config
+    def load_and_apply_config(self, config_file=None):
+        if config_file is None:
+            config_file = self.config_file
         else:
-            self.config = config
+            self.config_file = config_file
 
         self.load_config()
         # Init zoom tab
@@ -355,11 +428,12 @@ class Interface():
         as long as there is a GUI selected
         and the exit event has not been set
         """
-        config = os.path.join(PROJECT_DIR, 'config.yaml')
-        self.load_and_apply_config(config)
+        config_file = os.path.join(PROJECT_DIR, 'config.yaml')
+        self.load_and_apply_config(config_file)
 
         while not self.exit.is_set():
             # print(type(self.device.mapping))
             self.gui.run()
             self.gui.apply_updates()
+    
 

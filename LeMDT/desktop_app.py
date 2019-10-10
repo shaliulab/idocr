@@ -18,13 +18,11 @@ import pandas as pd
 from PIL import ImageTk, Image
 
 # Local application imports
-from .lmdt_utils import setup_logging, _toggle_pin
+from .lmdt_utils import _toggle_pin
 from . import PROJECT_DIR, STATIC_DIR
 from .decorators import if_record_event, if_config_loaded, if_play_event, if_not_record_event
 
 
-setup_logging()
-log = logging.getLogger(__name__)
 
 def _create_circle(self, x, y, r, **kwargs):
     return self.create_oval(x-r, y-r, x+r, y+r, **kwargs)
@@ -72,9 +70,9 @@ class BetterButton(tk.Button):
         """
 
         fname = Path(STATIC_DIR,  filename+'.png').__str__()
-        log.debug("Reading image on path {}".format(fname))
+        self.log.debug("Reading image on path {}".format(fname))
         if not os.path.isfile(fname):
-            log.warning('Could not find {}. Are you sure it is in /static?'.format(fname))
+            self.log.warning('Could not find {}. Are you sure it is in /static?'.format(fname))
             fname = Path(STATIC_DIR, 'question.png').__str__()
             photoimage = ImageTk.PhotoImage(file=fname)
         else:
@@ -159,7 +157,7 @@ class TkinterGui():
         self.video_width = None
         self.finished = False
 
-        self.log = log
+        self.log = self.interface.getLogger(name=__name__)
 
     def create(self):
         """

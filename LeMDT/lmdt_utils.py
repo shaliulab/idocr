@@ -1,4 +1,5 @@
 # Standard library imports
+import logging
 import logging.config
 import os
 
@@ -21,27 +22,7 @@ class ReadConfigMixin():
 
  
 
-@export
-def setup_logging(
-    default_path='logging.yaml',
-    default_level=logging.INFO,
-    env_key='LOG_CFG'
-):
-    """Setup logging configuration
 
-    """
-    path = default_path
-    value = os.getenv(env_key, None)
-    if value:
-        path = value
-    if os.path.exists(path):
-        with open(path, 'rt') as f:
-            config = yaml.safe_load(f.read())
-        logging.config.dictConfig(config)
-    else:
-        logging.basicConfig(level=default_level)
-
-    coloredlogs.install()
 
 def _toggle_pin(self, device=None, pin_number=None, pin_id=None, value=0, freq=None, thread=True):
     """

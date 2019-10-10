@@ -12,13 +12,13 @@ import numpy as np
 import psutil
 
 from .decorators import export 
-from .lmdt_utils import setup_logging
 from . import UTILS_DIR
-
-setup_logging()
 
 
 class StandardStream():
+
+    def __init__(self, tracker):
+        self.tracker = tracker
 
     def get_width(self):
         raise Exception
@@ -32,7 +32,9 @@ class StandardStream():
 
 @export
 class PylonStream(StandardStream):
-    def __init__(self, video=None):
+    def __init__(self, tracker, video=None):
+
+        super(PylonStream, self).__init__(tracker)
         self.log = logging.getLogger(__name__)
         self.log.info("Attempting to open pylon camera")
 
@@ -44,7 +46,7 @@ class PylonStream(StandardStream):
             self.log.warning(e)
             self.log.warning('Running open_camera.sh')
             script_path = Path(UTILS_DIR, 'open_camera.sh').__str__() 
-            os.system("sudo bash {}".format(script_path))
+            os.system("bash {}".format(script_path))
             time.sleep(5)
             try:
                 cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
@@ -165,9 +167,11 @@ class PylonStream(StandardStream):
 @export
 class WebCamStream(StandardStream):
 
-    def __init__(self, video=None):
+    def __init__(self, tracker, video=None):
 
-        self.log = logging.getLogger(__name__)
+        super(WebCamStream, self).__init__(tracker)
+
+        self.log = self.interface.getLogger(__name__)
 
         if video == 0:
             self.log.info("Attempting to open webcam")

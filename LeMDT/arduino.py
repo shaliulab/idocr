@@ -19,11 +19,8 @@ import yaml
 # Local application imports
 from .dummy_arduino import Dummy
 from .paradigm_loader import ParadigmLoader
-from .lmdt_utils import setup_logging
 from .arduino_threading import ArduinoThread
 
-# Set up package configurations
-setup_logging()
 
 BOARDS = {"Arduino": Arduino, "ArduinoMega": ArduinoMega, "Dummy": Dummy}
 
@@ -53,11 +50,14 @@ class LearningMemoryDevice(ParadigmLoader):
         # Inherited from interface
         self.reporting = self.interface.reporting
 
-        self.log = logging.getLogger(__name__)
+        self.log = self.interface.getLogger(__name__)
         # self.log.debug('Loaded paradigm in {}'.format(self.program))
 
         self.threads = {"exit_or_record": {}, "exit" : {}}
         self.threads_finished = {}
+
+
+        
 
 
     def connect_arduino_board(self, port):
@@ -282,11 +282,12 @@ class LearningMemoryDevice(ParadigmLoader):
         # power everything off except if ir is False.
         # In that case the IR light is kept
         for p in self.mapping.pin_number:
-            if self.mapping.loc[self.mapping.index.values == 'IRLED', 'pin_number'].values != p or ir:
-                self.board.digital[p].write(0)
+            # if self.mapping.loc[self.mapping.index.values == 'IRLED', 'pin_number'].values != p or ir:
+            self.board.digital[p].write(0)
     
         if shutdown:
-            return False
+            return False    
+
     ######################
     ## Enf of LearningMemoryDevice class
 

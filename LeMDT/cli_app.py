@@ -2,24 +2,35 @@
 import logging
 import cv2
 # Local application imports
-from .lmdt_utils import setup_logging, _toggle_pin
+from .lmdt_utils import _toggle_pin
 import threading
 import numpy as np
 import tempfile
-setup_logging()
 import ipdb
 import time
-log = logging.getLogger(__name__)
 
 class CLIGui():
 
     def __init__(self, interface):
 
         self.interface = interface
-        self.result = None
-        self.log = log
+        self.answer = None
+        self.log = self.interface.getLogger(__name__)
         self.live_feed_path = '/tmp/last_img.jpg'
+        self.options = ['open camera and start tracker', 'confirm settings', 'record', 'name odors', 'quit']
             
+    def let_user_pick(self):
+        print("Please choose:")
+        for idx, element in enumerate(self.options):
+            print("{}: {}".format(idx+1,element))
+        i = input("Enter number: ")
+        try:
+            if 0 < int(i) <= len(self.options):
+                return int(i)
+        except:
+            pass
+        return None
+
 
     def create(self):
         """
@@ -30,20 +41,19 @@ class CLIGui():
     def run(self):
         '''
         '''
-        while not self.interface.exit.is_set() and self.result != 0:
-            self.result = input('Proceed?: ')
-            if not self.result in ['n', 'no','N', 'no']:
-                try:
-                    self.result = self.proceed()
-                except Exception as e:
-                    self.log.warning("result = ".format(self.result))
-                    self.log.warning('Could not proceed')
-                    self.log.exception(e)
-                    break
-            else:
-                self.log.info('Not proceeding')
-                self.result = 0
-        
+
+        self.answer = self.let_user_pick()
+        while not self.interface.exit.is_set() and self.answer != len(self.options):
+
+            try:
+                self.proceed(self.answer)
+                self.answer = self.let_user_pick()
+            except Exception as e:
+                self.log.warning("answer = ".format(self.answer))
+                self.log.warning('I do not understand that answer')
+                self.log.exception(e)
+                break
+    
         self.close()
  
 
@@ -56,8 +66,8 @@ class CLIGui():
         This is the callback function of the X button in the window
         Note: this is the only method that closes the GUI
         """
-        self.interface.answer = input('Save results? Y/n')
-        if not self.interface.answer is None:
+        self.interface.save_results_answer = input('Press N to discard results, any other key will keep them: ')
+        if not self.interface.save_results_answer is None:
             self.interface.close()
 
     def display_feed(self):
@@ -73,26 +83,35 @@ class CLIGui():
                 print(self.interface.frame_color)
 
 
+    
+    def name_odors(self):
+        self.interface.odor_A = input('Name of odor A: ')
+        self.interface.odor_B = input('Name of odor B: ')
              
 
-    def proceed(self):
-        if not self.interface.play_event.is_set():
+    def proceed(self, answer):
+        if not self.interface.play_event.is_set() and answer == 1:
             self.interface.play()
             display_feed_thread = threading.Thread(target = self.display_feed)
             display_feed_thread.start()
             self.log.info('Play pressed')
             return 1
-        elif not self.interface.arena_ok_event.is_set():
+        elif not self.interface.arena_ok_event.is_set() and answer == 2:
             self.interface.ok_arena()
             self.log.info('Arena ok pressed')
             return 1
 
-        elif not self.interface.record_event.is_set():
+        elif not self.interface.record_event.is_set() and answer == 3:
             self.log.info('Record pressed')
             self.interface.record()
             return 1
-        else:
-            return 0
+
+        elif answer == 4:
+            self.name_odors()
+            return 1
+
+        elif answer == len(self.options):
+            pass
     
 
 CLIGui.toggle_pin = _toggle_pin
