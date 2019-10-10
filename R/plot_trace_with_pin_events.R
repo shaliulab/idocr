@@ -4,15 +4,15 @@
 plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pins_relevant = 1:4, colors=c("red", "blue"), arena_width_mm = 50, A='A', B = 'B', elshock_periods = character(), annot_on_side = FALSE) {
  
   if(interactive()) {
-    pins_relevant <- 1:4
-    colors <- c('red','blue')
-    arena_width_mm <- 50
-    A <- 'A'
-    B <- 'B'
-    annot_on_side <- F
-    elshock_periods = character()
-    library(ggplot2)
-    library(LeMDTr)
+    # pins_relevant <- 1:4
+    # colors <- c('red','blue')
+    # arena_width_mm <- 50
+    # A <- 'A'
+    # B <- 'B'
+    # annot_on_side <- F
+    # elshock_periods = character()
+    # library(ggplot2)
+    # library(LeMDTr)
   }
 
   # browser()
@@ -145,12 +145,17 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pin
     geom_hline(yintercept = borders[[1]]) +
     geom_hline(yintercept = borders[[2]])
   
+  print('Created base plot successfully')
+  
   ## Add exit points
   exits_dataframe <- get_exits_dataframe(lemdt_result[arena!=0], borders)
   if(nrow(exits_dataframe) > 0) {
     # browser()
     p3 <- p3 + geom_point(data = exits_dataframe, mapping = aes(x = t/60, y = x), col = 'blue')
   }
+  
+  
+  print('Exit points added successfully')
   
   ## Add rectangles
   if(nrow(rect_data) != 0) p3 <- p3 + geom_rect(
@@ -168,11 +173,17 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pin
     geom_text(data = rect_data, aes(label = annotation, x = (xmin+xmax)/2),  y = .95 * arena_width_mm) +
     geom_text(data = rect_data, aes(label = annotation, x = (xmin+xmax)/2),  y = .05 * arena_width_mm)
   
+  
+  print('Rectangles added successfully')
+  
   ## Add preference index data
   if(nrow(pi_data) != 0) {
     pi_data$pref_index <- as.character(round(pi_data$pref_index, digits = 2))
     pi_data$pref_index[is.na(pi_data$pref_index)] <- 'NA'
   }
+  
+  print('Index data preprared successfully')
+  
   
   # browser()
    if(annot_on_side) {
@@ -181,14 +192,21 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pin
      pi_data$pref_index_numeric <- as.numeric(pi_data$pref_index)
      myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
     
+     # print('Check 1')
+     # browser()
      
      p3 <- p3 +
-       new_scale_fill() +
+       ggnewscale::new_scale_fill() +
        geom_label(data = pi_data,
                            aes(label = pref_index, fill = pref_index_numeric),
                            fontface = 'bold', color = 'black', x =  x_limits[2], y = arena_width_mm/2, size = 5) +
        scale_fill_gradientn(colours = myPalette(100), limits = c(-1, +1), name = 'Index')
+     # print('Check 2')
+     
    }
+  
+  
+  print('Index annotation added successfully')
   
   p3 <- p3 + coord_flip(clip = "off")
   
