@@ -13,26 +13,27 @@ Learning Memory Device and Tracking
 ## Introduction
 **LMDT** (**L**earning **M**emory **D**evice and **T**racking)
 
+A Python interface to monitor and interact with flies in an olfactory memory setup, together with an R package for analysis of the resulting data.
+
 
 ## Documentation
-Please make sure the environment is using
 
-* Python3.6 (ideally python3.6.3)
-* Opencv 4.0.0 
+#### 1 Login 
 
-A python environment containing this and al the required packages is available under:
-```
-/home/luna.kuleuven.be/u0127714/anaconda3/envs/CV/bin/python
-```
+Username: **FSL**
+Password: **flysleep1**
 
-If you have not downloaded the software yet:
+#### 2 Open program
 
-#### Download
-Run in a terminal (only once) :)
-```
-git clone https://gitlab.com/flysleeplab/learning-memory-feedback-and-tracking
-```
-this will download the Python code
+* **Open a terminal**
+You can do it thre ways
+a) Press on the terminal icon on the launcher to the left
+![](LeMDT/static/terminal_icon.png) 
+
+b) Press **windows key** and type **terminal**. Then press **enter**
+c) Press Control+Alt+T
+
+
 
 #### Open the program
 Type this after entering the folder you have downloaded (with `cd`)
@@ -42,7 +43,7 @@ Type this after entering the folder you have downloaded (with `cd`)
 ```
 This will trigger the opening of the following window
 
-![](static/readme/startup.png) 
+![](LeMDT/static/readme/startup.png) 
 
 loaded with the following settings:
 
