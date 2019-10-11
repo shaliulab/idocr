@@ -2,6 +2,9 @@
 #' @export
 impute_missing_point <- function(lemdt_result) {
   
+  n_arenas <- length(unique(lemdt_result$arena))
+  
+  
   lemdt_result[, imputed := FALSE]
   
   lemdt_result[is.na(mm_mean), imputed :=  TRUE]
@@ -29,8 +32,8 @@ impute_missing_point <- function(lemdt_result) {
     
   }
   
-  period_imputed <- rep(lemdt_result[arena==0, period], times = 21)
-  period_id_imputed <- rep(lemdt_result[arena==0, period_id], times = 21)
+  period_imputed <- rep(lemdt_result[arena==0, period], times = n_arenas)
+  period_id_imputed <- rep(lemdt_result[arena==0, period_id], times = n_arenas)
   lemdt_result <- as.data.table(arrange(lemdt_result, by = arena))
   lemdt_result[, mm_mean := mm_mean_imputed]
   lemdt_result[, period := period_imputed]

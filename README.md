@@ -177,6 +177,9 @@ The plot shows the position of the flies over time (time is on Y and position on
 
 * The default index function is the preference_index, but other may be available. You can change the index function with the `index_function`.
 
+* If you wish to display a subset of flies, provide a numeric vector to the `selected_flies` argument i.e. `selected_flies = c(2,5,8)` will show the flies in arenas 2,5 and 8.
+If you want everything between 1 and 10, you can type 1:10. So this is also possible -> c(1:10, 15) will show 1 to 10 and 15 too.
+
 * The plot comes with comprehensive annotation by default, so it is easy to share with your peers. This includes the date and time of the experiment (which serves as identifier of the folder name in lemdt_results), the name of the program that was used to create the paradigm, as well as the value of `min_exits_required`, `decision_zone_mm` and `index_function`. The user can add custom annotation via the `annotation`argument.
 
 ### Make a paradigm

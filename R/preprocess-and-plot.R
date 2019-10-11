@@ -1,5 +1,5 @@
 #' @export
-preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FALSE, A=NULL, B=NULL, min_exits_required=5, max_time_minutes=Inf, annotation = '', index_function = LeMDTr::preference_index) {
+preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FALSE, A=NULL, B=NULL, min_exits_required=5, max_time_minutes=Inf, annotation = '', index_function = LeMDTr::preference_index, selected_flies = 1:20) {
 
   # if(interactive()) {
     # decision_zone_mm=10
@@ -35,6 +35,7 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
   
     
   lemdt_result <- na.omit(read.table(file = file_path, sep = ',', header = T, stringsAsFactors = F)[,-1])
+  lemdt_result <- lemdt_result[lemdt_result$arena %in% c(0, selected_flies),]
   
   # transform from pixels to mm. Assume the whole chamber (125 pixels)
   # is 5 mm (50 mm)
@@ -82,7 +83,7 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
   lemdt_result <- lemdt_result2[periods_dt, on = 't']
   
   
-  table(lemdt_result$arena)
+  # table(lemdt_result$arena)
   
   ##################################
   ## Clean mistracked datapoints

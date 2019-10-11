@@ -7,6 +7,8 @@
 #' @export
 set_timeseries_frequency <- function(lemdt_result, freq=.25) {
   
+  n_arenas <- length(unique(lemdt_result$arena))
+  
   
   # the timepoints for which we will have a datapoint
   time_index <- seq(0, max(lemdt_result$t), freq)
@@ -17,7 +19,7 @@ set_timeseries_frequency <- function(lemdt_result, freq=.25) {
   # and its equal to the length of time_index
   reference_dt <- data.table(
     # t_arena = paste0(
-      t = rep(time_index, times = 21),
+      t = rep(time_index, times = n_arenas),
       # '_',
       arena = rep(0:20, each = length(time_index))
     # ),
