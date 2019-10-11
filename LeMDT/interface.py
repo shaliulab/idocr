@@ -161,6 +161,7 @@ class Interface():
 
         self.odor_A = 'A'
         self.odor_B = 'B'
+        self.save_results_answer = 'Yes'
 
 
 
@@ -209,7 +210,7 @@ class Interface():
         device.prepare('exit')
         self.device = device
         self.log.info('Arduino will be run for {}'.format(datetime.timedelta(seconds= self.duration)))
-        paradigm_human_readable = device.paradigm[['pin_id', 'start', 'end', 'iterations', 'on', 'off']]
+        paradigm_human_readable = device.paradigm[['pin_id', 'start', 'end', 'iterations', 'on', 'off', 'block']]
         
         paradigm_starts = paradigm_human_readable['start'].values
         paradigm_ends = paradigm_human_readable['end'].values

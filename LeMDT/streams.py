@@ -35,7 +35,7 @@ class PylonStream(StandardStream):
     def __init__(self, tracker, video=None):
 
         super(PylonStream, self).__init__(tracker)
-        self.log = logging.getLogger(__name__)
+        self.log = tracker.interface.getLogger(__name__)
         self.log.info("Attempting to open pylon camera")
 
         ## TODO
@@ -171,7 +171,7 @@ class WebCamStream(StandardStream):
 
         super(WebCamStream, self).__init__(tracker)
 
-        self.log = self.interface.getLogger(__name__)
+        self.log = tracker.interface.getLogger(__name__)
 
         if video == 0:
             self.log.info("Attempting to open webcam")

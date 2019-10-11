@@ -67,7 +67,7 @@ class Saver():
         record_start_formatted = self.tracker.interface.record_start.strftime("%Y-%m-%d_%H-%M-%S")
         filename = record_start_formatted + "_" + self.machine_id
         self.output_dir = Path(self.path, record_start_formatted)
-        print(self.output_dir)
+        self.log.info('output_dir set to {}'.format(self.output_dir))
         self.store = Path(self.output_dir, filename)
         self.store_video = self.store.as_posix()
         self.store_img = Path(self.output_dir, "frames")

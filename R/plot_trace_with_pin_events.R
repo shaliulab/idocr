@@ -1,7 +1,7 @@
 #' @import data.table ggplot2 ggnewscale RColorBrewer
 #' @export
 #'
-plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pins_relevant = 1:4, colors=c("red", "blue"), arena_width_mm = 50, A='A', B = 'B', elshock_periods = character(), annot_on_side = FALSE) {
+plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pins_relevant = 1:4, colors=c("red", "blue"), arena_width_mm = 50, A=NULL, B = NULL, elshock_periods = character(), annot_on_side = FALSE) {
  
   if(interactive()) {
     # pins_relevant <- 1:4
@@ -9,7 +9,6 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pin
     # arena_width_mm <- 50
     # A <- 'A'
     # B <- 'B'
-    # annot_on_side <- F
     # elshock_periods = character()
     # library(ggplot2)
     # library(LeMDTr)
@@ -49,6 +48,8 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pin
   
   y_mins <- c(0, arena_width_mm/2)
   y_max <- c(arena_width_mm/2, arena_width_mm)
+  
+  
   odours <-  c(A, B)
   names(colors) <- odours
   
@@ -172,45 +173,49 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pin
     alpha = 0.5, size = 3) +
     geom_text(data = rect_data, aes(label = annotation, x = (xmin+xmax)/2),  y = .95 * arena_width_mm) +
     geom_text(data = rect_data, aes(label = annotation, x = (xmin+xmax)/2),  y = .05 * arena_width_mm)
-  
-  
+
+
   print('Rectangles added successfully')
-  
+
   ## Add preference index data
   if(nrow(pi_data) != 0) {
     pi_data$pref_index <- as.character(round(pi_data$pref_index, digits = 2))
     pi_data$pref_index[is.na(pi_data$pref_index)] <- 'NA'
   }
-  
+   
   print('Index data preprared successfully')
-  
-  
+
+
   # browser()
    if(annot_on_side) {
      p3 <- p3 + geom_text(data = pi_data, aes(x = x, label = pref_index), y = .95 * arena_width_mm, size = 3) + theme(plot.margin = unit(c(1,3,1,1), "lines")) # This widens the right m
    } else {
      pi_data$pref_index_numeric <- as.numeric(pi_data$pref_index)
      myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
-    
+
      # print('Check 1')
      # browser()
-     
+
      p3 <- p3 +
-       ggnewscale::new_scale_fill() +
+       # ggnewscale::new_scale_fill() +
        geom_label(data = pi_data,
-                           aes(label = pref_index, fill = pref_index_numeric),
-                           fontface = 'bold', color = 'black', x =  x_limits[2], y = arena_width_mm/2, size = 5) +
-       scale_fill_gradientn(colours = myPalette(100), limits = c(-1, +1), name = 'Index')
-     # print('Check 2')
+                           aes(
+                               label = pref_index
+                               # fill = pref_index_numeric
+                               ),
+                           fontface = 'bold', color = 'black', x =  x_limits[2], y = arena_width_mm/2, size = 5)
      
+     # p3 <- p3 + scale_fill_gradientn(colours = myPalette(100), limits = c(-1, +1), name = 'Index')
+     # print('Check 2')
+
    }
-  
-  
+
+
   print('Index annotation added successfully')
-  
+
   p3 <- p3 + coord_flip(clip = "off")
-  
-  
+
+
   p3 <- p3 + theme(
       panel.spacing = unit(.25, "lines"),
       legend.position = "bottom",

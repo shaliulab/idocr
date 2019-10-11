@@ -18,17 +18,20 @@ class CLIGui():
         self.log = self.interface.getLogger(__name__)
         self.live_feed_path = '/tmp/last_img.jpg'
         self.options = ['open camera and start tracker', 'confirm settings', 'record', 'name odors', 'quit']
+        self.effects = ['tracker starting', 'settings confirmed', 'recording starting', 'saving odor names', 'quitting']
             
     def let_user_pick(self):
         print("Please choose:")
         for idx, element in enumerate(self.options):
             print("{}: {}".format(idx+1,element))
         i = input("Enter number: ")
+
         try:
             if 0 < int(i) <= len(self.options):
+                self.log.info(self.effects[int(i)-1])
                 return int(i)
-        except:
-            pass
+        except Exception as e:
+            self.log.warning(e)
         return None
 
 
@@ -80,8 +83,6 @@ class CLIGui():
                 time.sleep(.2)
             except Exception as e:
                 self.log.exception(e)
-                print(self.interface.frame_color)
-
 
     
     def name_odors(self):
@@ -94,15 +95,12 @@ class CLIGui():
             self.interface.play()
             display_feed_thread = threading.Thread(target = self.display_feed)
             display_feed_thread.start()
-            self.log.info('Play pressed')
             return 1
         elif not self.interface.arena_ok_event.is_set() and answer == 2:
             self.interface.ok_arena()
-            self.log.info('Arena ok pressed')
             return 1
 
         elif not self.interface.record_event.is_set() and answer == 3:
-            self.log.info('Record pressed')
             self.interface.record()
             return 1
 

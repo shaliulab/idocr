@@ -1,5 +1,5 @@
 #' @export
-preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FALSE, A='A', B='B', min_exits_required=5, max_time_minutes=Inf, annotation = '', index_function = LeMDTr::preference_index) {
+preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FALSE, A=NULL, B=NULL, min_exits_required=5, max_time_minutes=Inf, annotation = '', index_function = LeMDTr::preference_index) {
 
   # if(interactive()) {
     # decision_zone_mm=10
@@ -12,7 +12,7 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
     # B <- 'B'
     # debug = F
     # annotation <- ''
-    # experiment_folder = '/home/antortjim/MEGAsync/Gitlab/LeMDT/lemdt_results/LeMDTe27SL5a9e19f94de287e28f789825/LEARNER_001/2019-09-16_16-04-19'
+    experiment_folder = '/home/antortjim/1TB/MEGA/FlySleepLab/Gitlab/LeMDT/lemdt_results/2019-10-04_12-46-49'
   # }
   filename <- list.files(path = experiment_folder, pattern = '_LeMDTe27SL5a9e19f94de287e28f789825.csv')
   
@@ -22,6 +22,18 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
     return(1)
   }
   
+  odors_csv <- file.path(experiment_folder, 'odors.csv')
+  if (file.exists(odors_csv)) {
+    odors_table <- read.table(odors_csv, sep = ',', header=T, stringsAsFactors = F)
+    if(is.null(A)) A <- odors_table$odor_A
+    if(is.null(B)) B <- odors_table$odor_B
+  } else {
+    if(is.null(A)) A <- "A"
+    if(is.null(B)) B <- "B"
+    
+  }
+  
+    
   lemdt_result <- na.omit(read.table(file = file_path, sep = ',', header = T, stringsAsFactors = F)[,-1])
   
   # transform from pixels to mm. Assume the whole chamber (125 pixels)
@@ -139,10 +151,14 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
 
 title <- basename(experiment_folder)
 
-program_name <- data.table::fread(file = file.path(experiment_folder, 'paradigm.csv'))[, .(block = unique(block))]$block %>%
+program_name <- tryCatch({
+  data.table::fread(file = file.path(experiment_folder, 'paradigm.csv'))[, .(block = unique(block))]$block %>%
   grep(pattern = 'end', invert = T, value = T) %>%
   grep(pattern = 'startup', invert = T, value = T)
-
+}, error = function(e) {
+  warning(e)
+  return("")
+})
 p <- result$p + ggtitle(label = title, subtitle = paste(
   '  /  Program:',   program_name,
   '  /  min exits:', min_exits_required,

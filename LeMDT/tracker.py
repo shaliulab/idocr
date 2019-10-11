@@ -371,14 +371,18 @@ class Tracker():
             if self.frame_count < self.N and self.frame_count > 0 or not self.interface.arena_ok_event.is_set():
                 self.arena_contours = self.find_arenas(gray)
 
-            found_targets = len(self.arena_contours)
-            if self.arena_contours is None or found_targets < int(targets):
-
+            if self.arena_contours is None:
+                found_targets = 0
+            else:
+                found_targets = len(self.arena_contours)
+                
+            if found_targets < int(targets):
                 self.log.debug("Number of putative arenas found less than target. Discarding frame".format(self.frame_count))
                 self.frame_count += 1
                 self.interface.frame_color = gray_color
                 status = self.track()
                 return status
+
                         
             transform = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.block_size, self.param1)
             self.transform = transform

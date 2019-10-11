@@ -49,25 +49,29 @@ handlers:
 
 loggers:
   LeMDT.tracker:
-    handlers: [console, file_tracker]
+    handlers: [file_tracker]
     propagate: no
   LeMDT.arduino:
-    handlers: [console, file_arduino]
+    handlers: [file_arduino]
     propagate: no
-  LeMDT.cli_gui:
-    handlers: [console, file_general]
+  LeMDT.arduino_threading:
+    handlers: [file_arduino]
     propagate: no
-  LeMDT.cli_gui:
-    handlers: [console, file_general]
+  LeMDT.cli_app:
+    handlers: [file_general]
     propagate: no
   LeMDT.interface:
-    handlers: [console, file_general]
+    handlers: [file_general]
     propagate: no
   LeMDT.saver:
-    handlers: [console, file_general]
+    handlers: [file_general]
     propagate: no
   LeMDT.streams:
+    handlers: [file_general]
+    propagate: no
+  LeMDT.dummy_arduino:
+    handlers: [file_general]
+    propagate: no
+  LeMDT.cli_app:
     handlers: [console, file_general]
     propagate: no
-    
-
