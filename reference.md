@@ -15,3 +15,5 @@ a csv file that declares a list of pins. For each pin if states when it is to be
 * https://superuser.com/questions/870510/run-ifconfig-without-sudo to run `ifconfig` without the need of entering a sudo password. This is required to turn on the camera after a reboot of the computer
 
 * add user to dialout group in order to have permission to work with `/dev/ttyACM0`, the file that represents the arduino
+
+"ODOUR_A_LEFT,ODOUR_A_RIGHT,ODOUR_B_LEFT,ODOUR_B_RIGHT"
