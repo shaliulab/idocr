@@ -29,38 +29,44 @@ def mixedomatic(cls):
     setattr(cls, '__init__', __init__)
     return cls
 
-def if_record_event(func=None, *, interface=None):
-    """Decorator function with arguments
-    Decorator can be used with or without arguments
-    Examples:
-        >>>
-        >>> @decorator_with_args
-        >>> def func():
-        >>>     pass
-        >>>
-        >>> @decorator_with_args(arg='foo')
-        >>> def func():
-        >>>     pass
-        >>>
-    """
-
-    # 1. Decorator arguments are applied to itself as partial arguments
-    if func is None:
-        return functools.partial(if_record_event, interface=None)
-
-    # 2. logic with the arguments
-    ...
-
-    # 3. Handles the actual decorating
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        # Write decorator function logic here
-        # Before function call
-        # ...
-        if interface.record_event.is_set():
-            result = func(*args, **kwargs)
-            # After function call
-            # ...
-            return result
+# def if_record_event(interface):
+def if_record_event(f):
+    def wrapper(self, *args, **kwargs):
+        is_set = self.interface.record_event.is_set()
+        if not is_set:
+            return True            
+        return f(self, *args, **kwargs)
     return wrapper
+    # return _if_record_event
 
+# def if_record_event(interface):
+def if_not_record_event(f):
+    def wrapper(self, *args, **kwargs):
+        is_set = self.interface.record_event.is_set()
+        if is_set:
+            return True            
+        return f(self, *args, **kwargs)
+    return wrapper
+    # return _if_record_event
+
+
+
+def if_play_event(f):
+    def wrapper(self, *args, **kwargs):
+        is_set = self.interface.play_event.is_set()
+        if not is_set:
+            return True            
+        return f(self, *args, **kwargs)
+    return wrapper
+    # return _if_record_event
+
+# def if_record_event(interface):
+def if_config_loaded(f):
+    def wrapper(self, *args, **kwargs):
+        config_loaded = not self.interface.config is None
+        if not config_loaded:
+            print('config is not loaded')
+            return True            
+        return f(self, *args, **kwargs)
+    return wrapper
+    # return _if_record_event

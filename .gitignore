@@ -107,3 +107,13 @@ LeMDTe27SL5a9e19f94de287e28f789825
 failed_arenas/*
 .vscode/*
 .pylintrc
+LeMDT.desktop
+node_modules
+LeMDT/static/semantic*
+.Rproj.user
+.Rhistory
+*.avi
+lemdt_results/*
+*.desktop
+wheels/LeMDT*
+scripts/make_app.sh

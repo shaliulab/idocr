@@ -1,0 +1,77 @@
+version: 1
+formatters:
+  simple:
+    (): coloredlogs.ColoredFormatter
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  basic:
+    (): coloredlogs.ColoredFormatter
+    format: '%(asctime)s - %(message)s'
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: simple
+    level: DEBUG
+    stream: ext://sys.stdout
+  console_basic:
+    class: logging.StreamHandler
+    formatter: basic
+    level: DEBUG 
+    stream: ext://sys.stdout
+
+  file_general:
+    class:  logging.handlers.RotatingFileHandler
+    level: DEBUG 
+    formatter: simple
+    filename: general
+    maxBytes: 10485760 # 10MB
+    backupCount: 3
+    encoding: utf8
+
+  file_arduino:
+    class:  logging.handlers.RotatingFileHandler
+    level: DEBUG 
+    formatter: simple
+    filename: arduino
+    maxBytes: 10485760 # 10MB
+    backupCount: 3
+    encoding: utf8
+
+  file_tracker:
+    class:  logging.handlers.RotatingFileHandler
+    level: DEBUG 
+    formatter: simple
+    filename: tracker
+    maxBytes: 10485760 # 10MB
+    backupCount: 3
+    encoding: utf8
+
+
+
+loggers:
+  LeMDT.tracker:
+    handlers: [file_tracker]
+    propagate: no
+  LeMDT.arduino:
+    handlers: [file_arduino]
+    propagate: no
+  LeMDT.arduino_threading:
+    handlers: [file_arduino]
+    propagate: no
+  LeMDT.cli_app:
+    handlers: [file_general]
+    propagate: no
+  LeMDT.interface:
+    handlers: [file_general]
+    propagate: no
+  LeMDT.saver:
+    handlers: [file_general]
+    propagate: no
+  LeMDT.streams:
+    handlers: [file_general]
+    propagate: no
+  LeMDT.dummy_arduino:
+    handlers: [file_general]
+    propagate: no
+  LeMDT.cli_app:
+    handlers: [console, file_general]
+    propagate: no

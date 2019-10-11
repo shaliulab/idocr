@@ -1,4 +1,5 @@
 # Standard library imports
+import logging
 import logging.config
 import os
 
@@ -6,8 +7,8 @@ import os
 import yaml
 import numpy as np
 import coloredlogs
-
-from decorators import export
+import threading
+from .decorators import export
 
 class ReadConfigMixin():
 
@@ -21,24 +22,45 @@ class ReadConfigMixin():
 
  
 
-@export
-def setup_logging(
-    default_path='logging.yaml',
-    default_level=logging.INFO,
-    env_key='LOG_CFG'
-):
-    """Setup logging configuration
 
+
+def _toggle_pin(self, device=None, pin_number=None, pin_id=None, value=0, freq=None, thread=True):
     """
-    path = default_path
-    value = os.getenv(env_key, None)
-    if value:
-        path = value
-    if os.path.exists(path):
-        with open(path, 'rt') as f:
-            config = yaml.safe_load(f.read())
-        logging.config.dictConfig(config)
-    else:
-        logging.basicConfig(level=default_level)
+    Update the state of pin pin_number with value,
+    while logging and caching this so user can confirm it.
+    """
 
-    coloredlogs.install()
+    if device is None:
+        device = self.device
+
+    if pin_number is None:
+        pin_number = device.mapping["pin_number"].loc[device.mapping.index == pin_id].values[0]
+        # print(pin_number)
+
+    d = threading.currentThread()
+    
+    # Update state of pin (value = 1 or value = 0)
+    device.board.digital[pin_number].write(value)
+
+    # Update log with info severity level unless
+    # on pin13, then use severity debug
+    if self.log.info:
+        f = self.log.info
+        
+        if pin_number != 13:
+            if thread:
+                f("{} ---> {}".format(
+                d._kwargs["d_name"],
+                value
+                ))
+            else:
+                f("{} ---> {}".format(
+                pin_id, value
+                ))   
+
+    # x = value if not freq else freq
+    x = value
+    # print("x")
+    # print(x)
+
+    device.pin_state[getattr(self, "pin_name", pin_id)] = x

@@ -12,27 +12,27 @@ import os
 # Third party imports
 import numpy as np
 import pandas as pd
+from pyfirmata import ArduinoMega, Arduino
 import serial
 import yaml
 
 # Local application imports
-from pyfirmata import ArduinoMega, Arduino
-from pdloader import PDLoader
-from lmdt_utils import setup_logging
-from arduino_threading import ArduinoThread
+from .dummy_arduino import Dummy
+from .paradigm_loader import ParadigmLoader
+from .arduino_threading import ArduinoThread
 
-# Set up package configurations
-setup_logging()
 
-BOARDS = {"Arduino": Arduino, "ArduinoMega": ArduinoMega}
+BOARDS = {"Arduino": Arduino, "ArduinoMega": ArduinoMega, "Dummy": Dummy}
 
-class LearningMemoryDevice(PDLoader):
+class LearningMemoryDevice(ParadigmLoader):
 
-    def __init__(self, interface, mapping_path, program_path):
+    def __init__(self, interface):
 
         ## Initialization
         self.mapping = None
         self.program = None
+        self.paradigm = None
+
         self.pin_state = None
         self.stop_event_name = None
         self.threads_finished = None
@@ -47,18 +47,17 @@ class LearningMemoryDevice(PDLoader):
 
         self.interface.arduino_stopped = False
 
-
-        self.mapping_path = mapping_path
-        self.program_path = program_path
-
         # Inherited from interface
         self.reporting = self.interface.reporting
 
-        self.log = logging.getLogger(__name__)
-        self.log.debug('Loaded paradigm in {}'.format(self.program))
+        self.log = self.interface.getLogger(__name__)
+        # self.log.debug('Loaded paradigm in {}'.format(self.program))
 
         self.threads = {"exit_or_record": {}, "exit" : {}}
         self.threads_finished = {}
+
+
+        
 
 
     def connect_arduino_board(self, port):
@@ -83,16 +82,13 @@ class LearningMemoryDevice(PDLoader):
     def load_program(self, mapping_path=None, program_path=None):
         """
         Update the mapping_path and program_path
-        This function runs the __init__ method of the PDLoader
+        This function runs the __init__ method of the ParadigmLoader
         (Pandas Loader) class
         """
 
-        mapping_path = self.interface.default_mapping_path if mapping_path is None else mapping_path
-        program_path = self.interface.default_program_path if program_path is None else program_path
+        # print(mapping_path)
 
-
-        PDLoader.__init__(self, mapping_path, program_path)
-
+        ParadigmLoader.__init__(self, mapping_path, program_path)
 
     def init_pin_state(self):
         """
@@ -104,13 +100,13 @@ class LearningMemoryDevice(PDLoader):
 
     def prepare(self, stop_event_name):
         """
-        Load the Arduino paradigm into LeMFT
+        Load the Arduino paradigm into LeMDT
         Power off all pins
         Create the threads dictionary
         """
 
         self.log.debug('Loading program')
-        self.load_program(mapping_path=self.mapping_path, program_path=self.program_path)
+        self.load_program(mapping_path=self.interface.mapping_path, program_path=self.interface.program_path)
 
         # power off any pins if any
         self.power_pins_off(shutdown=False, ir=True)
@@ -122,44 +118,61 @@ class LearningMemoryDevice(PDLoader):
 
     def create_threads(self, threads, stop_event_name='exit'):
         """
-        Take the loaded paradigm and create a dictionary of parallel threads
-        Each thread will be an instance of ArduinoThread, based on threading.Thread()
+        Read the paradigm and update the `threads` dictionary. The dictionary has one dictionary inside for two types of events.
+        The dictionaries are populated with `create_threads`. It adds one item for every event in the paradigm.
+        The dictionary inside threads is selected with the `stop_event_name` argument.
+        The subdictionaries have items with values of type `ArduinoThread` and
+        keys set to pin_name_X where x is a counter of how many times the pin has been called.
+
+        Parameters
+        ----------
+
+        threads: dict
+            Thread container that will be used by self.run
+        stop_event_name: str
+            Key of the subdict inside threads that will be populated  
+
         """
 
-        if self.program is None:
-            self.log.error("No program loaded. Exiting")
+        if self.paradigm is None:
+            self.log.error("No paradigm loaded. Exiting")
             sys.exit(1)
 
         self.stop_event_name = stop_event_name
         # threads_subgroup = {}
         # threads_subgroup[stop_event_name] = threads[stop_event_name]
+
+        # Access the subdict that will be populated
         threads_subgroup = threads[stop_event_name]
 
-        self.program["active"] = False
-        self.program["thread_name"] = None
-
-        self.active_block = {k: False for k in self.overview.index}
  
-        # They are not run throughout the lifetime of the program, just at some interval and without intermitency
-        events = self.program.index.get_level_values('pin_id')
+        self.active_block = {k: False for k in self.program.index}
+ 
+        # They are not run throughout the lifetime of the program, just at some interval and without intermitency       
+        events = self.paradigm['pin_id']
         count = {ev: 0 for ev in events}
-        for i, ev in enumerate(events):
+        for event_index, ev in enumerate(events):
+
+            pin_event_row = self.paradigm.iloc[event_index]
+
             d_pin_number = np.asscalar(self.mapping.loc[ev]["pin_number"])
             x0 = count[ev]
             x1 = count[ev]+1
 
-            d_start =      np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :]["start"])
-            d_end =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :]["end"])
+            d_start =      np.asscalar(pin_event_row["start"])
+            d_end =        np.asscalar(pin_event_row["end"])
 
             if d_end <= d_start:
                 continue
-            d_on =         np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :]["on"])
-            d_off =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :]["off"])
-            block =        np.asscalar(self.program.loc[[ev]].iloc[x0:x1, :].index)
+            d_on =         np.asscalar(pin_event_row["on"])
+            d_off =        np.asscalar(pin_event_row["off"])
+            block =        pin_event_row["block"]
 
             d_name = 'thread-{}-{}'.format(ev, count[ev])
 
-            self.program[i,"thread_name"] = d_name
+
+            # print(self.paradigm)
+            self.paradigm.at[event_index, "thread_name"] = d_name
 
             kwargs = {
                 "pin_number"   : d_pin_number,
@@ -172,7 +185,7 @@ class LearningMemoryDevice(PDLoader):
                 "d_name"         : d_name, 
                 "board":         self.board,
                 "block"         : block,
-                "i"             : i
+                "event_index"             : event_index
             }
 
             d = ArduinoThread(
@@ -208,7 +221,7 @@ class LearningMemoryDevice(PDLoader):
             if not process.is_alive():
                 process.start(start_time=self.interface.arduino_start, duration=self.interface.duration)
             else:
-                self.log.info("thread % already started", process.name)
+                self.log.info("thread %  already started", process.name)
         
         self.log.debug('% waiting for slave threads', t.name)
 
@@ -246,9 +259,10 @@ class LearningMemoryDevice(PDLoader):
         self.power_pins_off()
 
         self.interface.arduino_done.set()
+
         # NEEDED?
         # if the exit event is not set yet and this is the stop event of the threads, activate the interface close method
-        if not self.interface.exit.is_set() and self.stop_event_name == 'exit': self.interface.close()
+        # if not self.interface.exit.is_set() and self.stop_event_name == 'exit': self.interface.close()
         return True
  
 
@@ -268,11 +282,12 @@ class LearningMemoryDevice(PDLoader):
         # power everything off except if ir is False.
         # In that case the IR light is kept
         for p in self.mapping.pin_number:
-            if self.mapping.loc[self.mapping.index.values == 'IRLED', 'pin_number'].values != p or ir:
-                self.board.digital[p].write(0)
+            # if self.mapping.loc[self.mapping.index.values == 'IRLED', 'pin_number'].values != p or ir:
+            self.board.digital[p].write(0)
     
         if shutdown:
-            return False
+            return False    
+
     ######################
     ## Enf of LearningMemoryDevice class
 
@@ -283,7 +298,7 @@ class LearningMemoryDevice(PDLoader):
 if __name__ == "__main__":
     
     import signal
-    from interface import Interface
+    from .interface import Interface
     
     # Arguments to follow the command, adding video, etc options
     ap = argparse.ArgumentParser()

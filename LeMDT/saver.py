@@ -5,22 +5,24 @@ import os
 import os.path
 import datetime
 from pathlib import Path
+import shutil
 
 # Third party imports
 import cv2
+import numpy
 import pandas as pd
-
+import subprocess
+import threading
+# from skvideo.io import VideoWriter
 
 # Local application imports
-from lmdt_utils import setup_logging
-from decorators import if_record_event
-from LeMDT import PROJECT_DIR
+from .decorators import if_record_event
+from . import PROJECT_DIR
 
 # Set up package configurations
-setup_logging()
 
 # https://stackoverflow.com/questions/16740887/how-to-handle-incoming-real-time-data-with-python-pandas/17056022
-max_len = 1000
+max_len = 50
 
 
 class Saver():
@@ -30,12 +32,13 @@ class Saver():
 
         self.cache = cache
         self.tracker = tracker
-        self.log = logging.getLogger(__name__)
+        self.interface = self.tracker.interface
+        self.log = self.tracker.interface.getLogger(__name__)
         self.lst = []
         self.record_event = record_event
         self.columns = [
             "frame", "arena", "cx", "cy", "datetime", "t", \
-            "oct_left", "oct_right", "mch_left", "mch_right", \
+            "ODOUR_A_LEFT", "ODOUR_A_RIGHT", "ODOUR_B_LEFT", "ODOUR_B_RIGHT", \
             "eshock_left", "eshock_right"
             ]
         self.path = None
@@ -44,44 +47,75 @@ class Saver():
         self.store_video = None
         self.store_img = None
         self.out = None
+        self.video_writers = None
 
-    def set_store(self, cfg):
-        """
-        Set the absolute path to the output file (without extension)
-        """
+        self.path = self.tracker.interface.output_path
+        if self.path is None: self.path = self.tracker.interface.cfg["saver"]["path"]
 
-        self.log.info("Setting the store path")
+        self.video_format = self.tracker.interface.cfg["saver"]["video_format"]
+        self.video_out_fps = self.tracker.interface.cfg["saver"]["fps"]
+        self.log.info('FPS of output videos: {}'.format(self.video_out_fps))
         
-        
-        self.path = cfg["saver"]["path"]
-        record_start = self.tracker.interface.record_start.strftime("%Y-%m-%d_%H-%M-%S")
-        
-        
-        self.output_dir = Path(PROJECT_DIR, self.path, record_start)
-        filename = record_start+"_"+cfg["interface"]["machine_id"]
+        self.machine_id = self.tracker.interface.cfg["interface"]["machine_id"]
+        self.t = None
+
+    def init_record_start(self):
+        """
+        Set absolute paths to output (depend on what time the record button is pressed)
+        and create directory structure if needed.
+        """
+        record_start_formatted = self.tracker.interface.record_start.strftime("%Y-%m-%d_%H-%M-%S")
+        filename = record_start_formatted + "_" + self.machine_id
+        self.output_dir = Path(self.path, record_start_formatted)
+        self.log.info('output_dir set to {}'.format(self.output_dir))
         self.store = Path(self.output_dir, filename)
-
-        video_format = "mp4"
-        self.store_video = self.store.as_posix() + "." + video_format
-        self.store_video2 = self.store.as_posix() + "2." + ".avi"
-
-
+        self.store_video = self.store.as_posix()
         self.store_img = Path(self.output_dir, "frames")
-        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-        fourcc2 = cv2.VideoWriter_fourcc(*'XVID')
-
-        self.out = cv2.VideoWriter(self.store_video, fourcc, 2, (500, 500))
-        self.out2 = cv2.VideoWriter(self.store_video2, fourcc, 2, (500, 500))
-
-        self.log.info("Creating dirs")
+        self.log.info("Creating output directory structures")
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.store_img.mkdir(parents=True, exist_ok=False)
 
+    def init_output_files(self):
+        """Initialize csv and avi files."""
+        video_out_fourcc = ['H264', 'XVID', 'MJPG', 'DIVX', 'FMP4', 'MP4V']
+        vifc = video_out_fourcc[3]
+        self.output_video_shape = (1000, 1000)
+        self.video_writers = [
+            cv2.VideoWriter(
+                self.store_video + suffix + self.video_format,
+                cv2.VideoWriter_fourcc(*vifc),
+                self.video_out_fps, self.output_video_shape
+            ) for suffix in ["_original.", "_annotated."]]
+
+
+        store_header = pd.DataFrame(columns=self.columns)
+        with open(self.store.as_posix() + ".csv", 'w') as store:
+            store_header.to_csv(store)
 
         return True
 
+    def save_paradigm(self):
+        """Save a copy of the paradigm for future reference"""
+        self.tracker.interface.device.paradigm_human_readable.to_csv(os.path.join(self.output_dir, "paradigm.csv"), header=True)
 
+    def save_odors(self, odor_A, odor_B):
+        path2file = os.path.join(self.output_dir, "odors.csv")
+        handle = open(path2file, 'w')
+        handle.write('odor_A,odor_B\n')
+        handle.write('{},{}\n'.format(odor_A,odor_B))
+        handle.close()
 
+    def copy_logs(self, config):
+        try:
+            src_files = [config['handlers'][v]['filename'] for v in config['handlers'].keys() if v[:5] == 'file_']
+            dest = self.tracker.saver.output_dir 
+            for full_file_name in src_files:
+                if os.path.isfile(full_file_name):
+                    shutil.copy(full_file_name, dest)
+        except Exception as e:
+            self.log.warning(e)
+
+    @if_record_event
     def process_row(self, d, max_len=max_len):
         """
         Append row d to the store
@@ -91,8 +125,8 @@ class Saver():
     
         """
         
-        if not self.tracker.interface.record_event.is_set():
-            return True
+        # if not self.tracker.interface.record_event.is_set():
+        #     return True
         
         if len(self.lst) >= max_len:
             self.store_and_clear()
@@ -100,6 +134,7 @@ class Saver():
             self.lst.append(d)
             self.log.debug("Adding new datapoint to cache")      
 
+    @if_record_event
     def store_and_clear(self):
         """
         Convert the cache list to a DataFrame and append that to HDF5.
@@ -126,50 +161,66 @@ class Saver():
         # check the dataframe is not empty
         # could be empty if user closes before recording anything
            
-        self.log.info("Saving cache to {}".format(self.store.as_posix()))
+        self.log.debug("Saving cache to {}".format(self.store.as_posix()))
 
         # save to csv
-        with open(self.store.as_posix() + ".csv", 'a') as store:
-            df.to_csv(store)
+        try:
+            with open(self.store.as_posix() + ".csv", 'a') as store:
+                df.to_csv(store, header=False)
+        except FileNotFoundError:
+            self.log.warning('File already removed. Not saving cache')
+            
 
-
-        # try saving to hdf5
-        # try:
-        #     with pd.HDFStore(self.store + ".h5") as store:
-        #         store.append(key, df)
-        # except Exception as e:
-        #     self.log.info(key)
-        #     self.log.error("{} could not save cache to h5 file. Please investigate traceback. Is pytables available?".format(self.name))
-
-        #     self.log.info(df)
-        #     self.log.exception(e)
-
+    @if_record_event
     def save_img(self, filename, frame):
 
-        if not self.tracker.interface.record_event.is_set():
-            return True
+        # if not self.tracker.interface.record_event.is_set():
+            # return True
 
         full_path = Path(self.store_img, filename).as_posix()
         cv2.imwrite(full_path, frame)
 
+    @if_record_event
+    def save_video(self):
 
-    def images_to_video(self, clear_images=False):
+        # if not self.tracker.interface.record_event.is_set():
+            # return True
 
-        if not self.tracker.interface.record_event.is_set():
-            return True
-  
-        image_list = glob.glob(f"{self.store_img.as_posix()}/*.jpg")
-        sorted_images = sorted(image_list, key=os.path.getmtime)
-        for file in sorted_images:
-            # print("Adding image")
-            # print(self.store_video)
-            image_frame = cv2.imread(file)
-            self.out.write(image_frame)
-            self.out2.write(image_frame)
-        if clear_images:
-            for file in image_list:
-                os.remove(file)
+        # self.video_writer.open()
+        # print(self.tracker.interface.original_frame)
+
+        # self.video_writer.write(self.tracker.interface.original_frame)
+        # self.video_writer.release()
+        imgs = [self.tracker.interface.original_frame, self.tracker.interface.frame_color]
+        imgs_3_channels = [img if len(img.shape) == 3 else cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) for img in imgs]
 
 
+        if not self.video_writers is None:
+            for img, vw in zip(imgs_3_channels, self.video_writers):
+                saved_frame = cv2.resize(img, self.output_video_shape)
+                vw.write(saved_frame)
+
+    @if_record_event
+    def stop_video(self):
+        [vw.release() for vw in self.video_writers]
+
+    def refresh_trace_plot(self):
+        self.log.info('Creating traceplot')
+        self.t = threading.Thread(target=self.plot, name='trace_plot')
+        self.t.setDaemon(False)
+        try:
+            self.t.run()
+            self.log.info('Traceplot creation successful')
+        except:
+            self.log.warning('Traceplot creation failed')
 
 
+
+    def plot(self):
+        
+        # Comment this out when it is not fragile anymore
+        # subprocess.call([os.path.join(PROJECT_DIR, "Rscripts/main.R"), "-e", self.output_dir])
+        # p <- LeMDTr::preprocess_and_plot(experiment_folder = opt$experiment_folder)
+        # output_plot_path <- file.path(opt$experiment_folder, "trace_plot.png")
+        # ggplot2::ggsave(filename = output_plot_path, plot = p)
+        pass

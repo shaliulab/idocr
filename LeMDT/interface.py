@@ -3,53 +3,73 @@ import argparse
 import datetime
 import logging
 from pathlib import Path
+import os
 import os.path
 import sys
 import threading
 import time
+import shutil
 import signal
+import ipdb
+import tempfile
+
 
 # Third party imports
 import cv2
 import numpy as np
 import yaml
+import pandas as pd
+pd.options.mode.chained_assignment = None
 
 # Local application imports
-from arduino import LearningMemoryDevice
-from lmdt_utils import setup_logging
-from orevent import OrEvent
-from gui_framework.desktop_app import TkinterGui
-from tracker import Tracker
-from LeMDT import ROOT_DIR, PROJECT_DIR
+from .arduino import LearningMemoryDevice
+from .orevent import OrEvent
+from .desktop_app import TkinterGui
+from .cli_app import CLIGui
+
+from .tracker import Tracker
+from . import PROJECT_DIR
 
 DjangoGui = None
 
-# Set up package configurations
-setup_logging()
+# Set up logging configurations
 
-GUIS = {'django': DjangoGui, 'tkinter': TkinterGui}
+GUIS = {'django': DjangoGui, 'tkinter': TkinterGui, 'cli': CLIGui}
 
-config_yaml = Path(PROJECT_DIR, "config.yaml").__str__()
+# config_yaml = Path(PROJECT_DIR, "../config.yaml").__str__()
+
 
 # @mixedomatic
 class Interface():
 
-    def __init__(self, arduino=False, track=False, mapping=None, program=None, blocks=None, port=None,
-                 camera=None, video=None, reporting=False, config=config_yaml,
-                 duration=None, experimenter=None, gui=None):
+    def __init__(self, arduino=False, track=False,
+    mapping_path=None,
+    program_path=None,
+    blocks=None, port=None, camera=None,
+    video=None, reporting=False,
+    config_file=None,
+    output_path=None,
+    # duration=None,
+    experimenter=None, gui_name=None):
 
-        with open(config, 'r') as ymlfile:
-            self.cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
-
+        
 
         ## Initialization of attributes
         # Timestamps for important events
+
+        self.config_file = None
+        self.config = None
+
+        self.setup_logging()
+        self.log = self.getLogger(name=__name__)
+
         self.interface_start = None  # Instantation of the Interface class 
         self.arduino_start = None # Right before .start() the arduino threads
         self.tracking_start = None
+        self.cfg = None
 
         # Framework used to show graphics
-        self.gui = None
+        self.gui_name = None
 
         # Boolean flags indicating if arduino and or track are active
         self.arduino = None
@@ -64,12 +84,13 @@ class Interface():
         self.arduino_stopped = None # becomes true if user stops the arduino controls prematurily with Control C       
         self.exit = None            # later assigned a threading.Event()
         self.stream_finished = None # becomes true if stream is finished (i.e more frames are not available)
-        self.camera_closed = None   # becomes true if user stops tracking with X/q      
+        self.camera_closed = None   # becomes true if user stops tracking with X/q
+        self.original_frame = None    
         self.gray_color = None
         self.frame_color = None
         self.gray_gui = None
         self.stacked_arenas = None
-
+        self.min_arena_area = None
         self.reporting = None
         self.camera = None
         self.video = None
@@ -84,11 +105,13 @@ class Interface():
         self.timestamp = None
         self.duration = None
         self.experimenter = None
-        self.log = None
         self.statusbar = None
-
+        
+        self.odor_A = None
+        self.odor_B = None
+        
         ## Assignment of attributes
-        self.gui = gui
+        self.gui_name = gui_name
         self.arduino = arduino
         self.track = track
         self.interface_start = datetime.datetime.now()
@@ -105,29 +128,42 @@ class Interface():
         self.play_start = None
         self.record_start = None
 
+        self.config_file = config_file
+
 
         self.reporting = reporting
         self.camera = camera
         self.video = video
 
-        self.mapping_path = mapping
-        self.default_mapping_path = Path(PROJECT_DIR, 'mappings', 'main.csv').__str__()
-        self.program_path = program
-        self.default_program_path = Path(PROJECT_DIR, "programs", 'ir.csv').__str__()
+        self.mapping_path = mapping_path
+        self.program_path = program_path
 
         self.blocks = blocks
         self.port = port
-        if gui:
-            self.gui = GUIS[gui](interface=self)
+        
+        self.gui = None
+        if gui_name:
+            self.gui = GUIS[gui_name](interface=self)
+        
 
         self.timestamp = 0
-        self.duration = duration if duration else self.cfg["interface"]["duration"]
-        self.experimenter = experimenter if experimenter else self.cfg["tracker"]["experimenter"]
-        self.log = logging.getLogger(__name__)
-        
+        self.experimenter = experimenter
+      
         self.log.info("Start time: {}".format(self.interface_start.strftime("%Y%m%d-%H%M%S")))
         self.interface_initialized = False
         self.log.info('Interface initialized')
+
+        self.output_path = output_path
+        self.control_panel_path = Path(PROJECT_DIR, 'arduino_panel', 'tkinter.csv').__str__()
+
+        self.fraction_area = 1
+        self.answer = "Yes"
+
+        self.odor_A = 'A'
+        self.odor_B = 'B'
+        self.save_results_answer = 'Yes'
+
+
 
 
     def init_tracker(self):
@@ -142,8 +178,11 @@ class Interface():
         # Setup camera tracking
         ###########################
         self.log.info("Running tracker.init_tracker")
-        print(self.camera)
-        print(self.video)
+        frame_source = np.array([self.camera, self.video])
+        frame_source = frame_source[[not e is None for e in frame_source]].tolist()[0]
+        
+        self.log.info('Frame source set to {}'.format(frame_source))
+
         self.tracker = Tracker(interface=self, camera=self.camera, video=self.video)
         self.tracker.set_saver()
         self.tracker.load_camera()
@@ -165,14 +204,56 @@ class Interface():
 
         self.log.info("Running interface.init_device")
         device = LearningMemoryDevice(
-            interface=self,
-            mapping_path=self.default_mapping_path,
-            program_path=self.default_program_path,
+            interface=self
         )
         device.connect_arduino_board(self.port)
         device.prepare('exit')
         self.device = device
-    
+        self.log.info('Arduino will be run for {}'.format(datetime.timedelta(seconds= self.duration)))
+        paradigm_human_readable = device.paradigm[['pin_id', 'start', 'end', 'iterations', 'on', 'off', 'block']]
+        
+        paradigm_starts = paradigm_human_readable['start'].values
+        paradigm_ends = paradigm_human_readable['end'].values
+        paradigm_human_readable.drop(['start', 'end'], axis=1)
+        paradigm_human_readable.loc[:,'start'] = np.array([str(datetime.timedelta(seconds = v)) for v in paradigm_starts])
+        paradigm_human_readable.loc[:,'end'] = np.array([str(datetime.timedelta(seconds = v)) for v in  paradigm_ends])   
+        device.paradigm_human_readable = paradigm_human_readable
+        self.log.info('\n{}'.format(paradigm_human_readable))
+
+
+    def setup_logging(self, default_path='LeMDT/logging.yaml', default_level=logging.INFO, env_key='LOG_CFG'):
+        """
+        Setup logging configuration
+        """
+        path = default_path
+        value = os.getenv(env_key, None)
+        if value:
+            path = value
+        if os.path.exists(path):
+            with open(path, 'rt') as f:
+                config = yaml.safe_load(f.read())
+
+            file_handlers = [v for v in config['handlers'].keys() if v[:5] == 'file_']
+            for h in file_handlers:
+                # config['handlers'][f]['filename'] = tempfile.NamedTemporaryFile(prefix=config['handlers'][f]['filename'], suffix=".log").name
+                filename = os.path.join(PROJECT_DIR, 'logs', config['handlers'][h]['filename']+".log")
+                if os.path.exists(filename): os.remove(filename)
+                config['handlers'][h]['filename'] = filename
+
+            logging.config.dictConfig(config)
+
+        else:
+            self.log.warning('Could not find logging config file under {}'.format(path))
+            logging.basicConfig(level=default_level)
+            
+        
+        self.logging = logging
+        self.config = config 
+
+    def getLogger(self, name):
+        return self.logging.getLogger(name)
+
+        
     def close(self, signo=None, _frame=None):
         """
         Set the exit event
@@ -180,6 +261,20 @@ class Interface():
         classes. Upon setting this event, these processes stop
         """
         self.exit.set()
+        answer = self.save_results_answer
+        if answer == 'N':
+            try:
+                shutil.rmtree(self.tracker.saver.output_dir)
+            # in case the output_dir is not declared yet
+            # because we are closing early
+            except TypeError:
+                pass
+        else:
+            # ipdb.set_trace( )
+            self.tracker.saver.copy_logs(self.config)
+            
+
+
         self.log.info("Running interface.close()")
         if signo is not None: self.log.info("Received %", signo)
         
@@ -209,9 +304,6 @@ class Interface():
         self.play_event.set()
         self.play_start = datetime.datetime.now()
         
-        if self.arduino:
-            self.device.toprun(self.device.threads["exit"])
-
         if self.track:
             try:
                 self.log.info("Running tracker")
@@ -233,11 +325,15 @@ class Interface():
         This is the callback function of a button
         """
         
+        # Set the record_event so the data recording methods
+        # can run (if_record_event decorator)
         self.record_event.set()
-        
-        
+
         self.record_start = datetime.datetime.now()
-        self.tracker.saver.set_store(self.cfg)
+        self.tracker.saver.init_record_start()
+        self.tracker.saver.init_output_files()
+        self.tracker.saver.save_paradigm()
+        self.tracker.saver.save_odors(self.odor_A, self.odor_B)
         
         self.log.info("Pressed record")
         self.log.info("Savers will cache data and save it to csv files")
@@ -264,17 +360,67 @@ class Interface():
         self.arena_ok_event.set()
 
     
-    def init_components(self):
+    def load_config(self):
         
+        with open(self.config_file, 'r') as ymlfile:
+            self.cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
+
+        if self.mapping_path is None:
+            self.mapping_path = Path(PROJECT_DIR, 'mappings', 'tkinter.csv').__str__()
+        else:
+            self.mapping_path = Path(PROJECT_DIR, self.mapping_path).__str__()
+
+        if self.program_path is None:
+            self.program_path = Path(PROJECT_DIR, "programs", 'test.csv').__str__()
+        else:
+            self.program_path = Path(PROJECT_DIR, "programs", self.program_path).__str__()
+
+
+        self.log.info('Mapping path:')
+        self.log.info(self.mapping_path)
+        self.log.info('Program path:')
+        self.log.info(self.program_path)
+        
+        # if self.duration is None: self.duration = self.cfg["interface"]["duration"]
+        if self.experimenter is None: self.experimenter = self.cfg["tracker"]["experimenter"]
+        self.min_arena_area = self.cfg["arena"]["min_area"] 
+        # self.control_panel_path = Path(PROJECT_DIR, 'arduino_panel', self.cfg["interface"]["filename"]).__str__()
+        self.arena_width = self.cfg["arena"]["width"]
+        self.arena_height = self.cfg["arena"]["height"]
+       
+        width = self.cfg["arena"]["width"]
+        height = self.cfg["arena"]["height"]        
+        empty_img = np.zeros(shape=(height*3, width*3, 3), dtype=np.uint8)
+        self.stacked_arenas = [empty_img.copy() for i in range(self.cfg["arena"]["targets"])]
+
+    
+    def load_and_apply_config(self, config_file=None):
+        if config_file is None:
+            config_file = self.config_file
+        else:
+            self.config_file = config_file
+
+        self.load_config()
+        # Init zoom tab
+        self.init_components()
+    
+        self.log.info('Config applied successfully')
+
+
+
+    def init_components(self):
+ 
         self.init_control_c_handler()
         if self.arduino:
+            self.log.info('Initializing Arduino board')
             self.init_device()
     
         if self.track:
+            self.log.info('Initializing tracker')
             self.init_tracker()
-
-        self.gui.create()
-
+        if self.gui_name in ['tkinter', 'django', 'cli']:
+            self.gui.create()
+            self.log.info('Initializing gui')
 
     
     def start(self):
@@ -283,8 +429,12 @@ class Interface():
         as long as there is a GUI selected
         and the exit event has not been set
         """
+        config_file = os.path.join(PROJECT_DIR, 'config.yaml')
+        self.load_and_apply_config(config_file)
 
-        self.init_components()
-        while not self.exit.is_set() and self.gui is not None:
+        while not self.exit.is_set():
             # print(type(self.device.mapping))
             self.gui.run()
+            self.gui.apply_updates()
+    
+

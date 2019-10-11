@@ -11,14 +11,20 @@ import coloredlogs
 import numpy as np
 import psutil
 
-from decorators import export 
-from lmdt_utils import setup_logging
-from LeMDT import ROOT_DIR, UTILS_DIR
-
-setup_logging()
+from .decorators import export 
+from . import UTILS_DIR
 
 
 class StandardStream():
+
+    def __init__(self, tracker):
+        self.tracker = tracker
+
+    def get_width(self):
+        raise Exception
+    
+    def get_height(self):
+        raise Exception
 
     def get_dimensions(self):
         return self.get_width(), self.get_height()
@@ -26,8 +32,10 @@ class StandardStream():
 
 @export
 class PylonStream(StandardStream):
-    def __init__(self, video=None):
-        self.log = logging.getLogger(__name__)
+    def __init__(self, tracker, video=None):
+
+        super(PylonStream, self).__init__(tracker)
+        self.log = tracker.interface.getLogger(__name__)
         self.log.info("Attempting to open pylon camera")
 
         ## TODO
@@ -38,7 +46,7 @@ class PylonStream(StandardStream):
             self.log.warning(e)
             self.log.warning('Running open_camera.sh')
             script_path = Path(UTILS_DIR, 'open_camera.sh').__str__() 
-            os.system("sudo bash {}".format(script_path))
+            os.system("bash {}".format(script_path))
             time.sleep(5)
             try:
                 cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
@@ -54,8 +62,6 @@ class PylonStream(StandardStream):
             return 0
         finally:
             pass
-
-            
 
         # Print the model name of the camera.
         device_info = cap.GetDeviceInfo()
@@ -113,13 +119,26 @@ class PylonStream(StandardStream):
         return height
 
     def set_fps(self, fps):
-        self.stream.AcquisitionFrameRateAbs.SetValue(fps)
+        self.cap.AcquisitionFrameRateAbs.SetValue(fps)
+    
+    def retrieve_result(self):
+        while True:
+            try:
+                grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
+                break
+            except Exception as e:
+                self.log.exception(e)
+
+        self.grabResult = grabResult        
+        return grabResult
+
 
     def read_frame(self):
         # Wait for an image and then retrieve it. A timeout of 5000 ms is used.
         self.log.debug('Reading frame')
-        grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
-        self.grabResult = grabResult
+
+        grabResult = self.retrieve_result()      
+        
         # Image grabbed successfully?
         ret = False
         count = 1
@@ -127,8 +146,8 @@ class PylonStream(StandardStream):
         while not ret and count < 10:
             count += 1
             self.log.warning("Pylon could not fetch next frame. Trial no {}".format(count))
-            grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
-            self.grabResult = grabResult
+            grabResult = self.retrieve_result()
+
             ret = grabResult.GrabSucceeded()
         if count == 10:
             self.log.error("Tried reading next frame 10 times and none worked. Exiting :(")
@@ -148,9 +167,11 @@ class PylonStream(StandardStream):
 @export
 class WebCamStream(StandardStream):
 
-    def __init__(self, video=None):
+    def __init__(self, tracker, video=None):
 
-        self.log = logging.getLogger(__name__)
+        super(WebCamStream, self).__init__(tracker)
+
+        self.log = tracker.interface.getLogger(__name__)
 
         if video == 0:
             self.log.info("Attempting to open webcam")

@@ -1,0 +1,8 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Name=learningmemorysetup
+Type=Application
+Terminal=true
+Categories=GTK;GNOME;Utility;
+Exec=bash -c 'LD_LIBRARY_PATH=/home/luna.kuleuven.be/u0120864/anaconda3/envs/py37/bin/../lib/ /home/luna.kuleuven.be/u0120864/anaconda3/envs/py37/bin/python3 -m LeMDT --track --camera pylon --arduino'
+Icon=/home/luna.kuleuven.be/u0120864/VIBFlySleepLab/LeMDT/LeMDT/static/fly.png

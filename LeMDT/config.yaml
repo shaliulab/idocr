@@ -1,0 +1,40 @@
+arena:
+    min_area: 1000
+    block_size: 9
+    param1: 13
+    kernel_factor: 5
+    rangelow: 0
+    rangeup: 255
+    targets: 20
+    columns: 2
+    width: 80
+    height: 15
+
+fly:
+    min_length: 0
+    min_dist_arena: 2
+    max_area: 200
+    min_area: 0
+    min_intensity: 80
+
+tracker:   
+    fps: 12
+    experimenter: "Sayed"
+    crop: 1
+    N: 10
+    fail: 'failed_arenas/'
+
+arduino:
+    board: Dummy
+
+saver:
+    path: "lemdt_results/LeMDTe27SL5a9e19f94de287e28f789825/LEARNER_001"
+    video_format: "avi"
+    fps: 12
+
+blocks:
+    pattern: '.csv'
+
+interface:
+    machine_id: "LeMDTe27SL5a9e19f94de287e28f789825"
+    mode: 'deploy'

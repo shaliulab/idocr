@@ -1,0 +1,14 @@
+include LeMDT/static/fly.png
+include LeMDT/static/question.png
+include LeMDT/static/start.png
+include LeMDT/static/play.png
+include LeMDT/static/ok_arena.png
+include LeMDT/static/record.png
+include LeMDT/programs/*.csv
+include LeMDT/blocks/*.csv
+include LeMDT/mappings/*.csv
+include LeMDT/arduino_panel/*.csv
+include LeMDT/config.yaml
+include LeMDT/logging.yaml
+include LeMDT/videos/video_draft.avi
+include LeMDT/utils/open_camera.sh

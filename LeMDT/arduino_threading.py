@@ -9,17 +9,14 @@ import warnings
 import numpy as np
 
 # Local application imports
-from lmdt_utils import setup_logging
-
-# Set up package configurations
-setup_logging()
+from .lmdt_utils import _toggle_pin
 
 class ArduinoThread(threading.Thread):
 
     def __init__(self, device, kwargs, name = None, stop_event_name = 'exit'):
 
-        self.device = device
-        self.log = logging.getLogger(__name__)
+        self.device = device 
+        self.log = self.device.interface.getLogger(name=__name__)
         self.pin_name =  name.split('-')[1]
         self.stop_event_name = stop_event_name
         super(ArduinoThread, self).__init__(name = name, target = self.pin_thread, kwargs = kwargs)
@@ -38,41 +35,65 @@ class ArduinoThread(threading.Thread):
         event = getattr(self.device.interface, self.stop_event_name)
         if not event.is_set():
             event.wait(waiting_time)
-        else:
-            sys.exit(0)
+        
+        if event.is_set():
+            sys.exit(1)
+
 
         # if self.device.interface.pause:
             # self.log.info('Waiting for play button press')
             # self.device.interface.play_event.wait()
 
 
-    def pin_thread(self, pin_number, duration, start_time, start, end, on, off, block, i, n_iters=np.nan, d_name=None, board=None):
+    def pin_thread(self, pin_number, duration, start_time, start, end, on, off, block, event_index, n_iters=np.nan, d_name=None, board=None):
         """
-        Run by every thread independently, this function replicates the program specified in the corresponding row
-        of the program dataframe. Turns on a pin at a specific timepoint and after some waiting time, it turns it off
+        Run a single Arduino event in a separate thread independently.
+        
+        Run by every thread independently, this function implements the event specified in the corresponding row
+        of the paradigm dataframe. Turns on a pin at a specific timepoint and after some waiting time, it turns it off
         If on and off are not none, it can implement a cycle during this waiting time i.e. the pin can be turned on and off
         between start and end for on and off seconds respectively.
 
-        Keywords
-          pin_number: integer declaring the number of the pin on the Arduino board
+        Parameters
+        ----------
+        pin_number: int
+            Number of the pin on the Arduino board.
           
-          duration: time in seconds that the whole program is supposed to last.
-                       After duration, all pins should go off, no matter what their program is
+        duration: float
+            time in seconds that the whole paradigm is supposed to last.
+            After duration, all pins should go off, no matter what their program is.
           
-          start_time: datetime object declaring the exact moment when run()
-          (the function that calls pin_thread when defining the threads) is executed. Only makes sense in scheduled pins.
+        start_time: datetime.datetime
+            Exact moment when run() (the function that calls pin_thread when defining the threads) is executed.
+            Only makes sense in scheduled pins.
           
-          start: timepoint in seconds when the pin should go on for the first time. Only makes sense in scheduled pins.
+        start: float
+            timepoint in seconds when the pin should go on for the first time.
+            Only makes sense in scheduled pins.
+            Not the same as start_time because the pin does not go ON from time 0,
+            in most cases there is a waiting time.
           
-          end: timepoint in seconds when the pin should be turned off for good
+        end: float
+            timepoint in seconds when the pin should be turned off for good.
           
-          on: duration of the on time in a cycle. Only makes sense in intermitent pins.
+        on: float
+            duration of the on time in a cycle.
+            Only makes sense in intermitent pins.
           
-          off: duration of the off time in a cycle. Only makes sense in intermitent pins.
+        off: float
+            duration of the off time in a cycle.
+            Only makes sense in intermitent pins.
           
-          n_iters: By default is None, but it will be asigned a value equal to the number of cycles
-                   required by intermitent pins (as instructed in the program). If the pin does not have a cycle,
-                   then it will still be None        
+        n_iters: int, optional
+            Number of cycles required by intermitent pins (as instructed in the program).
+            Default is None
+            If the pin does not have a cycle it will remain None.
+
+        Returns
+        -------
+        int
+            1 for normal runs and 0 for early exits.
+
         """
         sync_time = 1
         # d = threading.currentThread()
@@ -94,7 +115,7 @@ class ArduinoThread(threading.Thread):
         stop = self.wait(sleep1)
         self.log.info('{} running'.format(d_name))
         if stop:
-            self.toggle_pin(pin_number, 0)
+            self.toggle_pin(pin_number=pin_number, value=0)
             return 0
     
         thread_start = datetime.datetime.now()    
@@ -106,7 +127,7 @@ class ArduinoThread(threading.Thread):
             stop = self.wait(sleep2)
             if stop:
                 self.log.debug("{} received exit".format(d_name))
-                self.toggle_pin(pin_number, 0)
+                self.toggle_pin(pin_number=pin_number, value=0)
                 return 0
         else:
              self.log.warning("{} delayed {} seconds".format(d_name, -sleep2))
@@ -115,8 +136,8 @@ class ArduinoThread(threading.Thread):
         # pin_id = self.mapping.query('pin_number == "{}"'.format(pin_number)).index[0]
 
         ##############
-        # It's time to activate the Arduino    
-        self.device.program.iloc[i,:]["active"] = True
+        # It's time to activate the Arduino       
+        self.device.paradigm.at[event_index,"active"] = True
 
         self.device.active_block[block] = True
 
@@ -125,7 +146,7 @@ class ArduinoThread(threading.Thread):
             for _ in range(int(n_iters)):
 
                 start_time = datetime.datetime.now()
-                self.toggle_pin(pin_number, 1, 1/(on + off))
+                self.toggle_pin(pin_number=pin_number, value=1, freq=1/(on + off))
                 
                 runtime = datetime.datetime.now() - start_time
                 sleep_time = on - runtime.total_seconds()
@@ -135,11 +156,11 @@ class ArduinoThread(threading.Thread):
                 else:
                     stop = self.wait(sleep_time)
                     if stop:
-                        self.toggle_pin(pin_number, 0)
+                        self.toggle_pin(pin_number=pin_number, value=0)
                         return 0
 
                 start_time = datetime.datetime.now()
-                self.toggle_pin(pin_number, 0, 1/(on + off))
+                self.toggle_pin(pin_number=pin_number, value=0, freq=1/(on + off))
                 runtime = datetime.datetime.now() - start_time
                 sleep_time = off - runtime.total_seconds()
                 if sleep_time < 0:
@@ -147,13 +168,13 @@ class ArduinoThread(threading.Thread):
                 else:
                     stop = self.wait(sleep_time)
                 if stop:
-                    self.toggle_pin(pin_number, 0, 0)
+                    self.toggle_pin(pin_number=pin_number, value=0, freq=0)
                     return 0
 
         else:
             # pins without cycle
             start_time = datetime.datetime.now()
-            self.toggle_pin(pin_number, 1)
+            self.toggle_pin(pin_number=pin_number, value=1)
             sleep_time = min(end - start, duration - start)
             if sleep2 < 0:
                 sleep_time += sleep2
@@ -161,15 +182,15 @@ class ArduinoThread(threading.Thread):
             #time.sleep(sleep_time)
             stop = self.wait(sleep_time)
             if stop:
-                self.toggle_pin(pin_number, 0)
+                self.toggle_pin(pin_number=pin_number, value=0)
                 return 0
 
         self.device.pin_state[self.pin_name] = False
-        self.toggle_pin(pin_number, 0)
+        self.toggle_pin(pin_number=pin_number, value=0)
         self.log.info("{} stopped".format(d_name))
 
         # Check if there's any thread from the current block that's still active
-        self.device.active_block[block] = np.any(self.device.program.query('block == "{}"'.format(block))["active"])
+        self.device.active_block[block] = np.any(self.device.paradigm.query('block == "{}"'.format(block))["active"])
         # communicate to interface that current thread is finished
         self.device.threads_finished[d_name] = True
         # check if it was the last (in that case, the reduce method returns True)
@@ -179,68 +200,6 @@ class ArduinoThread(threading.Thread):
             self.device.close()
 
         return 1
-    
-    def toggle_pin(self, pin_number, value, freq=None):
-        """
-        Updates the state of pin pin_number with value, while logging and caching this
-        so user can confirm it. TODO. Finish show_circuit and use message
-        """
 
-        d = threading.currentThread()
-        
-        # Update state of pin (value = 1 or value = 0)
-        self.device.board.digital[pin_number].write(value)
+ArduinoThread.toggle_pin = _toggle_pin
 
-        # Update log with info severity level unless
-        # on pin13, then use severity debug
-        f = self.log.info
-        # if pin_number == 13: f = self.log.debug
-        f("{} - {}".format(
-            d._kwargs["d_name"],
-            value
-        ))
-
-        x = value if not freq else freq
-        self.device.pin_state[self.pin_name] = x
-
-  
-        #self.show_circuit(
-        #            #pin_state,
-        #            message
-        #            )
-
-
-    # def show_circuit(self, 
-    #                 #pin_state,
-    #                 message=None, flush=True):
-    #    #global pin_state
-    #    pin_state_g = {p: "x" if v == 1 else "0" for p, v in self.pin_state.items()}
-
-    #    main_pins = self.device.mapping.query('pin_group == "main"').index.values[1:]
-    #    left_pins = self.device.mapping.query('pin_group == "left"').index.values
-    #    right_pins = self.device.mapping.query('pin_group == "right"').index.values
-       
-    #    show_data = [self.pin_id2n(p) for p in main_pins] + [pin_state_g[p] for p in main_pins]
-    #    show_data2 = [self.left_pair(p, pin_state_g) for p in left_pins] 
-    #    show_data3 = [self.left_pair(p, pin_state_g)[::-1] for p in right_pins] 
-    #    show_data4 = list(zip(show_data2, show_data3))
-    #    flatten = lambda l: [item for sublist in l for item in sublist]
-    #    show_data4 = flatten(flatten(show_data4))
-    #    show_data += show_data4
-    #    n=4
-    #    n2=18
-    #    circuit = " " * 8 + "{}-VA  {}-MA  {}-IR  {}-VI   \n" +    " " * 8 + "[{}]" + " " * n + "[{}]" + " " * n + "[{}]" + " " * n + "[{}]\n" +    "{}-LO1  [{}]" + " " * n2 + "[{}] RO1-{}\n" +    "{}-LO2  [{}]" + " " * n2 + "[{}] RO2-{}\n" +    "{}-LES  [{}]" + " " * n2 + "[{}] RES-{}\n" +    "{}-LL   [{}]" + " " * n2 + "[{}]  RL-{}\n"
-    #    filled_circuit = circuit.format(*show_data)        
-           
-           
-    #    if not message is None:
-    #        output = "{}: {}\n{}".format(datetime.datetime.now(), message, filled_circuit)
-    #    else:
-    #        output = "{}: \n{}".format(datetime.datetime.now(), filled_circuit)
-    #    if flush:
-    #        nlines = len(filled_circuit.split('\n'))
-    #        output = nlines * "\033[F\033[K" + output
-
-    #    handle = open("pin_state.txt", "a+")
-    #    handle.write(output)
-    #    handle.close()

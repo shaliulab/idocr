@@ -1,14 +1,11 @@
 import numpy as np
 import cv2
 
-from lmdt_utils import setup_logging
-
 white = (255, 255, 255)
 yellow = (0, 255, 255)
 red = (0, 0, 255)
 blue = (255, 0, 0)
 
-setup_logging()
 cv2_version = cv2.__version__
  
 
@@ -21,7 +18,7 @@ class Arena():
         """
         self.tracker = tracker
         self.contour = contour
-        self.min_arena_area = self.tracker.interface.cfg["arena"]["min_area"] 
+        self.min_arena_area = self.tracker.interface.min_arena_area
         self.area = None
         self.corners = None
         self.column = None
@@ -31,37 +28,52 @@ class Arena():
         self.fly = None
         self.tl_corner = None
         self.br_corner  = None
+        self.width = self.tracker.interface.cfg['arena']['width']
+        self.height = self.tracker.interface.cfg['arena']['height']
+        
         self.dilation_kernel = np.ones((5,5),np.uint8)
         fly = None
 
-    def __repr__(self):
-        print("Arena(tracker = self, contour = arena_contour, identity = {})".format(self.identity))
+    def __str__(self):
+        return "Arena(tracker = self, contour = arena_contour, identity = {})".format(self.identity)
         
     def compute(self):
         # try:
         self.area = cv2.contourArea(self.contour)
-        # except:
-
-        #self.x, self.y, self.w, self.h = cv2.boundingRect(self.contour)
-        rect = cv2.minAreaRect(self.contour)
-        box = cv2.boxPoints(rect)
-        box = np.int0(box)
+       
+        M0 = cv2.moments(self.contour)
+        if M0['m00'] != 0 and M0['m10']:
+            cx = int(M0['m10']/M0['m00'])
+            cy = int(M0['m01']/M0['m00'])
+            box = np.array([
+                [cx-self.width, cy-self.height], [cx-self.width, cy+self.height],
+                [cx+self.width, cy+self.height], [cx+self.width, cy-self.height]
+            ])  
+        
+            
+        else:
+            rect = cv2.minAreaRect(self.contour)
+            box = cv2.boxPoints(rect)
+            box = np.int0(box)
+            cx = np.mean([pt[0] for pt in box])
+            cy = np.mean([pt[1] for pt in box])
+        
         self.box = box
+        center = (cx, cy)
+        self.center = center
+        self.cx  = cx
+        self.cy = cy
+
+
+            # handle what happens when the if above is not true
+       
+
         tl_corner = np.min(box, axis = 0)
         br_corner = np.max(box, axis = 0)
-
+    
         self.tl_corner = tl_corner 
         self.br_corner = br_corner 
 
-        #self.center = (self.x + self.w//2, self.y + self.h // 2)
-        M0 = cv2.moments(self.contour)
-        if M0['m00'] != 0 and M0['m10']:
-            self.cx = int(M0['m10']/M0['m00'])
-            self.cy = int(M0['m01']/M0['m00'])
-            self.center = (self.cx, self.cy)
-        else:
-            pass
-            # handle what happens when the if above is not true
         
         corners = np.array([tl_corner, br_corner])
         return corners
@@ -74,7 +86,7 @@ class Arena():
 
     def validate(self):
         
-        if self.area < self.min_arena_area:
+        if self.area < self.min_arena_area * self.tracker.interface.fraction_area:            
             return False
         else:
             return True
@@ -104,6 +116,9 @@ class Arena():
         #cv2.circle(img, (self.cx, self.cy), 2, blue, -1)
         
         return img
+    
+    def crop(self,img):
+        return cv2.cvtColor(img[self.box[0,1]:self.box[1,1], self.box[0,0]:self.box[2,0]], cv2.COLOR_BGR2RGB)
 
     def find_flies(self, transform, kernel):
         #transform = cv2.morphologyEx(transform, cv2.MORPH_OPEN, kernel)

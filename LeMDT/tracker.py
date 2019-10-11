@@ -8,22 +8,21 @@ import time
 # Third party imports
 import coloredlogs
 import cv2
+import imutils
 import numpy as np
 import yaml
 from pathlib import Path
 from sklearn.cluster import KMeans
 
 # Local application imports
-from features import Arena, Fly
-from streams import PylonStream, StandardStream, STREAMS
-from lmdt_utils import setup_logging
-from decorators import export
-from saver import Saver
-from LeMDT import PROJECT_DIR
+from .features import Arena, Fly
+from .streams import STREAMS
+from .decorators import export
+from .saver import Saver
+from . import PROJECT_DIR
 
 # Set up package configurations
 cv2_version = cv2.__version__
-setup_logging()
 coloredlogs.install()
 
 def crop_stream(img, crop):
@@ -56,6 +55,7 @@ class Tracker():
         #                                ) + "\n"]
         
 
+        self.recursive_calls = 0
         self.interface = None
         self.camera = None
         self.video = None
@@ -96,6 +96,7 @@ class Tracker():
         self.interface = interface
         self.camera = camera
         self.video = video
+        self.failed_read_frame = 0
 
 
         # Results variables
@@ -123,7 +124,7 @@ class Tracker():
         self.kernel = np.ones((self.kernel_factor, self.kernel_factor), np.uint8)
         self.N = self.interface.cfg["tracker"]["N"] 
 
-        self.log = logging.getLogger(__name__)
+        self.log = self.interface.getLogger(__name__)
 
               
         
@@ -147,13 +148,10 @@ class Tracker():
         self.arenas = {}
         self.masks = {}
 
-
-
-        
-
     def set_saver(self):
         saver = Saver(
-            tracker=self, record_event=self.interface.record_event
+            tracker=self,
+            record_event=self.interface.record_event
         )
 
         self.saver = saver
@@ -165,16 +163,15 @@ class Tracker():
         Make it an instance of the classes in streams.py
         """
 
-
         if self.video is not None:
             self.video = Path(self.video)
+            
             if self.video.is_file():
-                self.stream = STREAMS[self.camera](self.video.__str__())
-                print(self.stream)
+                self.stream = STREAMS[self.camera](self, self.video.__str__())
             else:
                 self.log.error("Video under provided path not found. Check for typos")
         else:
-            self.stream = STREAMS[self.camera](0)
+            self.stream = STREAMS[self.camera](self, 0)
 
         if self.fps and self.video:
             # Set the FPS of the camera
@@ -203,7 +200,7 @@ class Tracker():
         self.interface.frame_color = np.zeros((self.video_height, self.video_width, 3), np.uint8)
         self.interface.gray_color = np.zeros((self.video_height, self.video_width, 3), np.uint8)
         self.interface.gray_gui = np.zeros((self.video_height, self.video_width), np.uint8)
-        self.interface.stacked_arenas = np.zeros((self.video_height, self.video_width), np.uint8)
+ 
 
 
     def rotate_frame(self, img, rotation=180):
@@ -249,14 +246,73 @@ class Tracker():
             avgImage = self.accuImage[:,:,self.frame_count].astype('uint8')
 
         image_blur = cv2.GaussianBlur(avgImage, (self.kernel_factor, self.kernel_factor), 0)
-        _, image1 = cv2.threshold(image_blur, RangeLow1, RangeUp1, cv2.THRESH_BINARY+cv2.THRESH_OTSU) 
-        arena_opening = cv2.morphologyEx(image1, cv2.MORPH_OPEN, self.kernel, iterations = 2)
+        _, thresholded = cv2.threshold(image_blur, RangeLow1, RangeUp1, cv2.THRESH_BINARY+cv2.THRESH_OTSU) 
+        #arena_opening = cv2.morphologyEx(image1, cv2.MORPH_OPEN, self.kernel, iterations = 2)
+        arena_opening = thresholded.copy()
         if cv2_version[0] == '4':
             arena_contours, _ = cv2.findContours(arena_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         else:
             _, arena_contours, _ = cv2.findContours(arena_opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
+        
+        # to merge contours belonging to the same chamber
+        # specially on ROI 10
+        contour_mask = np.zeros_like(gray)
+        
+        for c in arena_contours:
+            cv2.fillPoly(contour_mask, pts = [c], color=(255,255,255))
+
+
+        
+        dilation = cv2.dilate(contour_mask, (5,5), 10)
+        erosion = cv2.erode(dilation, (5,5), 10) 
+
+        # cv2.imshow('thr', image1)
+        # cv2.imshow('erosion', erosion)
+        # cv2.imshow('contour mask', contour_mask)       
+        # if cv2.waitKey(33) == ord('q'):
+        #     self.close()
+
+        if cv2_version[0] == '4':
+            arena_contours, _ = cv2.findContours(erosion, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        else:
+            _, arena_contours, _ = cv2.findContours(erosion, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
         return arena_contours
+
+
+    def write_arena_zero(self):
+        '''
+        A dummy arena that will be always written to.
+        No fly will ever be there, but the pin state data can be
+        harnessed from it reliably when the csv is analysed'''
+
+        d = {
+            "ODOUR_A_LEFT" : None,
+            "ODOUR_A_RIGHT" : None,
+            "ODOUR_B_LEFT" : None,
+            "ODOUR_B_RIGHT" : None,
+            "eshock_left" : None,
+            "eshock_right" : None,
+            "frame": self.frame_count,
+            "t": self.interface.timestamp,
+            "arena": 0,
+            "cx": 0,
+            "cy": 0,
+            "datetime": datetime.datetime.now()
+            }
+
+        if self.interface.device:
+        
+            d["ODOUR_A_LEFT"] = self.interface.device.pin_state["ODOUR_A_LEFT"]
+            d["ODOUR_A_RIGHT"] = self.interface.device.pin_state["ODOUR_A_RIGHT"]
+            d["ODOUR_B_LEFT"] = self.interface.device.pin_state["ODOUR_B_LEFT"]
+            d["ODOUR_B_RIGHT"] = self.interface.device.pin_state["ODOUR_B_RIGHT"]
+            d["eshock_left"] = self.interface.device.pin_state["EL_SHOCK_LEFT"]
+            d["eshock_right"] = self.interface.device.pin_state["EL_SHOCK_RIGHT"]
+                    
+        self.saver.process_row(d)
+
 
 
     def track(self):
@@ -265,11 +321,11 @@ class Tracker():
     # THIS FUNCTION NEEDS TO BE SPLIT INTO AT LEAST 2
         
         if not self.interface.exit.is_set():
-            # Check if experiment is over
-            if self.interface.timestamp > self.interface.duration:
-                self.log.info("Experiment duration is reached. Closing")
-                #self.save_record()
-                return False
+            # # Check if experiment is over
+            # if self.interface.timestamp > self.interface.duration:
+            #     self.log.info("Experiment duration is reached. Closing")
+            #     #self.save_record()
+            #     return False
 
             # How much time has passed since we started tracking?
             if self.interface.record_start:
@@ -284,12 +340,22 @@ class Tracker():
             # If ret is False, a new frame could not be read
             # Exit 
             if not success:
+                self.failed_read_frame =+ 1
+                self.log.info("Could not read frame")
+                self.log.warning('Recursive call to track() {}'.format(self.recursive_calls))
+                self.track()
+
+
+
+            if self.failed_read_frame > 10:
                 self.log.info("Stream or video is finished. Closing")
                 self.close()
                 self.interface.stream_finished = True
                 return False
            
             frame = crop_stream(frame, self.crop)
+            self.interface.original_frame = frame.copy()
+
             # Make single channel i.e. grayscale
             if len(frame.shape) == 3:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -305,16 +371,19 @@ class Tracker():
             if self.frame_count < self.N and self.frame_count > 0 or not self.interface.arena_ok_event.is_set():
                 self.arena_contours = self.find_arenas(gray)
 
-            found_targets = len(self.arena_contours)
-            if self.arena_contours is None or found_targets < int(targets):
-
+            if self.arena_contours is None:
+                found_targets = 0
+            else:
+                found_targets = len(self.arena_contours)
+                
+            if found_targets < int(targets):
                 self.log.debug("Number of putative arenas found less than target. Discarding frame".format(self.frame_count))
                 self.frame_count += 1
                 self.interface.frame_color = gray_color
                 status = self.track()
                 return status
 
-            
+                        
             transform = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.block_size, self.param1)
             self.transform = transform
 
@@ -327,10 +396,13 @@ class Tracker():
             id_arena = 1
             # For every arena contour detected
 
-            for arena_contour in self.arena_contours:
-                        
-                # Initialize an Arena object
+
+            # write to arena_zero
+            self.write_arena_zero()
+
+            for arena_contour in self.arena_contours:                       
                 
+                # Initialize an Arena object                
                 arena = Arena(tracker = self, contour = arena_contour)
                 # and compute parameters used in validation and drawing
                 arena.corners = arena.compute()
@@ -341,19 +413,22 @@ class Tracker():
                    # move on to next i.e. continue to the next iteration
                    # continue means we actually WON'T continue with the current arena
                    continue
-                else:
-
+                   
+                elif id_arena <= targets:
                     arenas_list[id_arena-1] = arena
                     # Update the id_arena to account for one more arena detected
                     id_arena += 1
+                else:
+                    break
 
             
-            found_arenas = len(arenas_list)
+            found_arenas = np.sum([a is not None for a in arenas_list])
+
             if found_arenas != self.targets:
-                
-                self.log.debug("Number of arenas found not equal to target. Discarding frame".format(self.frame_count))
+                self.log.debug("Number of arenas found not equal to target. Discarding frame")
                 self.frame_count += 1
                 self.interface.frame_color = gray_color
+                self.interface.fraction_area *= 0.99
                 status = self.track()
                 return status
 
@@ -371,8 +446,6 @@ class Tracker():
             labels = np.array(cluster_centers)[indices][kmeans.labels_]
             #print(labels)
 
-
-
             for i, a in enumerate(arenas_list):
                 a.set_column(labels[i])
 
@@ -387,9 +460,6 @@ class Tracker():
 
 
             sorted_arenas_br_to_tl_horizontally = sorted(arenas_list, key=lambda a: (a.column, a.corners[1][1]))
-            [print(a.corners[1]) for a in sorted_arenas_list]
-
-
 
             for identity, arena in enumerate(sorted_arenas_br_to_tl_horizontally):
 
@@ -417,90 +487,94 @@ class Tracker():
                 # Initialize a fly identity that will be increased with 1
                 # for every validated fly i.e. not on every loop iteration!
                 id_fly = 1
+
+                putative_flies = []
+
                 # For every arena contour detected
                 for fly_contour in fly_contours:
                     # Initialize a Fly object
                     fly = Fly(tracker = self, arena = arena, contour = fly_contour, identity = id_fly)
                     # and compute parameters used in validation and drawing
                     fly.compute()
+                
                     
                     # If not validated, move on the next fly contour
                     # i.e. ignore the current fly 
                     if not fly.validate(gray):
                         self.log.debug("Fly not validated")
                         continue
-                    self.log.debug("Fly {} in arena {} validated with area {} and length {}".format(fly.identity, fly.arena.identity, fly.area, fly.diagonal))
-                    
-                    d = {
-                        "oct_left" : None,
-                        "oct_right" : None,
-                        "mch_left" : None,
-                        "mch_right" : None,
-                        "eshock_left" : None,
-                        "eshock_right" : None,
-                        "frame": self.frame_count,
-                        "t": self.interface.timestamp,
-                        "arena": arena.identity,
-                        #"fly": fly.identity,
-                        "cx": fly.x_corrected,
-                        "cy": fly.y_corrected,
-                        "datetime": datetime.datetime.now()
-                        }
 
-                    if self.interface.device:
-                 
-                        d["oct_left"] = self.interface.device.pin_state["ODOUR_A_OCT_LEFT"]
-                        d["oct_right"] = self.interface.device.pin_state["ODOUR_A_OCT_RIGHT"]
-                        d["mch_left"] = self.interface.device.pin_state["ODOUR_B_MCH_LEFT"]
-                        d["mch_right"] = self.interface.device.pin_state["ODOUR_B_MCH_LEFT"]
-                        d["eshock_left"] = self.interface.device.pin_state["ESHOCK_LEFT"]
-                        d["eshock_right"] = self.interface.device.pin_state["ESHOCK_RIGHT"]
-                                
-                    self.saver.process_row(d)
+                    putative_flies.append(fly)
 
-                    self.found_flies += 1
-                    
-                    # Draw the fly
-                    frame_color = fly.draw(frame_color, self.frame_count)
-
-                    # Add the fly to the arena
-                    arena.fly = fly
-                  
-                    # Update the id_fly to account for one more fly detected
-                    id_fly += 1
-
-                    if id_fly > 1:
-                        self.log.debug("Arena {} in frame {}. Multiple flies found".format(arena.identity, self.frame_count))
-
-                    ############################################
-                    ## End for loop over all putative flies
-                    ##
-               
-                # If still 1, it means that none of the fly contours detected
-                # were validated, a fly was not found in this arena!
-                if id_fly == 1:
+                if len(putative_flies) == 0:
                     self.missing_fly += 1
-                    fname = str(self.record_frame_count) + "_" + str(arena.identity) + ".tiff"
-                    gray_crop = gray[arena.tl_corner[1]:arena.br_corner[1], arena.tl_corner[0]:arena.br_corner[0]]
-                    cv2.imwrite(Path(self.failed_arena_path, fname).__str__(), gray_crop)
+                    # fname = str(self.record_frame_count) + "_" + str(arena.identity) + ".tiff"
+                    # gray_crop = gray[arena.tl_corner[1]:arena.br_corner[1], arena.tl_corner[0]:arena.br_corner[0]]
+                    # cv2.imwrite(Path(self.failed_arena_path, fname).__str__(), gray_crop)
+                    continue
+                elif len(putative_flies) > 1:
+                    self.log.debug("Arena {} in frame {}. Multiple flies found".format(arena.identity, self.frame_count))             
+                    fly = sorted(putative_flies, key = lambda f: f.area, reverse=True)[0]
+                else:
+                    fly = putative_flies[0]
 
 
+                self.log.debug("Fly {} in arena {} validated with area {} and length {}".format(fly.identity, fly.arena.identity, fly.area, fly.diagonal))
+                
+                d = {
+                    "ODOUR_A_LEFT" : None,
+                    "ODOUR_A_RIGHT" : None,
+                    "ODOUR_B_LEFT" : None,
+                    "ODOUR_B_RIGHT" : None,
+                    "eshock_left" : None,
+                    "eshock_right" : None,
+                    "frame": self.frame_count,
+                    "t": self.interface.timestamp,
+                    "arena": arena.identity,
+                    #"fly": fly.identity,
+                    "cx": fly.x_corrected,
+                    "cy": fly.y_corrected,
+                    "datetime": datetime.datetime.now()
+                    }
 
-                ########################################
-                ## End for loop over all putative arenas
+                if self.interface.device:
+                
+                    d["ODOUR_A_LEFT"] = self.interface.device.pin_state["ODOUR_A_LEFT"]
+                    d["ODOUR_A_RIGHT"] = self.interface.device.pin_state["ODOUR_A_RIGHT"]
+                    d["ODOUR_B_LEFT"] = self.interface.device.pin_state["ODOUR_B_LEFT"]
+                    d["ODOUR_B_RIGHT"] = self.interface.device.pin_state["ODOUR_B_RIGHT"]
+                    d["eshock_left"] = self.interface.device.pin_state["EL_SHOCK_LEFT"]
+                    d["eshock_right"] = self.interface.device.pin_state["EL_SHOCK_RIGHT"]
+                            
+                self.saver.process_row(d)
 
+                self.found_flies += 1
+                
+                # Draw the fly
+                frame_color = fly.draw(frame_color, self.frame_count)
+
+                # Add the fly to the arena
+                arena.fly = fly
+
+            ########################################
+            ## End for loop over all putative arenas
 
             # Update GUI graphics
             self.interface.frame_color = frame_color
+            for i, arena in enumerate(sorted_arenas_br_to_tl_horizontally):
+                arena_crop = arena.crop(frame_color)
+                self.interface.stacked_arenas[i] = imutils.resize(arena_crop, width=arena_crop.shape[1]*3)
+
             # Save frame
             self.saver.save_img(frame_time.strftime("%Y-%m-%d_%H-%M-%S") + ".jpg", frame_color)
+            self.saver.save_video()
 
             # TODO: Make into utils function
             #self.interface.stacked_arenas = self.stack_arenas(arenas_dict)
 
             # Print warning if number of flies in new frame is not the same as in previous
             if self.old_found != self.found_flies:
-                self.log.warning("Found {} flies in frame {}".format(self.found_flies, self.frame_count))
+                self.log.debug("Found {} flies in frame {}".format(self.found_flies, self.frame_count))
             self.old_found = self.found_flies
             self.found_flies = 0
 
@@ -546,39 +620,6 @@ class Tracker():
         sample_fps_thread.start()
 
         
-        
-    # TODO
-    # MORE COMMENTS
-    def stack_arenas(self, arenas):
-
-        gray_color = self.interface.gray_color
-
-        
-        def draw_stacked(a):
-            # print(a.corners)
-            hhwws = np.array([a.corners[1,:] - a.corners[0,:] for key, a in arenas.items()])
-            max_h, max_w = np.max(hhwws, axis = 0)
-
-            ROI = gray_color[a.corners[0][0]:max_h, a.corners[0][1]:max_w]
-            if a.fly:
-                arena_crop = a.fly.draw(ROI, relative_to_arena = True)
-            else:
-                arena_crop = ROI
-            cv2.rectangle(arena_crop, (0, 0), arena_crop.shape, 128, 2)
-            return arena_crop
-
-        stacked_arenas = [draw_stacked(a) for key, a in arenas.items()]
-        stacked_arenas = np.stack(stacked_arenas, axis=0).reshape((10, 2))
-        return stacked_arenas
-
-        
-        # try: 
-        #     
-        # except:
-        #     self.log.debug(a.corners.shape)
-        #     
-
-        
     def run(self):
         """
         Start tracking in a while loop
@@ -595,6 +636,7 @@ class Tracker():
         while self.status and not self.interface.exit.is_set(): 
             self.merge_masks()
             self.interface.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
+            self.recursive_calls += 1
             self.status = self.track()
             # NEEDED?
             # we neet to event.wait so that Python listens to the
@@ -603,8 +645,6 @@ class Tracker():
             # where the timeout would always be 100% done
             #self.interface.exit.wait(.2)
 
-        self.saver.images_to_video()
-        
         self.close()            
 
     def toprun(self):
@@ -629,12 +669,13 @@ class Tracker():
         If the exit event is not yet set, call interface.close()
         """
         self.stream.release()
+        self.saver.stop_video()
         self.log.info("Tracking stopped")
         self.log.info("{} arenas in {} frames analyzed".format(20 * self.frame_count, self.frame_count))
         self.log.info("Number of arenas that fly is not detected in is {}".format(self.missing_fly))
         self.saver.store_and_clear()
 
-        if not self.interface.exit.is_set(): self.interface.close()
+        # if not self.interface.exit.is_set(): self.interface.close()
 
     def merge_masks(self):
     
