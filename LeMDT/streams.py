@@ -119,8 +119,18 @@ class PylonStream(StandardStream):
         return height
 
     def set_fps(self, fps):
+        self.log.info("Setting fps to {}".format(fps))
         self.cap.AcquisitionFrameRateAbs.SetValue(fps)
-    
+
+
+    def set_acquisition_time(self, at):
+        self.log.info("Setting acquisition time to {}".format(at))
+        self.cap.ExposureTimeAbs.SetValue(at)
+
+    def get_acquisition_time(self, at):
+        self.log.info("Acquisition time set to: {}".format(self.cap.ExposureTimeAbs.GetValue(at)))
+
+
     def retrieve_result(self):
         while True:
             try:
@@ -186,8 +196,6 @@ class WebCamStream(StandardStream):
 
     def get_fps(self):
         fps = self.cap.get(5)
-        if fps == 0:
-            return 2
         return fps
 
 #    def get_time_position(self, frame_count):
@@ -203,9 +211,16 @@ class WebCamStream(StandardStream):
         return height 
 
     def set_fps(self, fps):
+        import ipdb
+        ipdb.set_trace()
+
         if self.get_fps() != fps:
-            self.log.info("Settting fps to {}".format(fps))
+            self.log.info("Setting fps to {}".format(fps))
             self.cap.set(5, fps)
+
+    def set_acquisition_time(self, at):
+        self.log.warning("Change of acquisition time not implemented")
+        pass
 
  #   def set_width(self, width):
  #       if self.stream.get_width() != width:
