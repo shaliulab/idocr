@@ -134,6 +134,9 @@ it reports for ech row data
 
 * `6: odors.csv`: (OPTIONAL) a file naming odor A and B so as to improve the experiment's documentation.
 
+
+A mirror of `lemd_results`is maintained on the L drive under `Common_Lab_Data/lemdt_results/`
+
 ### Analyze traces
 
 Together with the Python software, LeMDT comes with an R package (LeMDTr) that makes it easy to analyze your traces.csv file.
