@@ -19,7 +19,7 @@ ap.add_argument("--no-track", action = 'store_false', dest = 'track', help="Shal
 ap.add_argument("-r", "--reporting", action = 'store_true')
 
 
-ap.add_argument("-c", "--camera",      type = str, help="Stream source", choices = ["webcam", "pylon"])
+ap.add_argument("-c", "--camera",      type = str, help="Stream source", choices = ["webcam", "pylon"], default = 'pylon')
 ap.add_argument("--config",            type = str, help="Path to config.yaml file")
 ap.add_argument("-e", "--experimenter",type = str, help="Add name of the experimenter/operator")
 ap.add_argument("-f", "--fps",         type = int, help="Frames per second in the opened stream. Default as stated in the __init__ method in Tracker, is set to 2")

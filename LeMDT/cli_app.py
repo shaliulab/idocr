@@ -137,8 +137,11 @@ class CLIGui():
             
             elif answer == 2:
                 new_fps = int(input("Enter new FPS: "))
+                if new_fps <= 2:
+                    self.log.warning('Please provide a new value > 2')
+                    return 0
                 self.interface.tracker.stream.set_fps(new_fps)
-                self.log.warning("Change of fps not implemented")
+                # self.log.warning("Change of fps not implemented")
                 return 1
 
             elif answer == 3:

@@ -102,7 +102,7 @@ class PylonStream(StandardStream):
         #cap.Width = width
         self.cap = cap
 
-        self.log.info("Camera loading successful")
+        self.log.info("Pylon camera loaded successfully")
 
 
 
