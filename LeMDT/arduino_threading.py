@@ -3,7 +3,6 @@ import datetime
 import logging
 import sys
 import threading
-import warnings
 
 # Third party imports
 import numpy as np
@@ -151,7 +150,7 @@ class ArduinoThread(threading.Thread):
                 runtime = datetime.datetime.now() - start_time
                 sleep_time = on - runtime.total_seconds()
                 if sleep_time < 0:
-                    warnings.warn("Runtime: {}".format(runtime))
+                    self.log.warning.warn("Runtime: {}".format(runtime))
 
                 else:
                     stop = self.wait(sleep_time)
@@ -164,7 +163,7 @@ class ArduinoThread(threading.Thread):
                 runtime = datetime.datetime.now() - start_time
                 sleep_time = off - runtime.total_seconds()
                 if sleep_time < 0:
-                    warnings.warn("Runtime: {}".format(runtime))
+                    self.log.warning("Runtime: {}".format(runtime))
                 else:
                     stop = self.wait(sleep_time)
                 if stop:

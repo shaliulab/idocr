@@ -127,8 +127,10 @@ class PylonStream(StandardStream):
         self.log.info("Setting acquisition time to {}".format(at))
         self.cap.ExposureTimeAbs.SetValue(at)
 
-    def get_acquisition_time(self, at):
-        self.log.info("Acquisition time set to: {}".format(self.cap.ExposureTimeAbs.GetValue(at)))
+    def get_acquisition_time(self):
+        at = self.cap.ExposureTimeAbs.GetValue()
+        return at
+        # self.log.info("Acquisition time set to: {}".format())
 
 
     def retrieve_result(self):
@@ -170,6 +172,10 @@ class PylonStream(StandardStream):
             img = grabResult.Array
             return ret, img
         return False, None
+
+
+    def __str__(self):
+        return 'Pylon Camera stream @ {} and acqu. time {}'.format(self.get_fps(), self.get_acquisition_time())
 
     def release(self):
         self.grabResult.Release()

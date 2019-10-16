@@ -17,7 +17,7 @@ from sklearn.cluster import KMeans
 # Local application imports
 from .features import Arena, Fly
 from .streams import STREAMS
-from .decorators import export
+from .decorators import export, if_not_self_stream
 from .saver import Saver
 from . import PROJECT_DIR
 
@@ -156,7 +156,7 @@ class Tracker():
 
         self.saver = saver
 
-
+    @if_not_self_stream
     def load_camera(self):
         """
         Populate the stream attribute of the Tracker class
@@ -166,7 +166,7 @@ class Tracker():
         if self.video is not None:
             self.video = Path(self.video)
             
-            if self.video.is_file() and not self.stream is None:
+            if self.video.is_file():
                 self.stream = STREAMS[self.camera](self, self.video.__str__())
             else:
                 self.log.error("Video under provided path not found. Check for typos")

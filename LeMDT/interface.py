@@ -397,10 +397,7 @@ class Interface():
         else:
             self.config_file = config_file
 
-        self.load_config()
-        # Init zoom tab
-        self.init_components()
-    
+        self.load_config()   
         self.log.info('Config applied successfully')
 
 
@@ -418,6 +415,19 @@ class Interface():
             self.gui.create()
             self.log.info('Initializing gui')
 
+
+    
+    def get_settings(self):
+
+        acquisition_time = self.tracker.stream.get_acquisition_time()
+        fps = self.tracker.stream.get_fps()
+        odors = self.odor_A, self.odor_B
+        program_path = self.program_path
+        return acquisition_time, fps, odors, program_path
+
+
+        
+
     
     def start(self):
         """
@@ -427,6 +437,7 @@ class Interface():
         """
         config_file = os.path.join(PROJECT_DIR, 'config.yaml')
         self.load_and_apply_config(config_file)
+        self.init_components()
 
         while not self.exit.is_set():
             # print(type(self.device.mapping))

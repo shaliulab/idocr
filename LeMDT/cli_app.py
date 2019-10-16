@@ -8,6 +8,7 @@ import numpy as np
 import tempfile
 import ipdb
 import time
+import subprocess
 
 class CLIGui():
 
@@ -18,12 +19,12 @@ class CLIGui():
         self.log = self.interface.getLogger(__name__)
         self.live_feed_path = '/tmp/last_img.jpg'
         self.menus = {
-            "general": ['change settings', 'open camera and start tracker', 'confirm', 'record', 'quit'],
-            "settings" : ['name odors', 'change fps', 'change acquisition time', 'load program', 'return']
+            "general": ['open camera and start tracker', 'change settings', 'load program', 'name odors', 'confirm', 'record', 'quit'],
+            "settings" : ['change fps', 'change acquisition time', 'return']
             }
         self.effects = {
-            "general": [None, 'tracker starting', 'settings confirmed', 'recording starting', 'saving odor names', 'quitting'],
-            "settings": ['renaming odors', None, None, None, None]
+            "general": ['tracker starting', 'settings confirmed', 'paradigm loaded', 'saving odor names', 'confirmed' , 'recording starting', 'quitting'],
+            "settings": [None, None, None]
         }
             
     def let_user_pick(self, menu_name):
@@ -32,17 +33,7 @@ class CLIGui():
         for idx, element in enumerate(options):
             print("{}: {}".format(idx+1,element))
         i = input("Enter number: ")
-
-        try:
-            if 0 < int(i) <= len(options):
-                effect = self.effects[menu_name][int(i)-1]
-                if not effect is None:
-                    self.log.info(effect.format(""))
-                return int(i)
-        except Exception as e:
-            self.log.warning(e)
-        return None
-
+        return int(i)
 
     def create(self):
         """
@@ -62,7 +53,7 @@ class CLIGui():
 
                 self.proceed(menu_name, self.answer)
 
-                if self.answer == 1 and menu_name == "general":
+                if self.answer == 2 and menu_name == "general":
                     menu_name = "settings"
                 elif self.answer == len(self.menus["settings"]) and menu_name == "settings":
                     menu_name = "general"
@@ -112,52 +103,86 @@ class CLIGui():
 
     def proceed(self, menu_name, answer):
         
+        options = self.menus[menu_name][answer-1]
+        sucess = False
+
         if menu_name == "general":
-            if not self.interface.play_event.is_set() and answer == 2:
+            if not self.interface.play_event.is_set() and answer == 1:
                 self.interface.play()
                 display_feed_thread = threading.Thread(target = self.display_feed)
                 display_feed_thread.start()
-                return 1
-            elif not self.interface.arena_ok_event.is_set() and answer == 3:
-                self.interface.ok_arena()
-                return 1
+                subprocess.call(['python',  '-m',  'webbrowser',  "file:///tmp/last_img.jpg"])
+                success = True
+            
+            elif answer == 3:
+                
+                new_program_path = input('Please enter a path to a programs csv file: ')
+                self.interface.program_path = new_program_path
+                self.interface.load_and_apply_config()
+                self.interface.device.prepare('exit')
+                self.interface.device.get_paradigm_human_readable()
+                success = True
 
-            elif not self.interface.record_event.is_set() and answer == 4:
+            elif answer == 4:
+                self.name_odors()
+                success = True
+
+            elif not self.interface.arena_ok_event.is_set() and answer == 5:
+
+                settings = self.interface.get_settings()
+                self.log.info('Acquistion time: {}'.format(settings[0]))
+                self.log.info('FPS: {}'.format(settings[1]))
+                self.log.info('Odors: {}'.format(' and '.join(settings[2])))
+                self.log.info('Program path: {}'.format(settings[3]))
+                confirm  = input('Press N if there is something wrong in the live feed or the settings above: ')
+                if confirm != 'N':
+                    self.interface.ok_arena()
+
+                success = True
+
+            elif not self.interface.record_event.is_set() and answer == 6:
                 self.interface.record()
-                return 1
+                success = True
 
             elif answer >= len(self.menus[menu_name]) or answer is None:
                 self.log.warning("Invalid answer entered")
-                pass
+                success = False
+
 
         elif menu_name == "settings":
+
             if answer == 1:
-                self.name_odors()
-                return 1
-            
-            elif answer == 2:
                 new_fps = int(input("Enter new FPS: "))
-                if new_fps <= 2:
+                while new_fps <= 2:
                     self.log.warning('Please provide a new value > 2')
-                    return 0
+                    success = False
+                    new_fps = int(input("Enter new FPS: "))
+
                 self.interface.tracker.stream.set_fps(new_fps)
                 # self.log.warning("Change of fps not implemented")
-                return 1
+                success = True
 
-            elif answer == 3:
+            elif answer == 2:
                 new_acquisition_time = int(input("Enter new acquisition time: "))
                 self.interface.tracker.stream.set_acquisition_time(new_acquisition_time)
-                return 1
-
-            elif answer == 4:
-                new_program_path = input('Please enter a path to a csv file')
-                self.interface.program_path = new_program_path
-                self.interface.load_and_apply_config()
-                self.interface.device.prepare()
-                return 1
+                success = True
             
             elif answer >= len(self.menus[menu_name]):
                 self.log.warning('Sorry, the number you entered does not match any option. Please enter a valid number!')
+                success = False
+        
+
+        if success:
+            try:
+                    effect = self.effects[menu_name][int(answer)-1]
+                    if not effect is None:
+                        self.log.info(effect.format(""))
+                    return 1
+            except Exception as e:
+                self.log.warning(e)
+        else:
+            return 0
+
     
 
 CLIGui.toggle_pin = _toggle_pin
