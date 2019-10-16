@@ -257,11 +257,14 @@ class Interface():
         answer = self.save_results_answer
         if answer == 'N':
             try:
+                self.getLogger('LeMDT.cli_app').info('Removing files')
                 shutil.rmtree(self.tracker.saver.output_dir)
             # in case the output_dir is not declared yet
             # because we are closing early
             except TypeError:
                 pass
+        elif answer == 'Y':
+            self.getLogger('LeMDT.cli_app').info('Keeping files')
         else:
             # ipdb.set_trace( )
             self.tracker.saver.copy_logs(self.config)

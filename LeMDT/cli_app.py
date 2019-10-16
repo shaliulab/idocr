@@ -1,14 +1,18 @@
 # Standard library imports
 import logging
-import cv2
-# Local application imports
-from .lmdt_utils import _toggle_pin
-import threading
-import numpy as np
-import tempfile
-import ipdb
-import time
+import os
 import subprocess
+import threading
+import tempfile
+import time
+
+
+# Local application imports
+import cv2
+import numpy as np
+from .lmdt_utils import _toggle_pin
+from . import PROJECT_DIR
+
 
 class CLIGui():
 
@@ -18,13 +22,17 @@ class CLIGui():
         self.answer = None
         self.log = self.interface.getLogger(__name__)
         self.live_feed_path = '/tmp/last_img.jpg'
+        programs = os.listdir(os.path.join(PROJECT_DIR, "programs"))
+        # print(programs)
         self.menus = {
-            "general": ['open camera and start tracker', 'change settings', 'load program', 'name odors', 'confirm', 'record', 'quit'],
-            "settings" : ['change fps', 'change acquisition time', 'return']
+            "general": ['open camera and start tracker', 'camera settings', 'load program', 'name odors', 'confirm', 'record', 'analyze with R', 'quit'],
+            "settings" : ['change fps', 'change acquisition time', 'return'],
+            "programs" : programs + ['return']
             }
         self.effects = {
-            "general": ['tracker starting', 'settings confirmed', 'paradigm loaded', 'saving odor names', 'confirmed' , 'recording starting', 'quitting'],
-            "settings": [None, None, None]
+            "general": ['tracker starting', 'settings confirmed', 'paradigm loaded', 'saving odor names', 'confirmed' , 'recording starting', 'launching R', 'quitting'],
+            "settings": [None, None, None],
+            "programs" : ['Loaded {}'.format(e) for e in self.menus['programs']] + [None]
         }
             
     def let_user_pick(self, menu_name):
@@ -51,12 +59,27 @@ class CLIGui():
 
             try:
 
-                self.proceed(menu_name, self.answer)
+                success = self.proceed(menu_name, self.answer)
+                self.display_log(success, menu_name)
+
+                
+                key_too_large = self.answer > len(self.menus[menu_name])
 
                 if self.answer == 2 and menu_name == "general":
                     menu_name = "settings"
-                elif self.answer == len(self.menus["settings"]) and menu_name == "settings":
+
+                elif self.answer == 3 and menu_name == "general":
+                    menu_name = "programs"
+
+                elif not success:
                     menu_name = "general"
+
+                elif success and menu_name == 'programs':
+                    menu_name = "general"
+                
+                elif key_too_large:
+                    self.log.warning('Sorry, the number you entered does not match any option. Please enter a valid number!')
+
 
                 self.answer = self.let_user_pick(menu_name)
                 
@@ -80,8 +103,8 @@ class CLIGui():
         This is the callback function of the X button in the window
         Note: this is the only method that closes the GUI
         """
-        self.interface.save_results_answer = input('Press N to discard results, any other key will keep them: ')
-        if not self.interface.save_results_answer is None:
+        self.interface.save_results_answer = input('Save results (Y/N): ')
+        if not self.interface.save_results_answer == '':
             self.interface.close()
 
     def display_feed(self):
@@ -104,28 +127,26 @@ class CLIGui():
     def proceed(self, menu_name, answer):
         
         options = self.menus[menu_name][answer-1]
-        sucess = False
-
+        switch_menu = self.answer == len(self.menus[menu_name])
+        if switch_menu:
+            return False
+                
+                
         if menu_name == "general":
             if not self.interface.play_event.is_set() and answer == 1:
                 self.interface.play()
                 display_feed_thread = threading.Thread(target = self.display_feed)
                 display_feed_thread.start()
                 subprocess.call(['python',  '-m',  'webbrowser',  "file:///tmp/last_img.jpg"])
-                success = True
+                return True
             
             elif answer == 3:
-                
-                new_program_path = input('Please enter a path to a programs csv file: ')
-                self.interface.program_path = new_program_path
-                self.interface.load_and_apply_config()
-                self.interface.device.prepare('exit')
-                self.interface.device.get_paradigm_human_readable()
-                success = True
+                pass
+                # handled by its submenu
 
             elif answer == 4:
                 self.name_odors()
-                success = True
+                return True
 
             elif not self.interface.arena_ok_event.is_set() and answer == 5:
 
@@ -137,16 +158,32 @@ class CLIGui():
                 confirm  = input('Press N if there is something wrong in the live feed or the settings above: ')
                 if confirm != 'N':
                     self.interface.ok_arena()
-
-                success = True
+                    return True
+                else:
+                    return False
 
             elif not self.interface.record_event.is_set() and answer == 6:
                 self.interface.record()
-                success = True
+                return True
+
+            elif not self.interface.record_event.is_set() and answer == 7:
+                self.log.warning('Not implemented')
+                return False
+
 
             elif answer >= len(self.menus[menu_name]) or answer is None:
                 self.log.warning("Invalid answer entered")
-                success = False
+                return False
+
+        elif menu_name == 'programs':
+
+        # new_program_path = input('Please enter a path to a programs csv file: ')
+            self.interface.program_path = self.menus['programs'][self.answer-1]
+            self.interface.load_and_apply_config()
+            self.interface.device.prepare('exit')
+            self.interface.device.get_paradigm_human_readable()
+            return True
+
 
 
         elif menu_name == "settings":
@@ -160,28 +197,27 @@ class CLIGui():
 
                 self.interface.tracker.stream.set_fps(new_fps)
                 # self.log.warning("Change of fps not implemented")
-                success = True
+                return True
 
             elif answer == 2:
                 new_acquisition_time = int(input("Enter new acquisition time: "))
                 self.interface.tracker.stream.set_acquisition_time(new_acquisition_time)
-                success = True
-            
-            elif answer >= len(self.menus[menu_name]):
-                self.log.warning('Sorry, the number you entered does not match any option. Please enter a valid number!')
-                success = False
-        
+                return True
 
+
+    def display_log(self, success, menu_name):
         if success:
             try:
-                    effect = self.effects[menu_name][int(answer)-1]
+                    effect = self.effects[menu_name][self.answer-1]
                     if not effect is None:
                         self.log.info(effect.format(""))
-                    return 1
+                    else:
+                        self.log.info(effect)
+                    
+                    time.sleep(2)
             except Exception as e:
                 self.log.warning(e)
-        else:
-            return 0
+
 
     
 
