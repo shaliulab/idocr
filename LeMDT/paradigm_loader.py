@@ -4,9 +4,10 @@ from pathlib import Path
 import os
 
 # Third party imports
-import yaml
+import datetime
 import numpy as np
 import pandas as pd
+import yaml
 
 
 def convert(s):
@@ -258,3 +259,15 @@ class ParadigmLoader():
         paradigm["thread_name"] = None
         # print(paradigm)
         return paradigm
+
+
+    def get_paradigm_human_readable(self):
+        paradigm_human_readable = self.paradigm[['pin_id', 'start', 'end', 'iterations', 'on', 'off', 'block']]
+        
+        paradigm_starts = paradigm_human_readable['start'].values
+        paradigm_ends = paradigm_human_readable['end'].values
+        paradigm_human_readable.drop(['start', 'end'], axis=1)
+        paradigm_human_readable.loc[:,'start'] = np.array([str(datetime.timedelta(seconds = v)) for v in paradigm_starts])
+        paradigm_human_readable.loc[:,'end'] = np.array([str(datetime.timedelta(seconds = v)) for v in  paradigm_ends])   
+        self.paradigm_human_readable = paradigm_human_readable
+        self.log.info('\n{}'.format(paradigm_human_readable))

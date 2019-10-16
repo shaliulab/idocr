@@ -166,7 +166,7 @@ class Tracker():
         if self.video is not None:
             self.video = Path(self.video)
             
-            if self.video.is_file():
+            if self.video.is_file() and not self.stream is None:
                 self.stream = STREAMS[self.camera](self, self.video.__str__())
             else:
                 self.log.error("Video under provided path not found. Check for typos")

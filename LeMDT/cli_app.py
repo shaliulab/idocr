@@ -19,11 +19,11 @@ class CLIGui():
         self.live_feed_path = '/tmp/last_img.jpg'
         self.menus = {
             "general": ['change settings', 'open camera and start tracker', 'confirm', 'record', 'quit'],
-            "settings" : ['name odors', 'change fps', 'change acquisition time', 'return']
+            "settings" : ['name odors', 'change fps', 'change acquisition time', 'load program', 'return']
             }
         self.effects = {
             "general": [None, 'tracker starting', 'settings confirmed', 'recording starting', 'saving odor names', 'quitting'],
-            "settings": ['renaming odors', None, None, None]
+            "settings": ['renaming odors', None, None, None, None]
         }
             
     def let_user_pick(self, menu_name):
@@ -150,10 +150,14 @@ class CLIGui():
                 return 1
 
             elif answer == 4:
+                new_program_path = input('Please enter a path to a csv file')
+                self.interface.program_path = new_program_path
+                self.interface.load_and_apply_config()
+                self.interface.device.prepare()
                 return 1
-
+            
             elif answer >= len(self.menus[menu_name]):
-                pass
+                self.log.warning('Sorry, the number you entered does not match any option. Please enter a valid number!')
     
 
 CLIGui.toggle_pin = _toggle_pin

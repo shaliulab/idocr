@@ -189,6 +189,7 @@ class Interface():
         self.tracker.init_image_arrays()
 
 
+
     def init_device(self):
         """
         Initialize a LearningMemoryDevice object that will provide Arduino controls
@@ -210,15 +211,7 @@ class Interface():
         device.prepare('exit')
         self.device = device
         self.log.info('Arduino will be run for {}'.format(datetime.timedelta(seconds= self.duration)))
-        paradigm_human_readable = device.paradigm[['pin_id', 'start', 'end', 'iterations', 'on', 'off', 'block']]
-        
-        paradigm_starts = paradigm_human_readable['start'].values
-        paradigm_ends = paradigm_human_readable['end'].values
-        paradigm_human_readable.drop(['start', 'end'], axis=1)
-        paradigm_human_readable.loc[:,'start'] = np.array([str(datetime.timedelta(seconds = v)) for v in paradigm_starts])
-        paradigm_human_readable.loc[:,'end'] = np.array([str(datetime.timedelta(seconds = v)) for v in  paradigm_ends])   
-        device.paradigm_human_readable = paradigm_human_readable
-        self.log.info('\n{}'.format(paradigm_human_readable))
+        device.get_paradigm_human_readable()
 
 
     def setup_logging(self, default_path='LeMDT/logging.yaml', default_level=logging.INFO, env_key='LOG_CFG'):
@@ -360,10 +353,7 @@ class Interface():
         self.arena_ok_event.set()
 
     
-    def load_config(self):
-        
-        with open(self.config_file, 'r') as ymlfile:
-            self.cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
+    def prepare_paths(self):
 
         if self.mapping_path is None:
             self.mapping_path = Path(PROJECT_DIR, 'mappings', 'tkinter.csv').__str__()
@@ -375,6 +365,13 @@ class Interface():
         else:
             self.program_path = Path(PROJECT_DIR, "programs", self.program_path).__str__()
 
+   
+    def load_config(self):
+        
+        with open(self.config_file, 'r') as ymlfile:
+            self.cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
+
+        self.prepare_paths()
 
         self.log.info('Mapping path:')
         self.log.info(self.mapping_path)
@@ -405,7 +402,6 @@ class Interface():
         self.init_components()
     
         self.log.info('Config applied successfully')
-
 
 
     def init_components(self):

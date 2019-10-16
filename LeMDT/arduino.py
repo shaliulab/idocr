@@ -111,6 +111,8 @@ class LearningMemoryDevice(ParadigmLoader):
         # power off any pins if any
         self.power_pins_off(shutdown=False, ir=True)
         # prepare the arduino parallel threads
+        
+        self.threads[stop_event_name] = {}
         threads = self.create_threads(self.threads, stop_event_name=stop_event_name)
         self.init_pin_state()
         return threads
