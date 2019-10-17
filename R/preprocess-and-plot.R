@@ -166,7 +166,7 @@ p <- result$p + ggtitle(label = title, subtitle = paste(
   '  /  decision zone (mm):', decision_zone_mm,
   '  /  index:', index_function(),
   '  /  ', annotation, '\n',
-  '+ -> ',B, ' - -> ', A
+  '- -> ',A, ' + -> ', B
   )
 )
 index_dataset <- result$index_dataset

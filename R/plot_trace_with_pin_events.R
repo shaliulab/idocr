@@ -1,7 +1,7 @@
 #' @import data.table ggplot2 ggnewscale RColorBrewer
 #' @export
 #'
-plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pins_relevant = 1:4, colors=c("red", "blue"), arena_width_mm = 50, A=NULL, B = NULL, elshock_periods = character(), annot_on_side = FALSE) {
+plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pins_relevant = 1:4, colors=c("purple", "red"), arena_width_mm = 50, A=NULL, B = NULL, elshock_periods = character(), annot_on_side = FALSE) {
  
   if(interactive()) {
     # pins_relevant <- 1:4

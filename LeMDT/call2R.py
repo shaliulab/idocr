@@ -1,4 +1,5 @@
 import subprocess
+import os.path
 
 class call2R:
 
@@ -10,11 +11,21 @@ class call2R:
         self.max_time_minutes = max_time_minutes
 
     def run(self):
-        subprocess.call(['R', '--slave', '-e', 'LeMDTr::preprocess_and_plot( \
+        subprocess.call(['nautilus', self.experiment_folder])
+
+        cmd = ['R', '--slave', '-e', 'LeMDTr::preprocess_and_plot( \
             experiment_folder = "{}", \
             decision_zone_mm = {}, \
             min_exits_required = {}, \
             max_time_minutes = {} \
-            )'.format(self.experiment_folder, self.decision_zone_mm, self.min_exits_required, self.max_time_minutes)])
+            )'.format(self.experiment_folder, self.decision_zone_mm, self.min_exits_required, self.max_time_minutes)]
+        
+        readable_cmd = ' '.join(cmd[3:])
+        readable_cmd = ' '.join(readable_cmd.split())
+
+        handle = open(os.path.join(self.experiment_folder, "script.R"), 'w')
+        handle.write(readable_cmd + '\n')
+        handle.close()
+        subprocess.call(cmd)
 
 
