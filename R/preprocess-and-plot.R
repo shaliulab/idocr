@@ -12,7 +12,7 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
     # B <- 'B'
     # debug = F
     # annotation <- ''
-    experiment_folder = '/home/antortjim/1TB/MEGA/FlySleepLab/Gitlab/LeMDT/lemdt_results/2019-10-04_12-46-49'
+    # experiment_folder = '/home/antortjim/1TB/MEGA/FlySleepLab/Gitlab/LeMDT/lemdt_results/2019-10-04_12-46-49'
   # }
   filename <- list.files(path = experiment_folder, pattern = '_LeMDTe27SL5a9e19f94de287e28f789825.csv')
   

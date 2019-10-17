@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 from .lmdt_utils import _toggle_pin
 from . import PROJECT_DIR
-
+from .call2R import call2R
 
 class CLIGui():
 
@@ -27,13 +27,18 @@ class CLIGui():
         self.menus = {
             "general": ['open camera and start tracker', 'camera settings', 'load program', 'name odors', 'confirm', 'record', 'analyze with R', 'quit'],
             "settings" : ['change fps', 'change acquisition time', 'return'],
-            "programs" : programs + ['return']
+            "programs" : programs + ['return'],
+            "Rsettings": ['run', 'experiment_folder', 'decision_zone_mm', 'min_exits_required', 'max_time_minutes', 'return']
             }
         self.effects = {
             "general": ['tracker starting', 'settings confirmed', 'paradigm loaded', 'saving odor names', 'confirmed' , 'recording starting', 'launching R', 'quitting'],
             "settings": [None, None, None],
             "programs" : ['Loaded {}'.format(e) for e in self.menus['programs']] + [None]
+
         }
+
+
+        self.Rsession = None
             
     def let_user_pick(self, menu_name):
         print("Please choose:")
@@ -70,6 +75,10 @@ class CLIGui():
 
                 elif self.answer == 3 and menu_name == "general":
                     menu_name = "programs"
+
+                elif self.answer == 7 and menu_name == "general":
+                    menu_name = "Rsettings"
+
 
                 elif not success:
                     menu_name = "general"
@@ -166,14 +175,9 @@ class CLIGui():
                 self.interface.record()
                 return True
 
-            elif not self.interface.record_event.is_set() and answer == 7:
-                self.log.warning('Not implemented')
-                return False
-
-
-            elif answer >= len(self.menus[menu_name]) or answer is None:
-                self.log.warning("Invalid answer entered")
-                return False
+            # elif answer >= len(self.menus[menu_name]) or answer is None:
+            #     self.log.warning("Invalid answer entered")
+            #     return False
 
         elif menu_name == 'programs':
 
@@ -184,6 +188,26 @@ class CLIGui():
             self.interface.device.get_paradigm_human_readable()
             return True
 
+
+        elif menu_name == 'Rsettings':
+
+            if self.Rsession is None:
+                self.Rsession = call2R(
+                    experiment_folder=self.interface.tracker.saver.output_dir
+                )
+
+            if answer == 1:
+                self.Rsession.run()
+                return True
+            
+            elif answer < len(self.menus[menu_name]):
+                param_name = self.menus[menu_name][answer-1]
+
+                param_value = int(input("Enter new {}: ".format(param_name)))
+                # if param_value is str:
+                    # if param_value.replace('.', 1).isdigit(): param_value = float(param_value)
+                setattr(self.Rsession, param_name, param_value)
+                return True
 
 
         elif menu_name == "settings":
