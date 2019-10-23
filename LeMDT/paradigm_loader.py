@@ -92,11 +92,14 @@ class ParadigmLoader():
         # overview = program
         # block_names = overview.index #  commment
 
-        self.paradigm = self.compile(self.program, self.blocks)
+        self.paradigm, self.interface.end_seconds = self.compile(self.program, self.blocks)
         # self.overview = overview
         # self.block_names = block_names
         self.loaded = True
         self.log.info('Paradigm is read')
+        self.log.info('Paradigm runs for {} seconds'.format(self.interface.end_seconds))
+        
+
 
     def infer_block_start_from_previous_block(self, program):
         """Infer the start field of a block if NaN is given by assuming it follows right after the previous block."""
@@ -258,7 +261,7 @@ class ParadigmLoader():
         paradigm["active"] = False
         paradigm["thread_name"] = None
         # print(paradigm)
-        return paradigm
+        return paradigm, max_end
 
 
     def get_paradigm_human_readable(self):

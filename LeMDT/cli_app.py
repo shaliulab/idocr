@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 from .lmdt_utils import _toggle_pin
 from . import PROJECT_DIR
-from .call2R import call2R
+import ipdb
 
 class CLIGui():
 
@@ -25,17 +25,21 @@ class CLIGui():
         programs = os.listdir(os.path.join(PROJECT_DIR, "programs"))
         # print(programs)
         self.menus = {
-            "general": ['open camera and start tracker', 'camera settings', 'load program', 'name odors', 'confirm', 'record', 'analyze with R', 'quit'],
-            "settings" : ['change fps', 'change acquisition time', 'return'],
+            "general": ['open camera, start tracker and run main valve', 'camera settings and adaptation time', 'load program', 'name odors', 'confirm', 'record', 'analyze with R', 'quit'],
+            "settings" : ['change fps', 'change acquisition time', 'adaptation time (minutes)', 'return'],
             "programs" : programs + ['return'],
             "Rsettings": ['run', 'experiment_folder', 'decision_zone_mm', 'min_exits_required', 'max_time_minutes', 'return']
             }
         self.effects = {
             "general": ['tracker starting', 'settings confirmed', 'paradigm loaded', 'saving odor names', 'confirmed' , 'recording starting', 'launching R', 'quitting'],
-            "settings": [None, None, None],
+            "settings": [None, None, None, None],
             "programs" : ['Loaded {}'.format(e) for e in self.menus['programs']] + [None]
 
         }
+
+        self.menu_name = "general"
+        self.answer = self.let_user_pick(self.menu_name)
+        self.shall_I_stop = False
 
 
         self.Rsession = None
@@ -46,6 +50,8 @@ class CLIGui():
         for idx, element in enumerate(options):
             print("{}: {}".format(idx+1,element))
         i = input("Enter number: ")
+        if i == '':
+            i = self.let_user_pick(menu_name)
         return int(i)
 
     def create(self):
@@ -57,55 +63,55 @@ class CLIGui():
     def run(self):
         '''
         '''
+       
+        try:
+            menu_name = self.menu_name
 
-        menu_name = "general"
-        self.answer = self.let_user_pick(menu_name)
-        while not self.interface.exit.is_set() and not (menu_name == "general" and self.answer == len(self.menus["general"])):
+            success = self.proceed(menu_name, self.answer)
+            self.display_log(success, menu_name)
 
-            try:
-
-                success = self.proceed(menu_name, self.answer)
-                self.display_log(success, menu_name)
-
-                
-                key_too_large = self.answer > len(self.menus[menu_name])
-
-                if self.answer == 2 and menu_name == "general":
-                    menu_name = "settings"
-
-                elif self.answer == 3 and menu_name == "general":
-                    menu_name = "programs"
-
-                elif self.answer == 7 and menu_name == "general":
-                    menu_name = "Rsettings"
-
-
-                elif not success:
-                    menu_name = "general"
-
-                elif success and menu_name == 'programs':
-                    menu_name = "general"
-                
-                elif key_too_large:
-                    self.log.warning('Sorry, the number you entered does not match any option. Please enter a valid number!')
-
-
-                self.answer = self.let_user_pick(menu_name)
-                
-
-            except Exception as e:
-                self.log.warning("answer = {}".format(self.answer))
-                self.log.warning('I do not understand that answer')
-                self.log.exception(e)
-                break
             
-    
-        self.close()
+            key_too_large = self.answer > len(self.menus[menu_name])
+
+            if self.answer == 2 and menu_name == "general":
+                menu_name = "settings"
+
+            elif self.answer == 3 and menu_name == "general":
+                menu_name = "programs"
+
+            elif self.answer == 7 and menu_name == "general":
+                menu_name = "Rsettings"
+
+
+            elif not success:
+                menu_name = "general"
+
+            elif success and menu_name == 'programs':
+                menu_name = "general"
+            
+            elif key_too_large:
+                self.log.warning('Sorry, the number you entered does not match any option. Please enter a valid number!')
+
+
+            self.answer = self.let_user_pick(menu_name)
+            self.menu_name = menu_name
+
+
+            self.shall_I_stop = (menu_name == "general" and self.answer == len(self.menus["general"]))
+
+        except Exception as e:
+            self.log.warning("answer = {}".format(self.answer))
+            self.log.warning('I do not understand that answer')
+            self.log.exception(e)
+            shall_I_stop = True
+            
+        if self.shall_I_stop:
+            self.close()
  
 
     def apply_updates(self):
-        pass         
-
+        pass
+        
     def close(self):
         """
         Quit the GUI and run the interface.close() method
@@ -115,6 +121,7 @@ class CLIGui():
         self.interface.save_results_answer = input('Save results (Y/N): ')
         if not self.interface.save_results_answer == '':
             self.interface.close()
+        
 
     def display_feed(self):
         while not self.interface.exit.is_set() and type(self.interface.frame_color) is np.ndarray:
@@ -160,10 +167,13 @@ class CLIGui():
             elif not self.interface.arena_ok_event.is_set() and answer == 5:
 
                 settings = self.interface.get_settings()
+                
+
                 self.log.info('Acquistion time: {}'.format(settings[0]))
                 self.log.info('FPS: {}'.format(settings[1]))
                 self.log.info('Odors: {}'.format(' and '.join(settings[2])))
                 self.log.info('Program path: {}'.format(settings[3]))
+                self.log.info('Adaptation time: {}'.format(settings[4]))
                 confirm  = input('Press N if there is something wrong in the live feed or the settings above: ')
                 if confirm != 'N':
                     self.interface.ok_arena()
@@ -182,7 +192,11 @@ class CLIGui():
         elif menu_name == 'programs':
 
         # new_program_path = input('Please enter a path to a programs csv file: ')
-            self.interface.program_path = self.menus['programs'][self.answer-1]
+            try:
+                self.interface.program_path = self.menus['programs'][self.answer-1]
+            except IndexError:
+                pass
+
             self.interface.load_and_apply_config()
             self.interface.device.prepare('exit')
             self.interface.device.get_paradigm_human_readable()
@@ -191,22 +205,34 @@ class CLIGui():
 
         elif menu_name == 'Rsettings':
 
-            if self.Rsession is None:
-                self.Rsession = call2R(
-                    experiment_folder=self.interface.tracker.saver.output_dir
-                )
-
             if answer == 1:
-                self.Rsession.run()
+                self.interface.Rsession.run()
                 return True
             
             elif answer < len(self.menus[menu_name]):
-                param_name = self.menus[menu_name][answer-1]
+
+                try:
+                    
+                    param_name = self.menus[menu_name][answer-1]
+                except IndexError:
+                    pass
 
                 param_value = int(input("Enter new {}: ".format(param_name)))
+                setattr(self.inteface, param_name, param_value)
+                setattr(self.interface.Rsession, param_name, param_value)
+                
+
+
                 # if param_value is str:
                     # if param_value.replace('.', 1).isdigit(): param_value = float(param_value)
-                setattr(self.Rsession, param_name, param_value)
+                    # {
+                    #     "experiment_folder" : self.interface.tracker.saver.output_dir,
+                    #     "decision_zone_mm" : self.interface.decision_zone_mm,
+                    #     "min_exits_required" : self.interface.min_exits_required,
+                    #     "max_time_minutes" : self.inteface.max_time_minutes
+                    # }
+
+         
                 return True
 
 
@@ -228,17 +254,22 @@ class CLIGui():
                 self.interface.tracker.stream.set_acquisition_time(new_acquisition_time)
                 return True
 
+            elif answer == 3:
+                self.log.info('Adaptation time is set to {}'.format(self.interface.adaptation_time_minutes))
+                self.interface.adaptation_time_minutes = int(input('Enter new adaptation time: '))
 
     def display_log(self, success, menu_name):
         if success:
             try:
-                    effect = self.effects[menu_name][self.answer-1]
-                    if not effect is None:
-                        self.log.info(effect.format(""))
-                    else:
-                        self.log.info(effect)
-                    
-                    time.sleep(2)
+                effect = self.effects[menu_name][self.answer-1]
+                if not effect is None:
+                    self.log.info(effect.format(""))
+                else:
+                    self.log.info(effect)
+                
+                time.sleep(2)
+            except IndexError:
+                pass
             except Exception as e:
                 self.log.warning(e)
 

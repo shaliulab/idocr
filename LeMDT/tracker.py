@@ -219,7 +219,7 @@ class Tracker():
         ## TODO Dont make coordinates of text hardcoded
         ###################################################
         cv2.putText(img,'Frame: '+ str(self.record_frame_count),   (25,25),    cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
-        cv2.putText(img,'Time: '+  str(int(self.interface.timestamp)), (1000,25),  cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
+        cv2.putText(img,'Time: '+  str(int(self.interface.timestamp_seconds)), (1000,25),  cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
         cv2.putText(img,'LEFT',                        (25,525),   cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
         cv2.putText(img,'RIGHT',                       (1100,525), cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
         return img
@@ -295,7 +295,7 @@ class Tracker():
             "eshock_left" : None,
             "eshock_right" : None,
             "frame": self.frame_count,
-            "t": self.interface.timestamp,
+            "t": self.interface.timestamp_seconds,
             "arena": 0,
             "cx": 0,
             "cy": 0,
@@ -322,16 +322,15 @@ class Tracker():
         
         if not self.interface.exit.is_set():
             # # Check if experiment is over
-            # if self.interface.timestamp > self.interface.duration:
+            # if self.interface.timestamp_seconds > self.interface.duration:
             #     self.log.info("Experiment duration is reached. Closing")
             #     #self.save_record()
             #     return False
 
             # How much time has passed since we started tracking?
-            if self.interface.record_start:
-                self.interface.timestamp = (datetime.datetime.now() - self.interface.record_start).total_seconds()
-            else:
-                self.interface.timestamp = 0
+            if self.interface.record_event.is_set():
+                self.interface.timestamp_datetime = datetime.datetime.now() - self.interface.record_start
+                self.interface.timestamp_seconds = self.interface.timestamp_datetime.total_seconds()
 
             # Read a new frame
             frame_time = datetime.datetime.now()
@@ -529,7 +528,7 @@ class Tracker():
                     "eshock_left" : None,
                     "eshock_right" : None,
                     "frame": self.frame_count,
-                    "t": self.interface.timestamp,
+                    "t": self.interface.timestamp_seconds,
                     "arena": arena.identity,
                     #"fly": fly.identity,
                     "cx": fly.x_corrected,

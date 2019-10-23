@@ -16,7 +16,7 @@ import threading
 # from skvideo.io import VideoWriter
 
 # Local application imports
-from .decorators import if_record_event
+from .decorators import if_record_event, if_not_record_end_event
 from . import PROJECT_DIR
 
 # Set up package configurations
@@ -65,8 +65,14 @@ class Saver():
         and create directory structure if needed.
         """
         record_start_formatted = self.tracker.interface.record_start.strftime("%Y-%m-%d_%H-%M-%S")
-        filename = record_start_formatted + "_" + self.machine_id
+        filename = record_start_formatted + '_LeMDT_' + self.machine_id
         self.output_dir = Path(self.path, record_start_formatted)
+        
+        try:
+            self.interface.Rsession.experiment_folder = self.output_dir
+        except Exception as e:
+            self.log.warning(e) 
+
         self.log.info('output_dir set to {}'.format(self.output_dir))
         self.store = Path(self.output_dir, filename)
         self.store_video = self.store.as_posix()
@@ -116,6 +122,7 @@ class Saver():
             self.log.warning(e)
 
     @if_record_event
+    @if_not_record_end_event
     def process_row(self, d, max_len=max_len):
         """
         Append row d to the store
@@ -172,6 +179,7 @@ class Saver():
             
 
     @if_record_event
+    @if_not_record_end_event
     def save_img(self, filename, frame):
 
         # if not self.tracker.interface.record_event.is_set():
@@ -181,6 +189,7 @@ class Saver():
         cv2.imwrite(full_path, frame)
 
     @if_record_event
+    @if_not_record_end_event
     def save_video(self):
 
         # if not self.tracker.interface.record_event.is_set():

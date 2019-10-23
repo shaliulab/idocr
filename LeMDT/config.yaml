@@ -28,7 +28,6 @@ arduino:
     board: ArduinoMega
 
 saver:
-    path: "lemdt_results/LeMDTe27SL5a9e19f94de287e28f789825/LEARNER_001"
     video_format: "avi"
     fps: 12
 
@@ -36,5 +35,5 @@ blocks:
     pattern: '.csv'
 
 interface:
-    machine_id: "LeMDTe27SL5a9e19f94de287e28f789825"
+    machine_id: "1"
     mode: 'deploy'

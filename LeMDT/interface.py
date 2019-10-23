@@ -12,13 +12,14 @@ import shutil
 import signal
 import ipdb
 import tempfile
-
+import math
 
 # Third party imports
 import cv2
 import numpy as np
 import yaml
 import pandas as pd
+from tqdm import tqdm
 pd.options.mode.chained_assignment = None
 
 # Local application imports
@@ -26,6 +27,8 @@ from .arduino import LearningMemoryDevice
 from .orevent import OrEvent
 from .desktop_app import TkinterGui
 from .cli_app import CLIGui
+from .lmdt_utils import _toggle_pin
+from .call2R import call2R
 
 from .tracker import Tracker
 from . import PROJECT_DIR
@@ -102,7 +105,7 @@ class Interface():
         self.blocks = None
         self.port = None
         
-        self.timestamp = None
+        self.timestamp_seconds = None
         self.duration = None
         self.experimenter = None
         self.statusbar = None
@@ -121,6 +124,8 @@ class Interface():
         self.stop_event = threading.Event()
         self.record_event = threading.Event()
         self.arena_ok_event = threading.Event()
+        self.record_end = threading.Event()
+        
         self.load_program_event = threading.Event()
         self.exit = threading.Event()
         self.exit_or_record = OrEvent(self.exit, self.record_event)
@@ -146,10 +151,11 @@ class Interface():
             self.gui = GUIS[gui_name](interface=self)
         
 
-        self.timestamp = 0
+        self.timestamp_seconds = 0
         self.experimenter = experimenter
       
-        self.log.info("Start time: {}".format(self.interface_start.strftime("%Y%m%d-%H%M%S")))
+        self.log.info("Start time: {}".format(self.interface_start.strftime("%Y-%m-%d-%H:%M:%S")))
+        self.getLogger('LeMDT.cli_app').info("Start time: {}".format(self.interface_start.strftime("%Y-%m-%d-%H:%M:%S")))
         self.interface_initialized = False
         self.log.info('Interface initialized')
 
@@ -162,6 +168,14 @@ class Interface():
         self.odor_A = 'A'
         self.odor_B = 'B'
         self.save_results_answer = 'Yes'
+        self.record_start = 0
+        self.adaptation_time_minutes = 10
+        self.decision_zone_mm=10
+        self.min_exits_required=5
+        self.max_time_minutes=60
+        
+        self.Rsession = call2R()
+
 
 
 
@@ -210,6 +224,8 @@ class Interface():
         device.connect_arduino_board(self.port)
         device.prepare('exit')
         self.device = device
+
+
         self.log.info('Arduino will be run for {}'.format(datetime.timedelta(seconds= self.duration)))
         device.get_paradigm_human_readable()
 
@@ -265,9 +281,13 @@ class Interface():
                 pass
         elif answer == 'Y':
             self.getLogger('LeMDT.cli_app').info('Keeping files')
-        else:
-            # ipdb.set_trace( )
             self.tracker.saver.copy_logs(self.config)
+            self.Rsession.run()
+            
+
+        else:
+            pass
+            
             
 
 
@@ -298,8 +318,9 @@ class Interface():
             return None
             
         self.play_event.set()
+
         self.play_start = datetime.datetime.now()
-        
+
         if self.track:
             try:
                 self.log.info("Running tracker")
@@ -307,6 +328,10 @@ class Interface():
             except Exception as e:
                 self.log.exception('Could not run tracker')
                 self.log.exception(e)
+
+        if self.arduino:
+            _toggle_pin(self=self, device=self.device, pin_number=11, value=1, log=False)
+
 
         # NEEDED?
         if not self.track and not self.gui and self.arduino:
@@ -323,8 +348,19 @@ class Interface():
         
         # Set the record_event so the data recording methods
         # can run (if_record_event decorator)
-        self.record_event.set()
+        acum = 0
+        total_seconds = ((self.interface_start + datetime.timedelta(seconds=self.adaptation_time_minutes*60)) - datetime.datetime.now()).total_seconds()
+        refresh_every_n_seconds = 5
+        niters = max(math.ceil(total_seconds / refresh_every_n_seconds),0)
+        print(niters)
 
+        for i in tqdm(range(int(niters))):
+            self.exit.wait(refresh_every_n_seconds)
+            self.log.info('Waiting')
+            if self.exit.is_set():
+                break
+
+        self.record_event.set()
         self.record_start = datetime.datetime.now()
         self.tracker.saver.init_record_start()
         self.tracker.saver.init_output_files()
@@ -417,8 +453,6 @@ class Interface():
         if self.gui_name in ['tkinter', 'django', 'cli']:
             self.gui.create()
             self.log.info('Initializing gui')
-
-
     
     def get_settings(self):
 
@@ -426,12 +460,8 @@ class Interface():
         fps = self.tracker.stream.get_fps()
         odors = self.odor_A, self.odor_B
         program_path = self.program_path
-        return acquisition_time, fps, odors, program_path
-
-
-        
-
-    
+        return acquisition_time, fps, odors, program_path, self.adaptation_time_minutes
+      
     def start(self):
         """
         Launch the tkinter GUI and update it accordingly
@@ -446,5 +476,3 @@ class Interface():
             # print(type(self.device.mapping))
             self.gui.run()
             self.gui.apply_updates()
-    
-

@@ -24,7 +24,7 @@ class ReadConfigMixin():
 
 
 
-def _toggle_pin(self, device=None, pin_number=None, pin_id=None, value=0, freq=None, thread=True):
+def _toggle_pin(self, device=None, pin_number=None, pin_id=None, value=0, freq=None, thread=True, log=True):
     """
     Update the state of pin pin_number with value,
     while logging and caching this so user can confirm it.
@@ -36,6 +36,10 @@ def _toggle_pin(self, device=None, pin_number=None, pin_id=None, value=0, freq=N
     if pin_number is None:
         pin_number = device.mapping["pin_number"].loc[device.mapping.index == pin_id].values[0]
         # print(pin_number)
+    
+    if pin_id is None:
+        pin_id = device.mapping.index[device.mapping.pin_number == pin_number].values[0]
+        
 
     d = threading.currentThread()
     
@@ -44,13 +48,13 @@ def _toggle_pin(self, device=None, pin_number=None, pin_id=None, value=0, freq=N
 
     # Update log with info severity level unless
     # on pin13, then use severity debug
-    if self.log.info:
+    if log:
         f = self.log.info
         
         if pin_number != 13:
             if thread:
                 f("{} ---> {}".format(
-                d._kwargs["d_name"],
+                pin_id,
                 value
                 ))
             else:

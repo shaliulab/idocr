@@ -73,6 +73,18 @@ def if_config_loaded(f):
     # return _if_record_event
 
 
+def if_not_record_end_event(f):
+    def wrapper(self, *args, **kwargs):
+        record_end_set = self.interface.record_end.is_set()
+        
+        if record_end_set:
+            if not getattr(self.interface, "exit_message_shown", False):
+                self.interface.getLogger(name='LeMDT.cli_app').info('End of paradigm reached. Stoped saving results')
+                self.interface.exit_message_shown = True
+            return True            
+        return f(self, *args, **kwargs)
+    return wrapper
+
 
 
 def if_not_self_stream(f):

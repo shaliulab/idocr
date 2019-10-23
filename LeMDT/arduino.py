@@ -4,7 +4,6 @@ import sys
 import threading
 import logging
 import datetime
-import warnings
 import time
 import glob
 import os
@@ -109,7 +108,7 @@ class LearningMemoryDevice(ParadigmLoader):
         self.load_program(mapping_path=self.interface.mapping_path, program_path=self.interface.program_path)
 
         # power off any pins if any
-        self.power_pins_off(shutdown=False, ir=True)
+        self.power_pins_off(shutdown=False, power_off_all=False)
         # prepare the arduino parallel threads
         
         self.threads[stop_event_name] = {}
@@ -245,9 +244,24 @@ class LearningMemoryDevice(ParadigmLoader):
                 }
         )
 
+        check_record_end_is_set_thread = threading.Thread(
+            name = 'check_record_end_is_set',
+            target = self.check_record_end_is_set
+        )
+
         self.interface.arduino_thread = arduino_thread
         arduino_thread.start()
+        check_record_end_is_set_thread.start()
+        
         return None
+
+
+    def check_record_end_is_set(self):
+        while not self.interface.exit.is_set():
+            done = self.interface.timestamp_seconds > self.interface.end_seconds
+            if done: self.interface.record_end.set()
+            self.interface.exit.wait(1)
+
 
     def close(self):
         """
@@ -275,7 +289,7 @@ class LearningMemoryDevice(ParadigmLoader):
         return [self.pin_id2n(p), pin_state_g[p]]
 
 
-    def power_pins_off(self, shutdown=True, ir=False):
+    def power_pins_off(self, shutdown=True, power_off_all=True):
         """
         Sets every pin mentioned in the mapping file to OFF except the if infrared (ir) is True.
         In that case, the IR stays ON
@@ -284,8 +298,8 @@ class LearningMemoryDevice(ParadigmLoader):
         # power everything off except if ir is False.
         # In that case the IR light is kept
         for p in self.mapping.pin_number:
-            # if self.mapping.loc[self.mapping.index.values == 'IRLED', 'pin_number'].values != p or ir:
-            self.board.digital[p].write(0)
+            if self.mapping.loc[self.mapping.index.values == 'MAIN_VALVE', 'pin_number'].values != p or power_off_all:
+                self.board.digital[p].write(0)
     
         if shutdown:
             return False    
