@@ -79,7 +79,7 @@ def if_not_record_end_event(f):
         
         if record_end_set:
             if not getattr(self.interface, "exit_message_shown", False):
-                self.interface.getLogger(name='LeMDT.cli_app').info('End of paradigm reached. Stoped saving results')
+                self.interface.getLogger(name='LeMDT.cli_app').info('End of paradigm reached. No recording anymore. Quit to either remove or save the results! :)')
                 self.interface.exit_message_shown = True
             return True            
         return f(self, *args, **kwargs)

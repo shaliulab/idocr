@@ -14,6 +14,8 @@ from .lmdt_utils import _toggle_pin
 from . import PROJECT_DIR
 import ipdb
 
+
+
 class CLIGui():
 
     def __init__(self, interface):
@@ -26,7 +28,7 @@ class CLIGui():
         # print(programs)
         self.menus = {
             "general": ['open camera, start tracker and run main valve', 'camera settings and adaptation time', 'load program', 'name odors', 'confirm', 'record', 'analyze with R', 'quit'],
-            "settings" : ['change fps', 'change acquisition time', 'adaptation time (minutes)', 'return'],
+            "settings" : ['change fps', 'change acquisition_time', 'change adaptation_time (minutes)', 'return'],
             "programs" : programs + ['return'],
             "Rsettings": ['run', 'experiment_folder', 'decision_zone_mm', 'min_exits_required', 'max_time_minutes', 'return']
             }
@@ -238,40 +240,52 @@ class CLIGui():
 
         elif menu_name == "settings":
 
-            if answer == 1:
-                new_fps = int(input("Enter new FPS: "))
+            settings_options = [e.split('(')[0] if len(e.split('(')) > 1 else e for e in self.menus[menu_name]]
+            settings_options = [e.split(' ')[1] if len(e.split(' ')) > 1 else e for e in settings_options]
+
+            if answer == settings_options.index('fps')+1:
+                new_fps = self.prompt_new_value(self.interface.tracker.stream, 'fps')
                 while new_fps <= 2:
                     self.log.warning('Please provide a new value > 2')
                     success = False
-                    new_fps = int(input("Enter new FPS: "))
-
-                self.interface.tracker.stream.set_fps(new_fps)
-                # self.log.warning("Change of fps not implemented")
+                    new_fps = self.prompt_new_value(self.interface.tracker.stream, 'fps')
                 return True
 
-            elif answer == 2:
-                new_acquisition_time = int(input("Enter new acquisition time: "))
-                self.interface.tracker.stream.set_acquisition_time(new_acquisition_time)
+            elif answer == settings_options.index('acquisition_time')+1:
+                self.prompt_new_value(self.interface.tracker.stream, 'acquisition_time')
                 return True
 
-            elif answer == 3:
-                self.log.info('Adaptation time is set to {}'.format(self.interface.adaptation_time_minutes))
-                self.interface.adaptation_time_minutes = int(input('Enter new adaptation time: '))
+            elif answer == settings_options.index('adaptation_time')+1:
+                self.prompt_new_value(self.interface, 'adaptation_time')
+                
 
     def display_log(self, success, menu_name):
         if success:
             try:
                 effect = self.effects[menu_name][self.answer-1]
-                if not effect is None:
+                    
+                if not effect is None:    
                     self.log.info(effect.format(""))
-                else:
-                    self.log.info(effect)
+                # else:
+                #     self.log.info(effect)
                 
                 time.sleep(2)
             except IndexError:
                 pass
             except Exception as e:
                 self.log.warning(e)
+
+    
+    def prompt_new_value(self, instance, param_name):
+        old_value = getattr(instance, 'get_' +param_name)()
+        self.log.info('{} is set to {}'.format(param_name, old_value))
+        value = int(input("Enter new {}: ".format(param_name)))
+        # print(param_name)
+        getattr(instance, 'set_' +param_name)(value)
+        self.log.info('{} is now changed to {}'.format(param_name, value))
+        time.sleep(1)
+        return value
+        
 
 
     

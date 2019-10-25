@@ -476,3 +476,10 @@ class Interface():
             # print(type(self.device.mapping))
             self.gui.run()
             self.gui.apply_updates()
+
+
+    def set_adaptation_time(self, value):
+        self.adaptation_time_minutes = value
+    
+    def get_adaptation_time(self):
+        return self.adaptation_time_minutes
