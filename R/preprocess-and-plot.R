@@ -14,7 +14,7 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
     # annotation <- ''
     # experiment_folder = '/home/antortjim/1TB/MEGA/FlySleepLab/Gitlab/LeMDT/lemdt_results/2019-10-04_12-46-49'
   # }
-  filename <- list.files(path = experiment_folder, pattern = 'LeMDT_1.csv')
+  filename <- list.files(path = experiment_folder, pattern = 'LeMDT') %>% grep(pattern = '.csv', x = ., value = T)
   
   file_path <- file.path(experiment_folder, filename)
   if (length(file_path) == 0) {
@@ -148,7 +148,7 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
     return(0)
   )
   
-})
+  })
 
 title <- basename(experiment_folder)
 
@@ -160,6 +160,8 @@ program_name <- tryCatch({
   warning(e)
   return("")
 })
+
+
 p <- result$p + ggtitle(label = title, subtitle = paste(
   '  /  Program:',   program_name,
   '  /  min exits:', min_exits_required,
@@ -170,7 +172,9 @@ p <- result$p + ggtitle(label = title, subtitle = paste(
   )
 )
 index_dataset <- result$index_dataset
-ggsave(filename = file.path(experiment_folder, paste0(index_function(), '.pdf')), plot = p, width = 12, height = 8)
-ggsave(filename = file.path(experiment_folder, paste0(index_function(), '.png')), plot = p, width = 12, height = 8)
+
+datetime <- rev(strsplit(experiment_folder, split = '/')[[1]])[1]
+ggsave(filename = file.path(experiment_folder, paste0(datetime, '_LeMDT_1_', index_function(), '.pdf')), plot = p, width = 12, height = 8)
+ggsave(filename = file.path(experiment_folder, paste0(datetime, '_LeMDT_1_', index_function(), '.png')), plot = p, width = 12, height = 8)
 return(list(plot = p, index_dataset = index_dataset))
 }
