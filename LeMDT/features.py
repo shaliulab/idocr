@@ -198,16 +198,18 @@ class Fly():
         fly_passed_1 = self.diagonal > self.min_object_length
         # the intensity on the top left corner needs to be greater than a minimum 
         ## INCONGRUENT
-        fly_passed_2 = gray[self.y, self.x] > self.min_intensity
+        intensity = gray[self.y, self.x]
+        fly_passed_2 = intensity > self.min_intensity
         # the area has to be more than a minimum and less than a maximum
         fly_passed_3 = self.area > self.min_object_area
         fly_passed_4 = self.area < self.max_object_area
 
         ## DEBUG
-        self.tracker.log.debug(fly_passed_1)
-        self.tracker.log.debug(fly_passed_2)
-        self.tracker.log.debug(fly_passed_3)
-        self.tracker.log.debug(fly_passed_4)
+        self.tracker.log.debug(self.arena.identity)
+        self.tracker.log.debug('Diagonal test: {} --> {}'.format(self.diagonal, fly_passed_1))
+        self.tracker.log.debug('Intensity test: {} --> {}'.format(intensity, fly_passed_2))
+        self.tracker.log.debug('Min area test: {} --> {}'.format(self.area, fly_passed_3))
+        self.tracker.log.debug('Max area test: {} --> {}'.format(self.area, fly_passed_4))
 
         if not (fly_passed_1 and fly_passed_2 and fly_passed_3 and fly_passed_4) or getattr(self, "cx") is None:
                 return False
