@@ -12,25 +12,23 @@ import shutil
 import signal
 import ipdb
 import tempfile
-import math
 
 # Third party imports
 import cv2
 import numpy as np
 import yaml
 import pandas as pd
-from tqdm import tqdm
 pd.options.mode.chained_assignment = None
 
 # Local application imports
 from .arduino import LearningMemoryDevice
-from .orevent import OrEvent
-from .desktop_app import TkinterGui
-from .cli_app import CLIGui
-from .lmdt_utils import _toggle_pin
 from .call2R import call2R
-
+from .cli_app import CLIGui
+from .desktop_app import TkinterGui
+from .lmdt_utils import _toggle_pin
+from .orevent import OrEvent
 from .tracker import Tracker
+from .saver import Saver
 from . import PROJECT_DIR
 
 DjangoGui = None
@@ -198,9 +196,13 @@ class Interface():
         self.log.info('Frame source set to {}'.format(frame_source))
 
         self.tracker = Tracker(interface=self, camera=self.camera, video=self.video)
-        self.tracker.set_saver()
         self.tracker.load_camera()
         self.tracker.init_image_arrays()
+
+
+    def init_saver(self):
+        saver = Saver(interface=self)
+        self.saver = saver
 
 
 
@@ -274,14 +276,14 @@ class Interface():
         if answer == 'N':
             try:
                 self.getLogger('LeMDT.cli_app').info('Removing files')
-                shutil.rmtree(self.tracker.saver.output_dir)
+                shutil.rmtree(self.saver.output_dir)
             # in case the output_dir is not declared yet
             # because we are closing early
             except TypeError:
                 pass
         elif answer == 'Y':
             self.getLogger('LeMDT.cli_app').info('Keeping files')
-            self.tracker.saver.copy_logs(self.config)
+            self.saver.copy_logs(self.config)
             self.Rsession.run()
             
 
@@ -348,27 +350,20 @@ class Interface():
         
         # Set the record_event so the data recording methods
         # can run (if_record_event decorator)
-        acum = 0
-        total_seconds = ((self.interface_start + datetime.timedelta(seconds=self.adaptation_time_minutes*60)) - datetime.datetime.now()).total_seconds()
-        refresh_every_n_seconds = 5
-        niters = max(math.ceil(total_seconds / refresh_every_n_seconds),0)
-        print(niters)
-
-        for i in tqdm(range(int(niters))):
-            self.exit.wait(refresh_every_n_seconds)
-            self.log.info('Waiting')
-            if self.exit.is_set():
-                break
+        self.log.info("Pressed record")
+ 
+        adaptation_seconds = ((self.interface_start + datetime.timedelta(seconds=self.adaptation_time_minutes*60)) - datetime.datetime.now()).total_seconds()
+        adaptation_done = self.gui.progress_bar(seconds = adaptation_seconds, background=False, name = 'adaptation time')
+        
 
         self.record_event.set()
         self.record_start = datetime.datetime.now()
-        self.tracker.saver.init_record_start()
-        self.tracker.saver.init_output_files()
-        self.tracker.saver.save_paradigm()
-        self.tracker.saver.save_odors(self.odor_A, self.odor_B)
-        
-        self.log.info("Pressed record")
-        self.log.info("Savers will cache data and save it to csv files")
+        self.saver.init_record_start()
+        self.saver.init_output_files()
+        self.saver.save_paradigm()
+        self.saver.save_odors(self.odor_A, self.odor_B)
+        record_seconds = max(self.device.paradigm['end'])  
+        self.gui.progress_bar(seconds = record_seconds, until_event = adaptation_done, name = 'recording time')
 
         if not self.arduino:
             self.log.warning("No arduino program is loaded. Are you sure it is ok?")
@@ -443,6 +438,8 @@ class Interface():
     def init_components(self):
  
         self.init_control_c_handler()
+        self.init_saver()
+
         if self.arduino:
             self.log.info('Initializing Arduino board')
             self.init_device()
@@ -456,8 +453,13 @@ class Interface():
     
     def get_settings(self):
 
-        acquisition_time = self.tracker.stream.get_acquisition_time()
-        fps = self.tracker.stream.get_fps()
+        stream = getattr(self.tracker, "stream", None)
+        acquisition_time = None
+        fps = None
+        if not stream is None:
+            acquisition_time = stream.get_acquisition_time()
+            fps = stream.get_fps()
+        
         odors = self.odor_A, self.odor_B
         program_path = self.program_path
         return acquisition_time, fps, odors, program_path, self.adaptation_time_minutes

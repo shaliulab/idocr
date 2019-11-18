@@ -1,11 +1,12 @@
 # Standard library imports
 import logging
+import math
 import os
 import subprocess
 import threading
 import tempfile
 import time
-
+from tqdm import tqdm
 
 # Local application imports
 import cv2
@@ -14,6 +15,13 @@ from .lmdt_utils import _toggle_pin
 from . import PROJECT_DIR
 import ipdb
 
+
+def RepresentsInt(s):
+    try: 
+        int(s)
+        return True
+    except ValueError:
+        return False
 
 
 class CLIGui():
@@ -33,7 +41,7 @@ class CLIGui():
             "Rsettings": ['run', 'experiment_folder', 'decision_zone_mm', 'min_exits_required', 'max_time_minutes', 'return']
             }
         self.effects = {
-            "general": ['tracker starting', 'settings confirmed', 'paradigm loaded', 'saving odor names', 'confirmed' , 'recording starting', 'launching R', 'quitting'],
+            "general": ['tracker starting', 'settings confirmed', 'paradigm loaded', 'saving odor names', 'confirmed' , None, 'launching R', 'quitting'],
             "settings": [None, None, None, None],
             "programs" : ['Loaded {}'.format(e) for e in self.menus['programs']] + [None]
 
@@ -54,7 +62,14 @@ class CLIGui():
         i = input("Enter number: ")
         if i == '':
             i = self.let_user_pick(menu_name)
-        return int(i)
+        
+        while not RepresentsInt(i):
+            self.log.warning('You entered answer: {}'.format(i))
+            self.log.warning('This is not valid. Try again!')
+            i = self.let_user_pick(menu_name)
+        
+        result = int(i)
+        return result
 
     def create(self):
         """
@@ -144,6 +159,11 @@ class CLIGui():
 
     def proceed(self, menu_name, answer):
         
+        while len(self.menus[menu_name]) < answer-1:
+            self.log.warning('You entered answer: {}'.format(answer))
+            self.log.warning('This is not valid. Try again!')
+            answer = self.let_user_pick(menu_name)
+            
         options = self.menus[menu_name][answer-1]
         switch_menu = self.answer == len(self.menus[menu_name])
         if switch_menu:
@@ -279,12 +299,65 @@ class CLIGui():
     def prompt_new_value(self, instance, param_name):
         old_value = getattr(instance, 'get_' +param_name)()
         self.log.info('{} is set to {}'.format(param_name, old_value))
-        value = int(input("Enter new {}: ".format(param_name)))
+        value = float(input("Enter new {}: ".format(param_name)))
         # print(param_name)
         getattr(instance, 'set_' +param_name)(value)
         self.log.info('{} is now changed to {}'.format(param_name, value))
         time.sleep(1)
         return value
+
+
+    def progress_bar(self, seconds, background=True, until_event=None, name = ''):
+
+        event_done = threading.Event()
+        if background:
+            progress_bar_thread = threading.Thread(
+                    name='progress_bar_main',
+                    target=self.progress_bar_main,
+                    kwargs={
+                        "seconds": seconds,
+                        "until_event": until_event,
+                        "event_done": event_done,
+                        "name": name
+
+                        }
+                )
+
+            self.log.debug('Background progress bar')          
+            progress_bar_thread.start()
+        
+
+        else:
+            self.log.debug('Foreground progress bar')          
+            self.progress_bar_main(seconds, until_event = until_event, event_done = event_done, name = name)
+
+        return event_done
+
+
+
+
+    def progress_bar_main(self, seconds, until_event=None, event_done=None, name=''):
+
+
+        refresh_every_n_seconds = 1
+        niters = max(math.ceil(seconds / refresh_every_n_seconds),0)
+        
+        if not until_event is None:
+            while not until_event.is_set():
+                self.interface.exit.wait(.5)
+
+        self.log.info('Running {}...'.format(name))
+
+        for i in tqdm(range(int(niters))):
+            self.interface.exit.wait(refresh_every_n_seconds)
+            if self.interface.exit.is_set():
+                break
+        
+        event_done.set()
+        
+
+
+        
         
 
 

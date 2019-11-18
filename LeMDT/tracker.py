@@ -18,7 +18,6 @@ from sklearn.cluster import KMeans
 from .features import Arena, Fly
 from .streams import STREAMS
 from .decorators import export, if_not_self_stream
-from .saver import Saver
 from . import PROJECT_DIR
 
 # Set up package configurations
@@ -147,14 +146,6 @@ class Tracker():
  
         self.arenas = {}
         self.masks = {}
-
-    def set_saver(self):
-        saver = Saver(
-            tracker=self,
-            record_event=self.interface.record_event
-        )
-
-        self.saver = saver
 
     @if_not_self_stream
     def load_camera(self):
@@ -311,7 +302,7 @@ class Tracker():
             d["eshock_left"] = self.interface.device.pin_state["EL_SHOCK_LEFT"]
             d["eshock_right"] = self.interface.device.pin_state["EL_SHOCK_RIGHT"]
                     
-        self.saver.process_row(d)
+        self.interface.saver.process_row(d)
 
 
 
@@ -545,7 +536,7 @@ class Tracker():
                     d["eshock_left"] = self.interface.device.pin_state["EL_SHOCK_LEFT"]
                     d["eshock_right"] = self.interface.device.pin_state["EL_SHOCK_RIGHT"]
                             
-                self.saver.process_row(d)
+                self.interface.saver.process_row(d)
 
                 self.found_flies += 1
                 
@@ -565,8 +556,8 @@ class Tracker():
                 self.interface.stacked_arenas[i] = imutils.resize(arena_crop, width=arena_crop.shape[1]*3)
 
             # Save frame
-            self.saver.save_img(frame_time.strftime("%Y-%m-%d_%H-%M-%S") + ".jpg", frame_color)
-            self.saver.save_video()
+            self.interface.saver.save_img(frame_time.strftime("%Y-%m-%d_%H-%M-%S") + ".jpg", frame_color)
+            self.interface.saver.save_video()
 
             # TODO: Make into utils function
             #self.interface.stacked_arenas = self.stack_arenas(arenas_dict)
@@ -668,11 +659,11 @@ class Tracker():
         If the exit event is not yet set, call interface.close()
         """
         self.stream.release()
-        self.saver.stop_video()
+        self.interface.saver.stop_video()
         self.log.info("Tracking stopped")
         self.log.info("{} arenas in {} frames analyzed".format(20 * self.frame_count, self.frame_count))
         self.log.info("Number of arenas that fly is not detected in is {}".format(self.missing_fly))
-        self.saver.store_and_clear()
+        self.interface.saver.store_and_clear()
 
         # if not self.interface.exit.is_set(): self.interface.close()
 

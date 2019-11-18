@@ -27,15 +27,16 @@ max_len = 50
 
 class Saver():
 
-    def __init__(self, tracker, cache={}, record_event=None):
+    def __init__(self, interface, cache={}, ):
 
 
         self.cache = cache
-        self.tracker = tracker
-        self.interface = self.tracker.interface
-        self.log = self.tracker.interface.getLogger(__name__)
+        self.interface = interface
+        self.tracker = interface.tracker
+        self.log = self.interface.getLogger(__name__)
         self.lst = []
-        self.record_event = record_event
+        self.record_event = getattr(self.interface, "record_event", None)
+
         self.columns = [
             "frame", "arena", "cx", "cy", "datetime", "t", \
             "ODOUR_A_LEFT", "ODOUR_A_RIGHT", "ODOUR_B_LEFT", "ODOUR_B_RIGHT", \
@@ -49,14 +50,14 @@ class Saver():
         self.out = None
         self.video_writers = None
 
-        self.path = self.tracker.interface.output_path
-        if self.path is None: self.path = self.tracker.interface.cfg["saver"]["path"]
+        self.path = self.interface.output_path
+        if self.path is None: self.path = self.interface.cfg["saver"]["path"]
 
-        self.video_format = self.tracker.interface.cfg["saver"]["video_format"]
-        self.video_out_fps = self.tracker.interface.cfg["saver"]["fps"]
+        self.video_format = self.interface.cfg["saver"]["video_format"]
+        self.video_out_fps = self.interface.cfg["saver"]["fps"]
         self.log.info('FPS of output videos: {}'.format(self.video_out_fps))
         
-        self.machine_id = self.tracker.interface.cfg["interface"]["machine_id"]
+        self.machine_id = self.interface.cfg["interface"]["machine_id"]
         self.t = None
 
     def init_record_start(self):
@@ -64,7 +65,7 @@ class Saver():
         Set absolute paths to output (depend on what time the record button is pressed)
         and create directory structure if needed.
         """
-        record_start_formatted = self.tracker.interface.record_start.strftime("%Y-%m-%d_%H-%M-%S")
+        record_start_formatted = self.interface.record_start.strftime("%Y-%m-%d_%H-%M-%S")
         filename = record_start_formatted + '_LeMDT_' + self.machine_id
         self.output_dir = Path(self.path, record_start_formatted)
         
@@ -102,7 +103,7 @@ class Saver():
 
     def save_paradigm(self):
         """Save a copy of the paradigm for future reference"""
-        self.tracker.interface.device.paradigm_human_readable.to_csv(os.path.join(self.output_dir, "paradigm.csv"), header=True)
+        self.interface.device.paradigm_human_readable.to_csv(os.path.join(self.output_dir, "paradigm.csv"), header=True)
 
     def save_odors(self, odor_A, odor_B):
         path2file = os.path.join(self.output_dir, "odors.csv")
@@ -114,7 +115,7 @@ class Saver():
     def copy_logs(self, config):
         try:
             src_files = [config['handlers'][v]['filename'] for v in config['handlers'].keys() if v[:5] == 'file_']
-            dest = self.tracker.saver.output_dir 
+            dest = self.interface.tracker.saver.output_dir 
             for full_file_name in src_files:
                 if os.path.isfile(full_file_name):
                     shutil.copy(full_file_name, dest)
@@ -132,7 +133,7 @@ class Saver():
     
         """
         
-        # if not self.tracker.interface.record_event.is_set():
+        # if not self.interface.record_event.is_set():
         #     return True
         
         if len(self.lst) >= max_len:
@@ -147,7 +148,7 @@ class Saver():
         Convert the cache list to a DataFrame and append that to HDF5.
         """
         
-        if not self.tracker.interface.record_event.is_set():
+        if not self.interface.record_event.is_set():
             return True
 
         try:
@@ -182,7 +183,7 @@ class Saver():
     @if_not_record_end_event
     def save_img(self, filename, frame):
 
-        # if not self.tracker.interface.record_event.is_set():
+        # if not self.interface.record_event.is_set():
             # return True
 
         full_path = Path(self.store_img, filename).as_posix()
@@ -192,15 +193,15 @@ class Saver():
     @if_not_record_end_event
     def save_video(self):
 
-        # if not self.tracker.interface.record_event.is_set():
+        # if not self.interface.record_event.is_set():
             # return True
 
         # self.video_writer.open()
-        # print(self.tracker.interface.original_frame)
+        # print(self.interface.original_frame)
 
-        # self.video_writer.write(self.tracker.interface.original_frame)
+        # self.video_writer.write(self.interface.original_frame)
         # self.video_writer.release()
-        imgs = [self.tracker.interface.original_frame, self.tracker.interface.frame_color]
+        imgs = [self.interface.original_frame, self.interface.frame_color]
         imgs_3_channels = [img if len(img.shape) == 3 else cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) for img in imgs]
 
 

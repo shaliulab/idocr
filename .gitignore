@@ -117,3 +117,5 @@ lemdt_results/*
 *.desktop
 wheels/LeMDT*
 scripts/make_app.sh
+
+LeMDT/logs/*
