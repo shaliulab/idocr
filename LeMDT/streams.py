@@ -226,8 +226,13 @@ class WebCamStream(StandardStream):
 
     def set_acquisition_time(self, at):
         self.log.warning("Change of acquisition time not implemented")
-        pass
+        return None
 
+
+    def get_acquisition_time(self):
+        self.log.warning("Get of acquisition time is not implemented")
+        return 0
+        
  #   def set_width(self, width):
  #       if self.stream.get_width() != width:
  #           self.stream.set(3, width)
