@@ -217,8 +217,9 @@ class WebCamStream(StandardStream):
         return height 
 
     def set_fps(self, fps):
-        import ipdb
-        ipdb.set_trace()
+
+        #import ipdb
+        #ipdb.set_trace()
 
         if self.get_fps() != fps:
             self.log.info("Setting fps to {}".format(fps))
