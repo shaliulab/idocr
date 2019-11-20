@@ -112,8 +112,8 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pin
       print(paste0('arena ', a))
       pref_index <- index_dataset[arena == a]
       
-      pref_index <- pref_index[(subseting_column),]$V1
-      # pref_index <- pref_index[subseting_column == perd,]$V1
+      pref_index <- pref_index[(subsetting_column),]$V1
+      # pref_index <- pref_index[subsetting_column == perd,]$V1
 
       if(length(pref_index) == 0) pref_index <- NA
       
@@ -147,12 +147,20 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pin
     geom_hline(yintercept = borders[[2]])
   
   print('Created base plot successfully')
-  
+  # browser()
   ## Add exit points
   exits_dataframe <- get_exits_dataframe(lemdt_result[arena!=0], borders)
+  
+  exits_dataframe$odor_test_active <- lapply(1:nrow(rect_data), function(i) {
+    exits_dataframe$t/60 > rect_data[i, "xmin"] & exits_dataframe$t/60 < rect_data[i, "xmax"]
+    }) %>% do.call(rbind, .) %>%
+    apply(., 2, any)
+  
   if(nrow(exits_dataframe) > 0) {
     # browser()
-    p3 <- p3 + geom_point(data = exits_dataframe, mapping = aes(x = t/60, y = x), col = 'blue')
+    p3 <- p3 +
+      geom_point(data = exits_dataframe[exits_dataframe$odor_test_active,], mapping = aes(x = t/60, y = x), col = "black") +
+      scale_color_manual(values = c("orange", "purple"))
   }
   
   
@@ -203,7 +211,8 @@ plot_trace_with_pin_events <- function(lemdt_result, borders, index_dataset, pin
                                label = pref_index
                                # fill = pref_index_numeric
                                ),
-                           fontface = 'bold', color = 'black', x =  x_limits[2], y = arena_width_mm/2, size = 5)
+                           fontface = 'bold', color = 'black', x =  x_limits[2], y = arena_width_mm/2, size = 5) +
+       geom_label()
      
      # p3 <- p3 + scale_fill_gradientn(colours = myPalette(100), limits = c(-1, +1), name = 'Index')
      # print('Check 2')

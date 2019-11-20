@@ -114,8 +114,8 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
     # browser()
     
     # lemdt_result[, any_pin_on := F]
-    lemdt_result[, any_pin_on := (substr(period,1,4) != '0000')]
-    lemdt_result$subseting_column <- lemdt_result[["any_pin_on"]]
+    lemdt_result[, odor_test_active := (substr(period,1,4) != '0000')]
+    lemdt_result$subsetting_column <- lemdt_result[["odor_test_active"]]
     # if()
     lemdt_result[, reversed := period == '0110']
     
@@ -124,10 +124,11 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
     lemdt_result[(reversed), rev_position := reversed_pos[position]]
     
     
+    
     index_dataset <- lemdt_result[, .(
       V1 = index_function(pos = rev_position, min_exits_required = min_exits_required)[[1]],
       V2 = index_function(pos = rev_position, min_exits_required = min_exits_required)[[2]]
-    ), by = .(arena, subseting_column)]
+    ), by = .(arena, subsetting_column)]
     
     p <- plot_trace_with_pin_events(lemdt_result = lemdt_result, borders=borders, index_dataset = index_dataset, A=A,B=B)
     
