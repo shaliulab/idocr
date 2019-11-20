@@ -51,6 +51,7 @@ loggers:
   LeMDT.tracker:
     handlers: [file_tracker]
     propagate: no
+    level: DEBUG
   LeMDT.arduino:
     handlers: [file_arduino]
     propagate: no

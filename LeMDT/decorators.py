@@ -1,5 +1,6 @@
 __all__ = []
 import functools
+import ipdb
 
 def export(defn):
     globals()[defn.__name__] = defn
@@ -70,3 +71,34 @@ def if_config_loaded(f):
         return f(self, *args, **kwargs)
     return wrapper
     # return _if_record_event
+
+
+def if_not_record_end_event(f):
+    def wrapper(self, *args, **kwargs):
+        record_end_set = self.interface.record_end.is_set()
+        
+        if record_end_set:
+            if not getattr(self.interface, "exit_message_shown", False):
+                self.interface.getLogger(name='LeMDT.cli_app').info('End of paradigm reached. No recording anymore. Quit to either remove or save the results! :)')
+                self.interface.getLogger(name='LeMDT.cli_app').info('Press enter to return back to the options menu')
+                self.interface.exit_message_shown = True
+            return True            
+        return f(self, *args, **kwargs)
+    return wrapper
+
+
+
+def if_not_self_stream(f):
+    def wrapper(self, *args, **kwargs):
+        stream_available = not self.interface.tracker.stream is None
+        # print(stream_available)
+        # ipdb.set_trace()
+        if stream_available:
+            print('Skip stream')
+            self.log.info(sef.interface.tracker.stream)
+            return True            
+        return f(self, *args, **kwargs)
+    return wrapper
+
+
+    

@@ -11,11 +11,11 @@ arena:
     height: 15
 
 fly:
-    min_length: 0
-    min_dist_arena: 2
-    max_area: 200
-    min_area: 0
-    min_intensity: 80
+    min_length: 5
+    min_dist_arena: 0
+    max_area: 50
+    min_area: 10
+    min_intensity: 100
 
 tracker:   
     fps: 12
@@ -25,10 +25,9 @@ tracker:
     fail: 'failed_arenas/'
 
 arduino:
-    board: Dummy
+    board: ArduinoMega
 
 saver:
-    path: "lemdt_results/LeMDTe27SL5a9e19f94de287e28f789825/LEARNER_001"
     video_format: "avi"
     fps: 12
 
@@ -36,5 +35,5 @@ blocks:
     pattern: '.csv'
 
 interface:
-    machine_id: "LeMDTe27SL5a9e19f94de287e28f789825"
+    machine_id: "1"
     mode: 'deploy'

@@ -13,7 +13,6 @@ import signal
 import ipdb
 import tempfile
 
-
 # Third party imports
 import cv2
 import numpy as np
@@ -23,11 +22,13 @@ pd.options.mode.chained_assignment = None
 
 # Local application imports
 from .arduino import LearningMemoryDevice
-from .orevent import OrEvent
-from .desktop_app import TkinterGui
+from .call2R import call2R
 from .cli_app import CLIGui
-
+from .desktop_app import TkinterGui
+from .lmdt_utils import _toggle_pin
+from .orevent import OrEvent
 from .tracker import Tracker
+from .saver import Saver
 from . import PROJECT_DIR
 
 DjangoGui = None
@@ -102,7 +103,7 @@ class Interface():
         self.blocks = None
         self.port = None
         
-        self.timestamp = None
+        self.timestamp_seconds = None
         self.duration = None
         self.experimenter = None
         self.statusbar = None
@@ -121,6 +122,8 @@ class Interface():
         self.stop_event = threading.Event()
         self.record_event = threading.Event()
         self.arena_ok_event = threading.Event()
+        self.record_end = threading.Event()
+        
         self.load_program_event = threading.Event()
         self.exit = threading.Event()
         self.exit_or_record = OrEvent(self.exit, self.record_event)
@@ -146,10 +149,11 @@ class Interface():
             self.gui = GUIS[gui_name](interface=self)
         
 
-        self.timestamp = 0
+        self.timestamp_seconds = 0
         self.experimenter = experimenter
       
-        self.log.info("Start time: {}".format(self.interface_start.strftime("%Y%m%d-%H%M%S")))
+        self.log.info("Start time: {}".format(self.interface_start.strftime("%Y-%m-%d-%H:%M:%S")))
+        self.getLogger('LeMDT.cli_app').info("Start time: {}".format(self.interface_start.strftime("%Y-%m-%d-%H:%M:%S")))
         self.interface_initialized = False
         self.log.info('Interface initialized')
 
@@ -162,6 +166,14 @@ class Interface():
         self.odor_A = 'A'
         self.odor_B = 'B'
         self.save_results_answer = 'Yes'
+        self.record_start = 0
+        self.adaptation_time_minutes = 10
+        self.decision_zone_mm=10
+        self.min_exits_required=5
+        self.max_time_minutes=60
+        
+        self.Rsession = call2R()
+
 
 
 
@@ -184,9 +196,14 @@ class Interface():
         self.log.info('Frame source set to {}'.format(frame_source))
 
         self.tracker = Tracker(interface=self, camera=self.camera, video=self.video)
-        self.tracker.set_saver()
         self.tracker.load_camera()
         self.tracker.init_image_arrays()
+
+
+    def init_saver(self):
+        saver = Saver(interface=self)
+        self.saver = saver
+
 
 
     def init_device(self):
@@ -209,16 +226,10 @@ class Interface():
         device.connect_arduino_board(self.port)
         device.prepare('exit')
         self.device = device
+
+
         self.log.info('Arduino will be run for {}'.format(datetime.timedelta(seconds= self.duration)))
-        paradigm_human_readable = device.paradigm[['pin_id', 'start', 'end', 'iterations', 'on', 'off', 'block']]
-        
-        paradigm_starts = paradigm_human_readable['start'].values
-        paradigm_ends = paradigm_human_readable['end'].values
-        paradigm_human_readable.drop(['start', 'end'], axis=1)
-        paradigm_human_readable.loc[:,'start'] = np.array([str(datetime.timedelta(seconds = v)) for v in paradigm_starts])
-        paradigm_human_readable.loc[:,'end'] = np.array([str(datetime.timedelta(seconds = v)) for v in  paradigm_ends])   
-        device.paradigm_human_readable = paradigm_human_readable
-        self.log.info('\n{}'.format(paradigm_human_readable))
+        device.get_paradigm_human_readable()
 
 
     def setup_logging(self, default_path='LeMDT/logging.yaml', default_level=logging.INFO, env_key='LOG_CFG'):
@@ -264,14 +275,21 @@ class Interface():
         answer = self.save_results_answer
         if answer == 'N':
             try:
-                shutil.rmtree(self.tracker.saver.output_dir)
+                self.getLogger('LeMDT.cli_app').info('Removing files')
+                shutil.rmtree(self.saver.output_dir)
             # in case the output_dir is not declared yet
             # because we are closing early
             except TypeError:
                 pass
+        elif answer == 'Y':
+            self.getLogger('LeMDT.cli_app').info('Keeping files')
+            self.saver.copy_logs(self.config)
+            self.Rsession.run()
+            
+
         else:
-            # ipdb.set_trace( )
-            self.tracker.saver.copy_logs(self.config)
+            pass
+            
             
 
 
@@ -302,8 +320,9 @@ class Interface():
             return None
             
         self.play_event.set()
+
         self.play_start = datetime.datetime.now()
-        
+
         if self.track:
             try:
                 self.log.info("Running tracker")
@@ -311,6 +330,10 @@ class Interface():
             except Exception as e:
                 self.log.exception('Could not run tracker')
                 self.log.exception(e)
+
+        if self.arduino:
+            _toggle_pin(self=self, device=self.device, pin_number=11, value=1, log=False)
+
 
         # NEEDED?
         if not self.track and not self.gui and self.arduino:
@@ -327,16 +350,20 @@ class Interface():
         
         # Set the record_event so the data recording methods
         # can run (if_record_event decorator)
-        self.record_event.set()
-
-        self.record_start = datetime.datetime.now()
-        self.tracker.saver.init_record_start()
-        self.tracker.saver.init_output_files()
-        self.tracker.saver.save_paradigm()
-        self.tracker.saver.save_odors(self.odor_A, self.odor_B)
-        
         self.log.info("Pressed record")
-        self.log.info("Savers will cache data and save it to csv files")
+ 
+        adaptation_seconds = ((self.interface_start + datetime.timedelta(seconds=self.adaptation_time_minutes*60)) - datetime.datetime.now()).total_seconds()
+        adaptation_done = self.gui.progress_bar(seconds = adaptation_seconds, background=False, name = 'adaptation time')
+        
+
+        self.record_event.set()
+        self.record_start = datetime.datetime.now()
+        self.saver.init_record_start()
+        self.saver.init_output_files()
+        self.saver.save_paradigm()
+        self.saver.save_odors(self.odor_A, self.odor_B)
+        record_seconds = max(self.device.paradigm['end'])  
+        self.gui.progress_bar(seconds = record_seconds, until_event = adaptation_done, name = 'recording time')
 
         if not self.arduino:
             self.log.warning("No arduino program is loaded. Are you sure it is ok?")
@@ -360,10 +387,7 @@ class Interface():
         self.arena_ok_event.set()
 
     
-    def load_config(self):
-        
-        with open(self.config_file, 'r') as ymlfile:
-            self.cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
+    def prepare_paths(self):
 
         if self.mapping_path is None:
             self.mapping_path = Path(PROJECT_DIR, 'mappings', 'tkinter.csv').__str__()
@@ -375,6 +399,13 @@ class Interface():
         else:
             self.program_path = Path(PROJECT_DIR, "programs", self.program_path).__str__()
 
+   
+    def load_config(self):
+        
+        with open(self.config_file, 'r') as ymlfile:
+            self.cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
+
+        self.prepare_paths()
 
         self.log.info('Mapping path:')
         self.log.info(self.mapping_path)
@@ -400,17 +431,15 @@ class Interface():
         else:
             self.config_file = config_file
 
-        self.load_config()
-        # Init zoom tab
-        self.init_components()
-    
+        self.load_config()   
         self.log.info('Config applied successfully')
-
 
 
     def init_components(self):
  
         self.init_control_c_handler()
+        self.init_saver()
+
         if self.arduino:
             self.log.info('Initializing Arduino board')
             self.init_device()
@@ -421,8 +450,20 @@ class Interface():
         if self.gui_name in ['tkinter', 'django', 'cli']:
             self.gui.create()
             self.log.info('Initializing gui')
-
     
+    def get_settings(self):
+
+        stream = getattr(self.tracker, "stream", None)
+        acquisition_time = None
+        fps = None
+        if not stream is None:
+            acquisition_time = stream.get_acquisition_time()
+            fps = stream.get_fps()
+        
+        odors = self.odor_A, self.odor_B
+        program_path = self.program_path
+        return acquisition_time, fps, odors, program_path, self.adaptation_time_minutes
+      
     def start(self):
         """
         Launch the tkinter GUI and update it accordingly
@@ -431,10 +472,16 @@ class Interface():
         """
         config_file = os.path.join(PROJECT_DIR, 'config.yaml')
         self.load_and_apply_config(config_file)
+        self.init_components()
 
         while not self.exit.is_set():
             # print(type(self.device.mapping))
             self.gui.run()
             self.gui.apply_updates()
-    
 
+
+    def set_adaptation_time(self, value):
+        self.adaptation_time_minutes = value
+    
+    def get_adaptation_time(self):
+        return self.adaptation_time_minutes

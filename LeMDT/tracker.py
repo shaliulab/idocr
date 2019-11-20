@@ -17,8 +17,7 @@ from sklearn.cluster import KMeans
 # Local application imports
 from .features import Arena, Fly
 from .streams import STREAMS
-from .decorators import export
-from .saver import Saver
+from .decorators import export, if_not_self_stream
 from . import PROJECT_DIR
 
 # Set up package configurations
@@ -148,15 +147,7 @@ class Tracker():
         self.arenas = {}
         self.masks = {}
 
-    def set_saver(self):
-        saver = Saver(
-            tracker=self,
-            record_event=self.interface.record_event
-        )
-
-        self.saver = saver
-
-
+    @if_not_self_stream
     def load_camera(self):
         """
         Populate the stream attribute of the Tracker class
@@ -219,7 +210,7 @@ class Tracker():
         ## TODO Dont make coordinates of text hardcoded
         ###################################################
         cv2.putText(img,'Frame: '+ str(self.record_frame_count),   (25,25),    cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
-        cv2.putText(img,'Time: '+  str(int(self.interface.timestamp)), (1000,25),  cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
+        cv2.putText(img,'Time: '+  str(int(self.interface.timestamp_seconds)), (1000,25),  cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
         cv2.putText(img,'LEFT',                        (25,525),   cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
         cv2.putText(img,'RIGHT',                       (1100,525), cv2.FONT_HERSHEY_SIMPLEX, 1, (40,170,0), 2)
         return img
@@ -295,7 +286,7 @@ class Tracker():
             "eshock_left" : None,
             "eshock_right" : None,
             "frame": self.frame_count,
-            "t": self.interface.timestamp,
+            "t": self.interface.timestamp_seconds,
             "arena": 0,
             "cx": 0,
             "cy": 0,
@@ -311,7 +302,7 @@ class Tracker():
             d["eshock_left"] = self.interface.device.pin_state["EL_SHOCK_LEFT"]
             d["eshock_right"] = self.interface.device.pin_state["EL_SHOCK_RIGHT"]
                     
-        self.saver.process_row(d)
+        self.interface.saver.process_row(d)
 
 
 
@@ -322,16 +313,15 @@ class Tracker():
         
         if not self.interface.exit.is_set():
             # # Check if experiment is over
-            # if self.interface.timestamp > self.interface.duration:
+            # if self.interface.timestamp_seconds > self.interface.duration:
             #     self.log.info("Experiment duration is reached. Closing")
             #     #self.save_record()
             #     return False
 
             # How much time has passed since we started tracking?
-            if self.interface.record_start:
-                self.interface.timestamp = (datetime.datetime.now() - self.interface.record_start).total_seconds()
-            else:
-                self.interface.timestamp = 0
+            if self.interface.record_event.is_set():
+                self.interface.timestamp_datetime = datetime.datetime.now() - self.interface.record_start
+                self.interface.timestamp_seconds = self.interface.timestamp_datetime.total_seconds()
 
             # Read a new frame
             frame_time = datetime.datetime.now()
@@ -529,7 +519,7 @@ class Tracker():
                     "eshock_left" : None,
                     "eshock_right" : None,
                     "frame": self.frame_count,
-                    "t": self.interface.timestamp,
+                    "t": self.interface.timestamp_seconds,
                     "arena": arena.identity,
                     #"fly": fly.identity,
                     "cx": fly.x_corrected,
@@ -546,7 +536,7 @@ class Tracker():
                     d["eshock_left"] = self.interface.device.pin_state["EL_SHOCK_LEFT"]
                     d["eshock_right"] = self.interface.device.pin_state["EL_SHOCK_RIGHT"]
                             
-                self.saver.process_row(d)
+                self.interface.saver.process_row(d)
 
                 self.found_flies += 1
                 
@@ -566,8 +556,8 @@ class Tracker():
                 self.interface.stacked_arenas[i] = imutils.resize(arena_crop, width=arena_crop.shape[1]*3)
 
             # Save frame
-            self.saver.save_img(frame_time.strftime("%Y-%m-%d_%H-%M-%S") + ".jpg", frame_color)
-            self.saver.save_video()
+            self.interface.saver.save_img(frame_time.strftime("%Y-%m-%d_%H-%M-%S") + ".jpg", frame_color)
+            self.interface.saver.save_video()
 
             # TODO: Make into utils function
             #self.interface.stacked_arenas = self.stack_arenas(arenas_dict)
@@ -669,11 +659,11 @@ class Tracker():
         If the exit event is not yet set, call interface.close()
         """
         self.stream.release()
-        self.saver.stop_video()
+        self.interface.saver.stop_video()
         self.log.info("Tracking stopped")
         self.log.info("{} arenas in {} frames analyzed".format(20 * self.frame_count, self.frame_count))
         self.log.info("Number of arenas that fly is not detected in is {}".format(self.missing_fly))
-        self.saver.store_and_clear()
+        self.interface.saver.store_and_clear()
 
         # if not self.interface.exit.is_set(): self.interface.close()
 

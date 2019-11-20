@@ -4,9 +4,10 @@ from pathlib import Path
 import os
 
 # Third party imports
-import yaml
+import datetime
 import numpy as np
 import pandas as pd
+import yaml
 
 
 def convert(s):
@@ -91,11 +92,14 @@ class ParadigmLoader():
         # overview = program
         # block_names = overview.index #  commment
 
-        self.paradigm = self.compile(self.program, self.blocks)
+        self.paradigm, self.interface.end_seconds = self.compile(self.program, self.blocks)
         # self.overview = overview
         # self.block_names = block_names
         self.loaded = True
         self.log.info('Paradigm is read')
+        self.log.info('Paradigm runs for {} seconds'.format(self.interface.end_seconds))
+        
+
 
     def infer_block_start_from_previous_block(self, program):
         """Infer the start field of a block if NaN is given by assuming it follows right after the previous block."""
@@ -257,4 +261,16 @@ class ParadigmLoader():
         paradigm["active"] = False
         paradigm["thread_name"] = None
         # print(paradigm)
-        return paradigm
+        return paradigm, max_end
+
+
+    def get_paradigm_human_readable(self):
+        paradigm_human_readable = self.paradigm[['pin_id', 'start', 'end', 'iterations', 'on', 'off', 'block']]
+        
+        paradigm_starts = paradigm_human_readable['start'].values
+        paradigm_ends = paradigm_human_readable['end'].values
+        paradigm_human_readable.drop(['start', 'end'], axis=1)
+        paradigm_human_readable.loc[:,'start'] = np.array([str(datetime.timedelta(seconds = v)) for v in paradigm_starts])
+        paradigm_human_readable.loc[:,'end'] = np.array([str(datetime.timedelta(seconds = v)) for v in  paradigm_ends])   
+        self.paradigm_human_readable = paradigm_human_readable
+        self.log.info('\n{}'.format(paradigm_human_readable))
