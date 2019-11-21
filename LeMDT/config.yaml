@@ -12,10 +12,10 @@ arena:
 
 fly:
     min_length: 5
-    min_dist_arena: 0
-    max_area: 50
+    min_dist_arena: 2
+    max_area: 25
     min_area: 10
-    min_intensity: 100
+    min_intensity: 80
 
 tracker:   
     fps: 12

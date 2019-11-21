@@ -111,12 +111,12 @@ class CLIGui():
 
 
             self.answer = self.let_user_pick(menu_name)
-            print(self.answer)
+            #print(self.answer)
             self.menu_name = menu_name
 
 
             self.shall_I_stop = (menu_name == "general" and self.answer == len(self.menus["general"]))
-            print(self.shall_I_stop)
+            #print(self.shall_I_stop)
 
         except Exception as e:
             self.log.warning("answer = {}".format(self.answer))

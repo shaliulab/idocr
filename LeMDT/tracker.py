@@ -330,18 +330,19 @@ class Tracker():
             # If ret is False, a new frame could not be read
             # Exit 
             if not success:
-                self.failed_read_frame =+ 1
-                self.log.info("Could not read frame")
-                self.log.warning('Recursive call to track() {}'.format(self.recursive_calls))
-                self.track()
+                if self.interface.video is None:
+                    print(success)
+                    print("Closing")
+                    self.failed_read_frame =+ 1
+                    self.log.info("Could not read frame")
+                    self.log.warning('Recursive call to track() {}'.format(self.recursive_calls))
+                    self.track()
+                else:
+                    self.log.info("Stream or video is finished. Closing")
+                    self.close()
+                    self.interface.stream_finished = True
+                    return False
 
-
-
-            if self.failed_read_frame > 10:
-                self.log.info("Stream or video is finished. Closing")
-                self.close()
-                self.interface.stream_finished = True
-                return False
            
             frame = crop_stream(frame, self.crop)
             self.interface.original_frame = frame.copy()
