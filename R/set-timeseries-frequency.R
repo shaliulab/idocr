@@ -3,10 +3,11 @@
 # Bin the data in windows of size freq
 # The datapoints in the same window are averaged
 #' @importFrom data.table data.table
-#' @import magrittr
-#' @importFrom dplyr full_join arrange rename summarise group_by
+#' @importFrom magrittr %>%
 #' @export
 set_timeseries_frequency <- function(self, freq=.25) {
+  
+  t_round <- NULL
   
   lemdt_result <- self$lemdt_result
   lemdt_result <- lemdt_result[, t_round := floor(t/ freq) * freq]
@@ -22,12 +23,8 @@ set_timeseries_frequency <- function(self, freq=.25) {
   # same number of datapoints
   # and its equal to the length of time_index
   reference_dt <- data.table(
-    # t_arena = paste0(
       t = rep(time_index, times = n_arenas),
-      # '_',
       arena = rep(c(0, self$selected_flies), each = length(time_index))
-    # ),
-    
   )
   
   # summarise the data so there is one datapoint every freq seconds

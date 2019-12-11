@@ -1,4 +1,5 @@
-#' @import dplyr data.table
+#' TODO Rewrite this crap
+#' @importFrom data.table as.data.table data.table
 #' @export
 define_unique_periods <- function(periods_dt) {
   # In order to not mix data from different blocks exhibiting the same system state
@@ -9,6 +10,7 @@ define_unique_periods <- function(periods_dt) {
   # independent of whether the fly is tracked or not
   # right now, we have no info on the state if the arena did not find a fly
   
+  period <- periods_t <- periods_ts <- period_first_row <- NULL
 
   period_map <- periods_dt[,rle(period)]
   periods_ts <- periods_dt$period
@@ -34,10 +36,7 @@ define_unique_periods <- function(periods_dt) {
   
   periods_ts_index <- unique(data.table(t = periods_t, period_id = periods_ts))
   
-  # setkey(periods_ts_index, "t")
-  # time_series <- periods_dt[,t := (round(t / freq) * freq)][, .(t, mm, pos, arena)]
-  # setkey(time_series, "t")
-  
+
   periods_dt2 <- as.data.table(right_join(periods_dt, periods_ts_index, by = "t"))
   return(periods_dt2)
   

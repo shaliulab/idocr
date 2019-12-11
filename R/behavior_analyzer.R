@@ -107,7 +107,8 @@ BehaviorAnalyzer <- R6Class(classname = "BehaviorAnalyzer", public = list(
   },
   
   #' Add to lemdt_result a column called period reflecting the state of the odour valves
-  #' @import magrittr data.table
+  #' @importFrom magrittr %>%
+  #' @importFrom data.table data.table
   #' @param  periods_dt A data.table with a t column and any amount of binary columns capturing the state of the setup 
   #' @return A data.table with a new column called period summarising the state of all the binary columns in a single character
   #' @export
@@ -330,7 +331,9 @@ BehaviorAnalyzer <- R6Class(classname = "BehaviorAnalyzer", public = list(
   },
     
   
-  #' @import data.table ggplot2 ggnewscale RColorBrewer
+  #' @import ggplot2
+  #' @importFrom grDevices colorRampPalette
+  #' @importFrom data.table as.data.table
   #' @export
   #'
   plot_trace_with_pin_events = function(annot_on_side = FALSE) {
@@ -401,7 +404,7 @@ BehaviorAnalyzer <- R6Class(classname = "BehaviorAnalyzer", public = list(
       p3 <- p3 + geom_text(data = pi_data, aes(x = x, label = pref_index), y = .95 * self$arena_width_mm, size = 3) + theme(plot.margin = unit(c(1,3,1,1), "lines")) # This widens the right m
     } else {
       self$index_dataset$pref_index_numeric <- as.numeric(self$index_dataset$value_index)
-      myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+      myPalette <- grDevices::colorRampPalette(rev(brewer.pal(11, "Spectral")))
       
       # print('Check 1')
       # browser()

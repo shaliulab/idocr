@@ -3,6 +3,8 @@
 #' @export
 read_experiment <- function(self) {
   
+  arena <- NULL
+  
   experiment_folder <- self$experiment_folder
   # read odors
   odors_csv <- file.path(experiment_folder, 'odors.csv')

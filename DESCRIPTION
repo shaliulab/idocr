@@ -8,14 +8,8 @@ Authors@R: c(
 Description: todo
 Depends: 
     data.table,
-    dplyr,
-    ggnewscale,
     ggplot2,
-    magrittr,
     R (>= 3.00),
-    R6,
-    RColorBrewer,
-    stringr,
     zoo,
 License: GPL-3
 Encoding: UTF-8

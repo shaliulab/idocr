@@ -1,6 +1,8 @@
-#' @import data.table zoo
+#' @importFrom stats approxfun
 #' @export
 impute_missing_point <- function(lemdt_result) {
+  
+  arena_id <- imputed <- mm_mean <- period <- period_id <- NULL
   
   n_arenas <- length(unique(lemdt_result$arena))
   
@@ -16,20 +18,11 @@ impute_missing_point <- function(lemdt_result) {
   
   for(arena_id in available_arenas) {
     ts_subset <- lemdt_result[arena == arena_id]
-    mm_mean_imputed <- c(mm_mean_imputed, approxfun(
+    mm_mean_imputed <- c(mm_mean_imputed, stats::approxfun(
       x = 1:nrow(ts_subset),
       y = ts_subset$mm_mean,
       method = "linear")(1:nrow(ts_subset))
     )
-   
-    # period_imputed <- c(
-      # period_imputed,
-      
-    #   na.locf(na.locf(zoo(ts_subset$period), na.rm=FALSE), fromLast=TRUE)
-    #   )
-    
-    
-    
   }
   
   period_imputed <- rep(lemdt_result[arena==0, period], times = n_arenas)
