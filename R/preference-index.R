@@ -15,8 +15,8 @@ get_exits_dataframe <- function(lemdt_result, borders) {
       exit_time <- when_exit_happened(lr)
       result <- rbind(
         result,
-        data.frame(x = borders[[1]], arena = arenas_with_data[i], t = exit_time$left, side = "left"),
-        data.frame(x = borders[[2]], arena = arenas_with_data[i], t = exit_time$right, side = "right")
+        data.frame(x = borders()[[1]], arena = arenas_with_data[i], t = exit_time$left, side = "left"),
+        data.frame(x = borders()[[2]], arena = arenas_with_data[i], t = exit_time$right, side = "right")
       )
     }
     
@@ -77,6 +77,7 @@ count_exits <- function(pos) {
 #'
 #' @param pos A character vector encoding the position of the fly in the chamber (L/D/R)
 #' @param min_required Number of exits required to compute the index
+#' @param min_length Minimal length of the sequence of positions required to compute the index
 #'
 #' @return Numeric ranging 0-1 0 shows total aversion for odour on right side, and 1 total preference. -1 is return if min_required is not reached
 #' @importFrom stringr str_count
@@ -123,8 +124,6 @@ count_decision_zone_is_skipped <- function(pos) {
   
   # returns the count of RL and LR transitions (skipping D)
   return(c(stringr::str_count(pos, pattern = "RL"), stringr::str_count(pos, pattern = "LR")))
-  
-  
 }
 
 

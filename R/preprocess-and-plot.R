@@ -1,94 +1,100 @@
+#' Process the results of an experiment performed using the FSL learning memory setup
+#'
+#' @param experiment_folder character, path to results folder of an experiment
+#' @param index_function function, returns an satistic based on a character vector of states
+#' @param decision_zone_mm numeric, widht of the decision in mm
+#' @param min_exits_required integer, minimum number of crossing events required to return an index
+#' @param max_time_minutes numeric, drop all data after this amount of time since the start of the recording
+#' @param annotation character, text to write in the top left corner of the plot
+#' @param A character, name of odour in valves connected to bottle A
+#' @param B character, name of odour in valves connected to bottle B
+#' @param selected_flies integer vector, only these `region_id`s will be included in the plot
+#' @import ggplot2
 #' @export
-preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FALSE, A=NULL, B=NULL, min_exits_required=5, max_time_minutes=Inf, annotation = '', index_function = LeMDTr::preference_index, selected_flies = 1:20) {
+preprocess_and_plot <- function(experiment_folder, index_function = LeMDTr::preference_index,
+                                decision_zone_mm=10, min_exits_required=5, max_time_minutes=Inf,
+                                annotation = '', A=NULL, B=NULL, selected_flies = 1:20, debug=FALSE) {
 
-  # if(interactive()) {
-    # decision_zone_mm=10
-    # # # experiment_folder='/home/antortjim/MEGAsync/Gitlab/LeMDT/lemdt_results/LeMDTe27SL5a9e19f94de287e28f789825/LEARNER_001/2019-09-16_17-46-34'
-    # experiment_folder <- '/home/antortjim/MEGAsync/setup_results/2019-10-04_13-02-11'
-    # index_function <- LeMDTr::preference_index
-    # min_exits_required <- 5
-    # max_time_minutes <- Inf
-    # A <- 'A'
-    # B <- 'B'
-    # debug = F
-    # annotation <- ''
-    # experiment_folder = '/home/antortjim/1TB/MEGA/FlySleepLab/Gitlab/LeMDT/lemdt_results/2019-10-04_12-46-49'
-  # }
-  filename <- list.files(path = experiment_folder, pattern = 'LeMDT') %>% grep(pattern = '.csv', x = ., value = T)
-  
-  file_path <- file.path(experiment_folder, filename)
-  if (length(file_path) == 0) {
-    warning('Provided path to trace file does not exist')
-    return(1)
-  }
-  
-  odors_csv <- file.path(experiment_folder, 'odors.csv')
-  if (file.exists(odors_csv)) {
-    odors_table <- read.table(odors_csv, sep = ',', header=T, stringsAsFactors = F)
-    if(is.null(A)) A <- odors_table$odor_A
-    if(is.null(B)) B <- odors_table$odor_B
-  } else {
-    if(is.null(A)) A <- "A"
-    if(is.null(B)) B <- "B"
-    
-  }
-  
-    
-  lemdt_result <- na.omit(read.table(file = file_path, sep = ',', header = T, stringsAsFactors = F)[,-1])
-  lemdt_result <- lemdt_result[lemdt_result$arena %in% c(0, selected_flies),]
-  
-  # transform from pixels to mm. Assume the whole chamber (125 pixels)
-  # is 5 mm (50 mm)
-  lemdt_result <- px2mm(lemdt_result)
-  
-  
-  ##################################
-  ## Add period column
-  ##################################
-
-  # Needed to compute preference index 
-  periods_dt <- add_period_column(lemdt_result[arena == 0])[,c("t", "period")]
-  
-  
-  ##################################
-  ## Define periods/blocks
-  ##################################
-  
-  # Distinguish rows where the state (i.e. period) is the same but
-  # they belong to different blocks
-  # i.e. first time when odourAleft and odourBright
-  # and the second time (a few minutes after)
-  periods_dt <- define_unique_periods(periods_dt)
-  # lemdt_result0 <- copy(lemdt_result)
-  
-  
-  
-  ##################################
-  ## Set a time series frequency  ##
-  ##################################
-  
-  # Simplifies analysis: have all datapoints equally distributeed
-  # and in a periodic basis
-  freq <- 0.25
-  lemdt_result2 <- set_timeseries_frequency(lemdt_result, freq = freq)
-  periods_dt[, t :=  floor(t/ freq) * freq]
-  periods_dt <- as.data.table(
-    periods_dt %>% group_by(t) %>%
-    summarise(
-      period = names(table(period))[1],
-      period_id = names(table(period_id))[1]
-    ))
-  
-    
-  lemdt_result <- lemdt_result2[periods_dt, on = 't']
-  
-  
-  # table(lemdt_result$arena)
-  
-  ##################################
-  ## Clean mistracked datapoints
-  ##################################
-  lemdt_result <- clean_mistracked_points(lemdt_result)
+  ## # define experiment name
+  ## plot_title <- basename(experiment_folder)
+  ## 
+  ## # read odors
+  ## odors_csv <- file.path(experiment_folder, 'odors.csv')
+  ## if (file.exists(odors_csv)) {
+  ##   odors_table <- read.table(odors_csv, sep = ',', header=T, stringsAsFactors = F)
+  ##   if(is.null(A)) A <- odors_table$odor_A
+  ##   if(is.null(B)) B <- odors_table$odor_B
+  ## } else {
+  ##   if(is.null(A)) A <- "A"
+  ##   if(is.null(B)) B <- "B"
+  ##   
+  ## }
+  ## 
+  ## # read experiment data
+  ## filename <- list.files(path = experiment_folder, pattern = 'LeMDT') %>% grep(pattern = '.csv', x = ., value = T)
+  ## file_path <- file.path(experiment_folder, filename)
+  ## if (length(file_path) == 0) {
+  ##   warning('Provided path to trace file does not exist')
+  ##   return(1)
+  ## }
+  #
+  #
+  #  
+  ## lemdt_result <- na.omit(read.table(file = file_path, sep = ',', header = T, stringsAsFactors = F)[,-1])
+  ## lemdt_result <- lemdt_result[lemdt_result$arena %in% c(0, selected_flies),]
+  #
+  ## transform from pixels to mm. Assume the whole chamber (125 pixels)
+  ## is 5 mm (50 mm)
+  ## lemdt_result <- px2mm(lemdt_result)
+  ## 
+  ## 
+  ## ##################################
+  ## ## Add period column
+  ## ##################################
+  ## 
+  ## # Needed to compute preference index 
+  ## periods_dt <- add_period_column(lemdt_result[arena == 0])
+  ## events_over_time_plot(periods_dt, experiment_folder)
+  ## 
+  ## ##################################
+  ## ## Define periods/blocks
+  ## ##################################
+  ## 
+  ## # Distinguish rows where the state (i.e. period) is the same but
+  ## # they belong to different blocks
+  ## # i.e. first time when odourAleft and odourBright
+  ## # and the second time (a few minutes after)
+  ## periods_dt <- define_unique_periods(periods_dt)
+  ## # lemdt_result0 <- copy(lemdt_result)
+  ## 
+  ## 
+  ## 
+  ## ##################################
+  ## ## Set a time series frequency  ##
+  ## ##################################
+  ## 
+  ## # Simplifies analysis: have all datapoints equally distributeed
+  ## # and in a periodic basis
+  ## freq <- 0.25
+  ## lemdt_result2 <- set_timeseries_frequency(lemdt_result, freq = freq)
+  ## periods_dt[, t :=  floor(t/ freq) * freq]
+  ## periods_dt <- as.data.table(
+  ##   periods_dt %>% group_by(t) %>%
+  ##   summarise(
+  ##     period = names(table(period))[1],
+  ##     period_id = names(table(period_id))[1]
+  ##   ))
+  ## 
+  ##   
+  ## lemdt_result <- lemdt_result2[periods_dt, on = 't']
+  ## 
+  ## 
+  ## # table(lemdt_result$arena)
+  ## 
+  ## ##################################
+  ## ## Clean mistracked datapoints
+  ## ##################################
+  ## lemdt_result <- clean_mistracked_points(lemdt_result)
  
   ##################################
   ## Impute missing datapoints
@@ -116,7 +122,6 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
     # lemdt_result[, any_pin_on := F]
     lemdt_result[, odor_test_active := (substr(period,1,4) != '0000')]
     lemdt_result$subsetting_column <- lemdt_result[["odor_test_active"]]
-    # if()
     lemdt_result[, reversed := period == '0110']
     
     reversed_pos <- c('R' = 'L', 'L' = 'R', 'D' = 'D')
@@ -151,31 +156,29 @@ preprocess_and_plot <- function(experiment_folder, decision_zone_mm=10, debug=FA
   
   })
 
-title <- basename(experiment_folder)
 
-program_name <- tryCatch({
-  data.table::fread(file = file.path(experiment_folder, 'paradigm.csv'))[, .(block = unique(block))]$block %>%
-  grep(pattern = 'end', invert = T, value = T) %>%
-  grep(pattern = 'startup', invert = T, value = T)
-}, error = function(e) {
-  warning(e)
-  return("")
-})
-
-
-p <- result$p + ggtitle(label = title, subtitle = paste(
-  '  /  Program:',   program_name,
-  '  /  min exits:', min_exits_required,
-  '  /  decision zone (mm):', decision_zone_mm,
-  '  /  index:', index_function(),
-  '  /  ', annotation, '\n',
-  '- -> ',A, ' + -> ', B
+  program_name <- tryCatch({
+    data.table::fread(file = file.path(experiment_folder, 'paradigm.csv'))[, .(block = unique(block))]$block %>%
+    grep(pattern = 'end', invert = T, value = T) %>%
+    grep(pattern = 'startup', invert = T, value = T)
+  }, error = function(e) {
+    warning(e)
+    return("")
+  })
+  
+  
+  p <- result$p + ggtitle(label = plot_title, subtitle = paste(
+    '  /  Program:',   program_name,
+    '  /  min exits:', min_exits_required,
+    '  /  decision zone (mm):', decision_zone_mm,
+    '  /  index:', index_function(),
+    '  /  ', annotation, '\n',
+    '- -> ',A, ' + -> ', B
+    )
   )
-)
-index_dataset <- result$index_dataset
-
-datetime <- rev(strsplit(experiment_folder, split = '/')[[1]])[1]
-ggsave(filename = file.path(experiment_folder, paste0(datetime, '_LeMDT_1_', index_function(), '.pdf')), plot = p, width = 12, height = 8)
-ggsave(filename = file.path(experiment_folder, paste0(datetime, '_LeMDT_1_', index_function(), '.png')), plot = p, width = 12, height = 8)
-return(list(plot = p, index_dataset = index_dataset))
+  index_dataset <- result$index_dataset
+  
+  ggsave(filename = file.path(experiment_folder, paste0(plot_title, '_LeMDT_1_', index_function(), '.pdf')), plot = p, width = 12, height = 8)
+  ggsave(filename = file.path(experiment_folder, paste0(plot_title, '_LeMDT_1_', index_function(), '.png')), plot = p, width = 12, height = 8)
+  return(list(plot = p, index_dataset = index_dataset))
 }

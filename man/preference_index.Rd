@@ -10,6 +10,8 @@ preference_index(pos = NULL, min_exits_required = 5, min_length = 10)
 \arguments{
 \item{pos}{A character vector encoding the position of the fly in the chamber (L/D/R)}
 
+\item{min_length}{Minimal length of the sequence of positions required to compute the index}
+
 \item{min_required}{Number of exits required to compute the index}
 }
 \value{

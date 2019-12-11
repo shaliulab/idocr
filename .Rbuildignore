@@ -1,2 +1,11 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+lemdt_results/*
+LeMDT/*
+failed_arenas/*
+core/*
+videos/*
+wheels/*
+dist/*
+scripts/*
+

@@ -26,7 +26,7 @@ define_unique_periods <- function(periods_dt) {
   
   
   for(i in 1:length(period_map$values)) {
-    print(i)
+    # print(i)
     period <- period_map$values[i]
     period_count[period] <- period_count[period] + 1
     periods_ts[period_first_row[i]:period_last_row[i]] <- paste0(periods_ts[period_first_row[i]:period_last_row[i]], period_count[period])

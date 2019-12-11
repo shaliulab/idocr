@@ -7,15 +7,20 @@ Authors@R: c(
     )
 Description: todo
 Depends: 
-    R (>= 3.00),
-    stringr,
     data.table,
     dplyr,
-    zoo
+    ggnewscale,
+    ggplot2,
+    magrittr,
+    R (>= 3.00),
+    R6,
+    RColorBrewer,
+    stringr,
+    zoo,
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
 URL: https://gitlab.com/flysleeplab/learning-memory-feedback-and-tracking
 BugReports: https://gitlab.com/flysleeplab/learning-memory-feedback-and-tracking/issues
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.2
 Roxygen: list(markdown = TRUE)
