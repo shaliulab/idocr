@@ -6,6 +6,9 @@
 \usage{
 define_unique_periods(periods_dt)
 }
+\arguments{
+\item{periods_dt}{A data.table with columns t (time) and period (character) which captures the state of the setup}
+}
 \description{
 TODO Rewrite this crap
 }

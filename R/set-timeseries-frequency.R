@@ -2,12 +2,12 @@
 #
 # Bin the data in windows of size freq
 # The datapoints in the same window are averaged
-#' @importFrom data.table data.table
+#' @importFrom data.table data.table := setnames
 #' @importFrom magrittr %>%
 #' @export
 set_timeseries_frequency <- function(self, freq=.25) {
   
-  t_round <- NULL
+  t_round <- mm <- period <- arena <- . <- NULL
   
   lemdt_result <- self$lemdt_result
   lemdt_result <- lemdt_result[, t_round := floor(t/ freq) * freq]

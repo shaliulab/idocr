@@ -1,10 +1,11 @@
 # maximum number of pixels between 2 positions contiguous in time
 # that the fly can traverse. If greater, the fly was mistracked
 
-#' @importFrom data.table data.table
+#' @importFrom data.table data.table :=
 #' @export
 clean_mistracked_points <- function(lemdt_result, threshold=10) {
   
+  arena <- NULL
   to_clean <- arena_id <- mm_mean <- threshold <- NULL
   
  # lemdt_result <- lemdt_result2

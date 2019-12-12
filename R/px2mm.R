@@ -1,3 +1,4 @@
+#' @importFrom data.table :=
 #' @export
 px2mm <- function(self)  {
   

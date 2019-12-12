@@ -1,6 +1,8 @@
 #' @export
 get_exits_dataframe <- function(lemdt_result, borders) {
   
+  arena <- NULL
+  
   arenas_with_data <- unique(lemdt_result$arena)
   setkeyv(lemdt_result, c('arena', 't'))
   
@@ -112,39 +114,38 @@ preference_index <- function(pos=NULL, min_exits_required=5, min_length=10) {
 }
 
 
-#' Count how many times D is skipped on either direction
-#'
-#' @param pos 
-#'
-#' @return Integer with RL and LR counts
-#' @importFrom stringr str_count
-#' @export
-#'
-count_decision_zone_is_skipped <- function(pos) {
-  
-  # returns the count of RL and LR transitions (skipping D)
-  return(c(stringr::str_count(pos, pattern = "RL"), stringr::str_count(pos, pattern = "LR")))
-}
+# #' Count how many times D is skipped on either direction
+# #'
+# #'
+# #' @return Integer with RL and LR counts
+# #' @importFrom stringr str_count
+# #' @export
+# #'
+# count_decision_zone_is_skipped <- function(pos) {
+#   
+#   # returns the count of RL and LR transitions (skipping D)
+#   return(c(stringr::str_count(pos, pattern = "RL"), stringr::str_count(pos, pattern = "LR")))
+# }
 
 
-#' Find t when D is skipped
-#'
-#' @param t 
-#' @param pos 
-#'
-#' @return Numeric with t for each transition without D
-#' @importFrom stringr str_count
-#' @export
-#'
-find_decision_zone_non_traversed <- function(t, pos) {
-  # returns the time of all transitions skipping the decision zone
-  result <- c()
-  j <- 1
-  for(i in 1:(length(pos)-1)) {
-    if(paste(pos[i:(i+1)], collapse = '') %in% c("LR", "RL")) {
-      result[j] <- t[i] 
-      j <- j + 1
-    }
-  }
-  return(result)
-}
+# #' Find t when D is skipped
+# #'
+# #' @param t 
+# #' @param pos 
+# #'
+# #' @return Numeric with t for each transition without D
+# #' @importFrom stringr str_count
+# #' @export
+# #'
+# find_decision_zone_non_traversed <- function(t, pos) {
+#   # returns the time of all transitions skipping the decision zone
+#   result <- c()
+#   j <- 1
+#   for(i in 1:(length(pos)-1)) {
+#     if(paste(pos[i:(i+1)], collapse = '') %in% c("LR", "RL")) {
+#       result[j] <- t[i] 
+#       j <- j + 1
+#     }
+#   }
+#   return(result)
+# }

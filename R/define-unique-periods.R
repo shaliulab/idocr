@@ -1,6 +1,7 @@
 #' TODO Rewrite this crap
-#' @importFrom data.table as.data.table data.table
-#' @export
+#' @param periods_dt A data.table with columns t (time) and period (character) which captures the state of the setup
+#' @importFrom data.table as.data.table data.table setkeyv
+#' @exportFrom dplyr right_join
 define_unique_periods <- function(periods_dt) {
   # In order to not mix data from different blocks exhibiting the same system state
   # i.e. the period var is the same

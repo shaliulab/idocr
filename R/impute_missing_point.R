@@ -1,4 +1,5 @@
 #' @importFrom stats approxfun
+#' @importFrom dplyr right_join arrange
 #' @export
 impute_missing_point <- function(lemdt_result) {
   

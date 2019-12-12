@@ -1,9 +1,10 @@
 #' Read experiment data (odors and lemdt_results csv)
 #' @importFrom data.table fread
+#' @importFrom stats na.omit
 #' @export
 read_experiment <- function(self) {
   
-  arena <- NULL
+  . <- arena <- NULL
   
   experiment_folder <- self$experiment_folder
   # read odors
