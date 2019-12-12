@@ -7,18 +7,18 @@ arena:
     rangeup: 255
     targets: 20
     columns: 2
-    width: 80
-    height: 15
+    width: 65
+    height: 12
 
 fly:
-    min_length: 5
-    min_dist_arena: 2
-    max_area: 25
+    min_length: 2
+    min_dist_arena: 1
+    max_area: 30
     min_area: 10
-    min_intensity: 80
+    min_intensity: 20
 
 tracker:   
-    fps: 12
+    fps: 10
     experimenter: "Sayed"
     crop: 1
     N: 10
@@ -29,7 +29,7 @@ arduino:
 
 saver:
     video_format: "avi"
-    fps: 12
+    fps: 5
 
 blocks:
     pattern: '.csv'

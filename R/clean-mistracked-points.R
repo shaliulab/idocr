@@ -5,14 +5,13 @@
 #' @export
 clean_mistracked_points <- function(lemdt_result, threshold=10) {
   
-  arena <- NULL
-  to_clean <- arena_id <- mm_mean <- threshold <- NULL
+  arena <- to_clean <- arena_id <- mm_mean <- NULL
   
  # lemdt_result <- lemdt_result2
  lemdt_result$to_clean <- FALSE
-  
   for (arena_id in 1:20) {
-    
+    print(arena_id)
+    tryCatch({
     if(lemdt_result[arena == arena_id, all(is.na(mm_mean))]) {
       lemdt_result[(lemdt_result$arena == arena_id), "to_clean"] <- TRUE
       next()
@@ -20,10 +19,12 @@ clean_mistracked_points <- function(lemdt_result, threshold=10) {
     
     lemdt_result[
       which(lemdt_result$arena == arena_id)[
-        unique(c(which(diff(lemdt_result[arena == arena_id]$mm_mean) > +threshold)+1,
-                 which(diff(lemdt_result[arena == arena_id]$mm_mean) < -threshold)))
+        unique(c(which(diff(lemdt_result[arena == arena_id]$mm_mean) > + threshold)+1,
+                 which(diff(lemdt_result[arena == arena_id]$mm_mean) < - threshold)))
         ], mm_mean := NA
       ]
+    }, error = function(e) {browser()})
+    
   }
  
  lemdt_result <- as.data.table(lemdt_result)[!lemdt_result$to_clean,]

@@ -11,11 +11,11 @@ read_experiment <- function(self) {
   odors_csv <- file.path(experiment_folder, 'odors.csv')
   if (file.exists(odors_csv)) {
     odors_table <- fread(odors_csv, sep = ',', header=T, stringsAsFactors = F)
-    if(is.null(A)) A <- odors_table$odor_A
-    if(is.null(B)) B <- odors_table$odor_B
+    if(is.null(self$A)) A <- odors_table$odor_A
+    if(is.null(self$B)) B <- odors_table$odor_B
   } else {
-    if(is.null(A)) A <- "A"
-    if(is.null(B)) B <- "B"
+    if(is.null(self$A)) A <- "A"
+    if(is.null(self$B)) B <- "B"
   }
   
   self$A <- A
