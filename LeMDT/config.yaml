@@ -37,3 +37,12 @@ blocks:
 interface:
     machine_id: "1"
     mode: 'deploy'
+pwm:
+    #IRLED: 0.5
+    #LED_R_LEFT: 0.5
+    #LED_R_RIGHT: 0.5
+    2: 0.5
+    3: 0.5
+    4: 0.5
+
+

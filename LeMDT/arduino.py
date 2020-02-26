@@ -152,6 +152,12 @@ class LearningMemoryDevice(ParadigmLoader):
         # They are not run throughout the lifetime of the program, just at some interval and without intermitency       
         events = self.paradigm['pin_id']
         count = {ev: 0 for ev in events}
+
+        value_on_by_pin_number = {str(p): 1 for p in range(2,50)}
+        
+        for e in self.interface.cfg['pwm']:
+            value_on_by_pin_number[str(e)] = self.interface.cfg['pwm'][e]
+
         for event_index, ev in enumerate(events):
 
             pin_event_row = self.paradigm.iloc[event_index]
@@ -176,7 +182,6 @@ class LearningMemoryDevice(ParadigmLoader):
             self.paradigm.at[event_index, "thread_name"] = d_name
 
             kwargs = {
-                "pin_number"   : d_pin_number,
                 "start"        : d_start,
                 "end"          : d_end,
                 "on"           : d_on,
@@ -192,7 +197,9 @@ class LearningMemoryDevice(ParadigmLoader):
             d = ArduinoThread(
                 device = self,
                 name=d_name,
-                kwargs = kwargs
+                pin_number = d_pin_number,
+                kwargs = kwargs,
+                value_on = value_on_by_pin_number[str(d_pin_number)]
             )
 
             d.setDaemon(False)

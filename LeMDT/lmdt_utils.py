@@ -23,10 +23,9 @@ class ReadConfigMixin():
  
 
 
-
-def _toggle_pin(self, device=None, pin_number=None, pin_id=None, value=0, freq=None, thread=True, log=True):
+def _toggle_pin(self, device=None, pin_id=None, value=0, freq=None, thread=True, log=True, pin_number = None):
     """
-    Update the state of pin pin_number with value,
+    Update the state of pin self.pin_number with value,
     while logging and caching this so user can confirm it.
     """
 
@@ -34,17 +33,24 @@ def _toggle_pin(self, device=None, pin_number=None, pin_id=None, value=0, freq=N
         device = self.device
 
     if pin_number is None:
-        pin_number = device.mapping["pin_number"].loc[device.mapping.index == pin_id].values[0]
-        # print(pin_number)
-    
+            if self.pin_number is None:
+            # self.pin_number = device.mapping["pin_number"].loc[device.mapping.index == pin_id].values[0]
+                pin_number = device.mapping["pin_number"].loc[device.mapping.index == pin_id].values[0]
+            else:
+                pin_number = self.pin_number
+        
     if pin_id is None:
         pin_id = device.mapping.index[device.mapping.pin_number == pin_number].values[0]
+
+    pin_mode = getattr(self, "pin_mode", 'o')
         
 
     d = threading.currentThread()
     
     # Update state of pin (value = 1 or value = 0)
-    device.board.digital[pin_number].write(value)
+    # selected_pin = device.board.digital[pin_number]
+    self.selected_pin = self.device.board.get_pin(f'd:{pin_number}:{pin_mode}')
+    self.selected_pin.write(value)
 
     # Update log with info severity level unless
     # on pin13, then use severity debug
