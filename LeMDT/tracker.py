@@ -35,7 +35,17 @@ def crop_stream(img, crop):
     return img
 
 
+class CouldNotReadFrameError(Exception):
+    """
+    Used to signal that no more frames are coming from the camera
+    """
+    pass
 
+class LessArenasThanTargetError(Exception):
+    """
+    Used to signal the target number of arenas (usually 20) was not detected in a frame
+    """
+    pass
 
 @export
 class Tracker():
@@ -334,9 +344,8 @@ class Tracker():
                     print(success)
                     print("Closing")
                     self.failed_read_frame =+ 1
-                    self.log.info("Could not read frame")
                     self.log.warning('Recursive call to track() {}'.format(self.recursive_calls))
-                    self.track()
+                    raise CouldNotReadFrameError("Could not read frame")
                 else:
                     self.log.info("Stream or video is finished. Closing")
                     self.close()
@@ -368,11 +377,9 @@ class Tracker():
                 found_targets = len(self.arena_contours)
                 
             if found_targets < int(targets):
-                self.log.debug("Number of putative arenas found less than target. Discarding frame".format(self.frame_count))
                 self.frame_count += 1
                 self.interface.frame_color = gray_color
-                status = self.track()
-                return status
+                raise LessArenasThanTargetError("Number of putative arenas found less than target. Discarding frame")
 
                         
             transform = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.block_size, self.param1)
@@ -416,12 +423,10 @@ class Tracker():
             found_arenas = np.sum([a is not None for a in arenas_list])
 
             if found_arenas != self.targets:
-                self.log.debug("Number of arenas found not equal to target. Discarding frame")
                 self.frame_count += 1
                 self.interface.frame_color = gray_color
                 self.interface.fraction_area *= 0.99
-                status = self.track()
-                return status
+                raise LessArenasThanTargetError("Number of arenas found not equal to target. Discarding frame")
 
             
             columns = self.interface.cfg['arena']['columns']
@@ -620,21 +625,26 @@ class Tracker():
         This is the target function of the intermediate thread
         and it runs self.track an indefinite amount of time
         """
-
-        self.status = self.track()
-        self._sample_fps()
-
+        error_counts = {LessArenasThanTargetError: 0, CouldNotReadFrameError: 0}
+        self.status = True
         while self.status and not self.interface.exit.is_set(): 
-            self.merge_masks()
-            self.interface.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
-            self.recursive_calls += 1
-            self.status = self.track()
-            # NEEDED?
-            # we neet to event.wait so that Python listens to the
-            # event while it is idle
-            # as opposed what would happen with time.sleep
-            # where the timeout would always be 100% done
-            #self.interface.exit.wait(.2)
+            try:
+                self.status = self.track()
+                self._sample_fps()           
+                self.merge_masks()
+                self.interface.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
+                self.recursive_calls += 1
+                
+            except (LessArenasThanTargetError, CouldNotReadFrameError) as e:
+                # status is one of the errors that track can return
+                # increase the counter accordingly
+                error_counts[type(e)] += 1
+                for error, count in error_counts.items():
+                    if count > 99999999999999999999999:
+                        print(error_counts)
+                        raise error
+                        
+                self.status = True
 
         self.close()            
 
