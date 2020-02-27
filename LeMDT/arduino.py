@@ -56,7 +56,13 @@ class LearningMemoryDevice(ParadigmLoader):
         self.threads_finished = {}
 
 
+        self.value_on_by_pin_number = {p: 1 for p in range(2,50)}
         
+        for e in self.interface.cfg['pwm']:
+            self.value_on_by_pin_number[e] = self.interface.cfg['pwm'][e]
+
+
+
 
 
     def connect_arduino_board(self, port):
@@ -73,6 +79,9 @@ class LearningMemoryDevice(ParadigmLoader):
         try:
             self.board = BOARDS[self.interface.cfg["arduino"]["board"]](port)
             self.log.info("Loaded {} board".format(self.interface.cfg["arduino"]["board"]))
+            self.pins_mode = {p: "o" if v == 1 else "p" for p, v in self.value_on_by_pin_number.items()}
+            self.pins = {pin_number: self.board.get_pin(f'd:{pin_number}:{pin_mode}') for pin_number, pin_mode in self.pins_mode.items()}
+
         except serial.serialutil.SerialException as e:
             self.log.error('Please provide the correct port')
             self.log.error(e)
@@ -153,10 +162,7 @@ class LearningMemoryDevice(ParadigmLoader):
         events = self.paradigm['pin_id']
         count = {ev: 0 for ev in events}
 
-        value_on_by_pin_number = {str(p): 1 for p in range(2,50)}
-        
-        for e in self.interface.cfg['pwm']:
-            value_on_by_pin_number[str(e)] = self.interface.cfg['pwm'][e]
+
 
         for event_index, ev in enumerate(events):
 
@@ -198,8 +204,9 @@ class LearningMemoryDevice(ParadigmLoader):
                 device = self,
                 name=d_name,
                 pin_number = d_pin_number,
+                selected_pin = self.pins[d_pin_number],
                 kwargs = kwargs,
-                value_on = value_on_by_pin_number[str(d_pin_number)]
+                value_on = self.value_on_by_pin_number[d_pin_number]
             )
 
             d.setDaemon(False)

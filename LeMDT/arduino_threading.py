@@ -12,16 +12,13 @@ from .lmdt_utils import _toggle_pin
 
 class ArduinoThread(threading.Thread):
 
-    def __init__(self, device, kwargs, value_on = 1, name = None, pin_number = 0, stop_event_name = 'exit'):
+    def __init__(self, selected_pin, device, kwargs, value_on = 1, name = None, pin_number = 0, stop_event_name = 'exit'):
 
+        self.selected_pin = selected_pin
         self.device = device 
         self.log = self.device.interface.getLogger(name=__name__)
         self.pin_name =  name.split('-')[1]
         self.pin_number = pin_number
-        pin_mode = 'o'
-        if value_on < 1:
-            pin_mode = 'p'
-        self.pin_mode = pin_mode
         self.stop_event_name = stop_event_name
         self.value_on = value_on
         super(ArduinoThread, self).__init__(name = name, target = self.pin_thread, kwargs = kwargs)
@@ -148,12 +145,12 @@ class ArduinoThread(threading.Thread):
             for _ in range(int(n_iters)):
 
                 start_time = datetime.datetime.now()
-                self.toggle_pin(self.value_on, freq=1/(on + off))
+                self.toggle_pin(value=self.value_on, freq=1/(on + off))
                 
                 runtime = datetime.datetime.now() - start_time
                 sleep_time = on - runtime.total_seconds()
                 if sleep_time < 0:
-                    self.log.warning.warn("Runtime: {}".format(runtime))
+                    self.log.warning("Runtime: {}".format(runtime))
 
                 else:
                     stop = self.wait(sleep_time)
@@ -176,7 +173,7 @@ class ArduinoThread(threading.Thread):
         else:
             # pins without cycle
             start_time = datetime.datetime.now()
-            self.toggle_pin(self.value_on)
+            self.toggle_pin(value=self.value_on)
             sleep_time = min(end - start, duration - start)
             if sleep2 < 0:
                 sleep_time += sleep2

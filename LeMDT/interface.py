@@ -332,7 +332,7 @@ class Interface():
                 self.log.exception(e)
 
         if self.arduino:
-            _toggle_pin(self=self, device=self.device, pin_number=11, value=1, log=False)
+            _toggle_pin(self=self, selected_pin = self.device.pins[11], device=self.device, pin_number=11, value=1, log=False)
 
 
         # NEEDED?
