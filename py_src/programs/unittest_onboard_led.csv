@@ -1,0 +1,4 @@
+pin_id,start,end,on,off,block
+ONBOARD_LED,0,10,1,1
+ONBOARD_LED,10,20,1,1
+
