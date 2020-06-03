@@ -6,7 +6,8 @@ import logging
 # Local application imports
 from learnmem.server.controllers.controllers import Controller
 from learnmem.server.core.base import Base, Root
-from learnmem.server.trackers.trackers import SimpleTracker
+from learnmem.server.trackers.simple_tracker import SimpleTracker
+from learnmem.server.trackers.adaptive_bg_tracker import AdaptiveBGModel
 from learnmem.server.io.saver import SimpleSaver
 from learnmem.configuration import LearnMemConfiguration
 from learnmem.helpers import get_machine_id, get_machine_name
@@ -26,7 +27,7 @@ class ControlThread(Base, Root):
         'tracker': {
             'possible_classes': [
                 #DefaultTracker,
-                SimpleTracker,
+                SimpleTracker, AdaptiveBGModel
                 #AdaptiveBGModel
             ],
             'default_class': SimpleTracker
