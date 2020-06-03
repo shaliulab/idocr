@@ -1,181 +1,203 @@
 # for now it will not scan devices, just retrieve attributes of a device running on localhost
 
+import logging
 from threading import Thread
 import time
-import urllib.request
-import json
-from functools import wraps
 
-import numpy as np
-
-class ScanException(BaseException):
-    pass
+import requests
 
 
-def retry(ExceptionToCheck, tries=4, delay=3, backoff=2):
-    """Retry calling the decorated function using an exponential backoff.
+from learnmem.client.utils.logging_server import LogRecordSocketReceiver
+from learnmem.client.utils.mixins import HTTPMixin
 
-    http://www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
-    original from: http://wiki.python.org/moin/PythonDecoratorLibrary#Retry
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+
+
+class Device(Thread, HTTPMixin):
+    r"""
+    Individual Drosophila Optogenetic Conditioner Device
     """
-    def deco_retry(f):
-        @wraps(f)
-        def f_retry(*args, **kwargs):
-            mtries, mdelay = tries, delay
-            while mtries > 1:
-                try:
-                    return f(*args, **kwargs)
-                except ExceptionToCheck as e:
-                    time.sleep(mdelay)
-                    mtries -= 1
-                    mdelay *= backoff
-            return f(*args, **kwargs)
-        return f_retry
-    return deco_retry
-
-
-class Device():
-
-    _odor_A = "A"
-    _odor_B = "B"
-    _frame_color = np.array([])
-    _program_path = None
-    #rsession will run on client
-    _r_session = None
-    _fps = 0
-    _acquisition_time = 0
-    _adaptation_time = 0
-
-    _events = {}
-    _settings = {}
-    _metadata = {}
-    _info = {}
-
-    def __init__(self, ip, port=9000):
+    _remote_pages = {
+            'id' : "id",
+            # 'videofiles' :  "data/listfiles/video",
+            # 'stream' : "stream.mjpg",
+            # 'user_options' : "user_options",
+            'log' : "data/log",
+            'static' : "static",
+            'controls' : "controls",
+            'logs' : 'logs'
+            # 'machine_info' : "machine",
+            # 'update' : "update"
+            }
+    def __init__(self, ip, port=9000, *args, **kwargs):
 
         self._ip = ip
         self._port = port
+        self._info = {}
+        self._settings = {}
+        self._id_url = "http://%s:%i/%s" % (ip, port, self._remote_pages['id'])
+        self._id = ""
+        self._logs_cache = {"logs": []}
+        self._tcpserver = LogRecordSocketReceiver()
+        super().__init__(*args, **kwargs)
 
+    def controls(self, submodule, action):
+        template = "http://%s:%d/%s/%s/%s/%s"
+        url = template % (
+            self._ip, self._port,
+            self._remote_pages["controls"],
+            submodule, action, self.id
+        )
 
-    @retry(ScanException, tries=3, delay=1, backoff=1)
-    def _get_json(self, url, timeout=5, post_data=None):
-        """
-        Ethoscope
-        """
+        return self._get_json(url)
 
-        try:
-            req = urllib.request.Request(url, data=post_data, headers={'Content-Type': 'application/json'})            
-            f = urllib.request.urlopen(req, timeout=timeout)
-            message = f.read()
-            if not message:
-                # logging.error("URL error whist scanning url: %s. No message back." % self._id_url)
-                raise ScanException("No message back")
-            try:
-                resp = json.loads(message)
-                return resp
-            except ValueError:
-                # logging.error("Could not parse response from %s as JSON object" % self._id_url)
-                raise ScanException("Could not parse Json object")
-        
-        except urllib.error.HTTPError as e:
-            raise ScanException("Error" + str(e.code))
-            #return e
-        
-        except urllib.error.URLError as e:
-            raise ScanException("Error" + str(e.reason))
-            #return e
-        
-        except Exception as e:
-            raise ScanException("Unexpected error" + str(e))
-
-    def push(self, value, param_name):
-        url = f"http://{self._ip}:{self._port}/update"
-        self._get_json(url, post_data={"param_name": param_name, "value": value})
-       
-
-    def control(self, action):
-        url = f"http://{self._ip}:{self._port}/control/{action}"
-        self._get_json(url)
-       
     def close(self, answer="Y"):
 
-        url = f"http://{self._ip}:{self._port}/close"
-        self._get_json(url, post_data={"answer", answer})
+        url = "http://%s:%d/close/%s" % self._ip, self._port, self.id
+        self._get_json(url, post_data={"answer": answer})
 
-    def get_camera_settings(self):
-
-        url = f"http://{self._ip}:{self._port}/camera"
-        self._settings = self._get_json(url)
-        
-    def get_metadata(self):
-        url = f"http://{self._ip}:{self._port}/metadata"
-        self._metadata = self._get_json(url)
-
-    def get_events(self):
-        url = f"http://{self._ip}:{self._port}/events"
-        self._events = self._get_json(url)
+    # def get_metadata(self):
+    #     url = f"http://{self._ip}:{self._port}/metadata"
+    #     self._metadata = self._get_json(url)
 
     def get_programs(self):
-        url = f"http.//{self._ip}:{self._port}/list_programs"
+        url = f"http.//{self._ip}:{self._port}/list_programs/%s" % self.id
         self._programs = self._get_json(url)
-
-    def get_pin_state(self):
-
-        url = f"http.//{self._ip}:{self._port}/pin_state" 
-        self._pin_state = self._get_json(url)
-
 
     def post_program(self, program_path):
 
-        url = f"http://{self._ip}:{self._port}/load_program"
-        self._get_json(url, post_data={"program_path": program_path})
+        url = f"http://{self._ip}:{self._port}/load_program/%s" % self.id
+        requests.post(url, data={"program_path": program_path})
+        # self._get_json(url, post_data={"program_path": program_path})
 
-    def _update_info(self):
+    def post(self, data):
+        url = f"http://{self._ip}:{self._port}/settings/%s" % self.id
+        self._get_json(url, post_data=data)
 
-        # get data
-        self.get_camera_settings()
-        self.get_metadata()
-        self.get_events()
-        self.get_programs()
-        self.get_pin_state()
+    @property
+    def settings(self):
+        return self._settings
 
-        # update info
-        self._info.update(self._settings)
-        self._info.update(self._metadata)
-        self._info.update(self._events)
-        self._info.update(self._programs)
-        self._info.update(self._pin_state)
+    @settings.getter
+    def settings(self):
+        url = f"http://{self._ip}:{self._port}/settings/%s" % self.id
+        self._settings = self._get_json(url)
 
 
     @property
     def info(self):
         return self._info
 
-class DeviceScanner(Thread):
+    def get_info(self):
+        logging.info('Getting self._info')
+        url = "http://%s:%d/info/%s" % (self._ip, self._port, self.id)
+        self._info = self._get_json(url)
+        logging.info('_get_json self._info')
+        return self._info
 
-    _devices = []
+    def get_logs(self):
+        return self._logs_cache
 
-    def __init__(self, device_refresh_period=5, deviceClass=Device):
+    def post_logs(self, post_data):
 
-        self._device_refresh_period = device_refresh_period
-        self._deviceClass = deviceClass
-        
-    def get_device(self, idx):
-        return self._devices[idx]
+        # print("CACHE")
+        # print(self._logs_cache)
+        # print("INCOMING")
+        # print(post_data["logs"])
+        self._logs_cache["logs"].append(post_data["logs"])
+        return {"status": "success"}
+
+
+    def _reset_info(self):
+        r"""
+        This is called whenever the device goes offline or when it is first added
+        """
+        self._info = {'status': "offline"}
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.getter
+    def id(self):
+        r"""
+        """
+        old_id = self._id
+        resp = self._get_json(self._id_url)
+        self._id = resp['id']
+        if self._id != old_id:
+            if old_id:
+                logging.warning("Device id changed at %s. %s ===> %s", self._ip, old_id, self._id)
+            self._reset_info()
+
+        # keep the ip
+        self._info["ip"] = self._ip
+        return self._id
+
+    def ip(self):
+        return self._ip
+
 
     def run(self):
 
-        self._devices.append(self._deviceClass(ip="localhost"))
+        print('About to start TCP server...')
+        self._tcpserver.serve_until_stopped()
+
+
+class DeviceScanner(Thread):
+
+
+    def __init__(self, *args, device_refresh_period=5, deviceClass=Device, **kwargs):
+
+        self.devices = []
+        self._device_refresh_period = device_refresh_period
+        self._deviceClass = deviceClass
+        super(DeviceScanner, self).__init__(*args, **kwargs)
+
+
+    def get_all_devices_info(self):
+
+        '''
+        Returns a dictionary in which each entry has key of device_id
+        '''
+        out = {}
+
+        for device in self.devices:
+            out[device.id] = device.info
+        return out
+
+    def get_device(self, idx):
+        return self.devices[idx]
+
+
+
+    def get_device_by_id(self, machine_id):
+
+        for device in self.devices:
+            try:
+                info_id = device.info['id']
+            except KeyError:
+                continue
+
+            if info_id == machine_id:
+                return device
+
+        message = "Device with machine_id %s is not available." % machine_id
+        logging.warning("DEVICES")
+        logging.warning(self.devices)
+        raise Exception(message)
+
+    def run(self):
+
+        device = self._deviceClass(ip="localhost")
+        device.start()
+        self.devices.append(device)
 
         while True:
             time.sleep(self._device_refresh_period)
 
-            for device in self._devices:
-                device._update_info()
+            for device in self.devices:
+                device.get_info()
 
-
-
-
-
-        
-        

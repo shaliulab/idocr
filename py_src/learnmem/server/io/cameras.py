@@ -1,252 +1,296 @@
 import logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-from pathlib import Path
 import os
+import os.path
 import sys
 import time
-
+import traceback
 
 import cv2
-import coloredlogs
-import numpy as np
+# import numpy as np
 import psutil
 
-from learnmem.decorators import export 
+from pypylon import pylon
+
+
 from learnmem import UTILS_DIR
+from learnmem.server.core.base import Base, Root
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
-class StandardStream():
+class StandardStream(Base, Root):
 
-    def __init__(self, tracker):
-        self.tracker = tracker
+    _settings = {"framerate": None, "exposure_time": None}
+    _submodules = []
 
-    def get_width(self):
-        raise Exception
-    
-    def get_height(self):
-        raise Exception
+    def __init__(self, *args, **kwargs):
+        self._framerate = 0
+        self._resolution = (0, 0)
+        self._exposure_time = 0
 
-    def get_dimensions(self):
-        return self.get_width(), self.get_height()
+        super().__init__(*args, **kwargs)
 
 
-@export
+    @property
+    def shape(self):
+        return (self._resolution[1], self._resolution[0], 3)
+
+
+    def release(self):
+        raise NotImplementedError
+
+
+    def stop(self):
+        super().stop()
+        self.release()
+
+
+
 class PylonStream(StandardStream):
 
-    def __init__(self, tracker, video=None):
+    def __init__(self, *args, **kwargs):
 
-        super(PylonStream, self).__init__(tracker)
+        super(PylonStream, self).__init__()
         logger.info("Attempting to open pylon camera")
-        ## TODO
-        ## Check camera is visible!
-        try:
-            from pypylon import pylon
-            from pypylon import genicam
+        self.cap = self.connect()
+        self._grab_result = None
 
+        super().__init__(*args, **kwargs)
+
+
+    def restart(self):
+        r"""
+        Attempt to restart a Basler camera
+        """
+        logger.warning('Running open_camera.sh')
+        # TODO Improve connection to bash script
+        script_path = os.path.join(UTILS_DIR, 'open_camera.sh')
+        os.system("bash {}".format(script_path))
+        time.sleep(5)
+
+    def _connect(self):
+
+        try:
             cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-        except genicam._genicam.RuntimeException as e:
-            logger.warning(e)
-            logger.warning('Running open_camera.sh')
-            script_path = Path(UTILS_DIR, 'open_camera.sh').__str__() 
-            os.system("bash {}".format(script_path))
-            time.sleep(5)
+
+        # TODO Use right exceptions
+        except Exception: # pylint: disable=broad-except
             try:
                 cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-            except genicam._genicam.RuntimeException as e:
-                logger.exception(e)
-                logger.error('Camera could not be opened. Is the switch off?!')
-                sys.exit(1)
+            except Exception as error:
+                logging.error("Cannot connect to camera")
+                logging.error(traceback.print_exc())
+                raise error
 
-        except genicam._genicam.AccessException as e:
-            logger.warning('An exception has occurred. Camera could not be opened')
-            logger.critical(e)
-            self.status = 0
-            return 0
-        finally:
-            pass
-
-        # Print the model name of the camera.
-        device_info = cap.GetDeviceInfo()
-        logger.info("Using device {}".format(device_info.GetModelName()))
-        logger.info(device_info.GetFullName())
-        # print(device_info.GetPropertyAvailable())
-        
-    
         # The parameter MaxNumBuffer can be used to control the count of buffers
         # allocated for grabbing. The default value of this parameter is 10.
         cap.MaxNumBuffer = 5
+        return cap
 
-   
+    def _trial(self, cap):
         # Start the grabbing of c_countOfImagesToGrab images.
         # The camera device is parameterized with a default configuration which
         # sets up free-running continuous exposure.
         try:
             cap.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
-        except Exception as e:
+        # TODO Use right exceptions
+        except Exception as error:  # pylint: disable=broad-except
             process = [p for p in psutil.process_iter() if 'Pylon' in p.name()]
             if len(process) != 0:
                 logger.warning('A running instance of PylonViewerApp was detected')
                 logger.warning('Closing as Python will not be able to access the camera then')
-                [p.kill() for p in process]
+                _ = [p.kill() for p in process]
                 time.sleep(3)
                 cap.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
-            else:             
+            else:
                 logger.error('Camera could not grab frames. This is likely to be caused by the camera being already in use')
                 logger.error('This can happen if the program has recently been closed')
                 logger.error('Try again in a few seconds')
-                logger.debug(e)
+                logger.debug(error)
 
-
-        #width = cap.Width.GetValue() // 3
-        #offset_x = width
-        #cap.OffsetX.Max = 1000
-        #cap.OffsetX = offset_x
-        #cap.Width = width
-        self.cap = cap
-
+    def connect(self):
+        cap = self._connect()
+        self._trial(cap)
         logger.info("Pylon camera loaded successfully")
+        return cap
+
+    @property
+    def framerate(self):
+        return self._settings["framerate"]
+
+    @framerate.getter
+    def framerate(self):
+        self._settings["framerate"] = self.cap.AcquisitionFrameRateAbs.GetValue()
+        return self._settings["framerate"]
+
+    @framerate.setter
+    def framerate(self, framerate):
+        logger.info("Setting framerate to %s", str(framerate))
+        self.cap.AcquisitionFrameRateAbs.SetValue(framerate)
+        self._settings["framerate"] = framerate
+
+    @property
+    def exposure_time(self):
+        return self._settings["exposure_time"]
+
+    @exposure_time.getter
+    def exposure_time(self):
+        self._settings["exposure_time"] = self.cap.ExposureTimeAbs.GetValue()
+        return self._settings["exposure_time"]
+
+    @exposure_time.setter
+    def exposure_time(self, exposure_time):
+        logger.info("Setting exposure time to %3.f", exposure_time)
+        self.cap.ExposureTimeAbs.SetValue(exposure_time)
+        self._settings["exposure_time"] = exposure_time
+
+    # @property
+    # def resolution(self):
+    #     return self._resolution
+
+    @property
+    def resolution(self):
+        r"""
+        Convenience function to return resolution of camera.
+        Resolution = (number_horizontal_pixels, number_vertical_pixels)
+        """
+        return self.cap.Width.GetValue(), self.cap.Height.GetValue()
+
+    @property
+    def shape(self):
+        r"""
+        Convenience function to return shape of camera
+        Shape = (number_vertical_pixels, number_horizontal_pixels, number_channels)
+        """
+        # TODO Return number of channels!
+        return self.cap.Height.GetValue(), self.cap.Width.GetValue(), 1
+
+    @resolution.setter
+    def resolution(self, resolution):
+        raise NotImplementedError
 
 
 
-    def get_fps(self):
-        fps = self.cap.AcquisitionFrameRateAbs.GetValue()
-        return fps
+    def _read(self):
+        try:
+            grab_result = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
 
-    def get_width(self):
-        width = self.cap.Width.GetValue()
-        return width
+        # TODO Use right exception
+        except Exception as error:  # pylint: disable=broad-except
+            logger.warning(traceback.print_exc())
+            logger.warning(error)
 
-    def get_height(self):
-        height = self.cap.Height.GetValue()
-        return height
-
-    def set_fps(self, fps):
-        logger.info("Setting fps to {}".format(fps))
-        self.cap.AcquisitionFrameRateAbs.SetValue(fps)
-
-
-    def set_exposure_time(self, at):
-        logger.info("Setting exposure time to {}".format(at))
-        self.cap.ExposureTimeAbs.SetValue(at)
-
-    def get_exposure_time(self):
-        at = self.cap.ExposureTimeAbs.GetValue()
-        return at
-        # logger.info("exposure time set to: {}".format())
-
-
-    def retrieve_result(self):
-        while True:
-            try:
-                grabResult = self.cap.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
-                break
-            except Exception as e:
-                logger.exception(e)
-
-        self.grabResult = grabResult        
-        return grabResult
+        return grab_result
 
 
     def read_frame(self):
         # Wait for an image and then retrieve it. A timeout of 5000 ms is used.
         logger.debug('Reading frame')
+        ret = False
+        img = None
 
-        grabResult = self.retrieve_result()      
-        
+        grab_result = self._read()
+
         # Image grabbed successfully?
         ret = False
         count = 1
-        ret = grabResult.GrabSucceeded()
+        ret = grab_result.GrabSucceeded()
+
         while not ret and count < 10:
             count += 1
-            logger.warning("Pylon could not fetch next frame. Trial no {}".format(count))
-            grabResult = self.retrieve_result()
+            logger.warning("Pylon could not fetch next frame. Trial no %d", count)
+            grab_result = self._read()
 
-            ret = grabResult.GrabSucceeded()
+            ret = grab_result.GrabSucceeded()
         if count == 10:
             logger.error("Tried reading next frame 10 times and none worked. Exiting :(")
             sys.exit(1)
         #print(ret)
         if ret:
             # Access the image data.
-            #print("SizeX: ", grabResult.Width)
-            #print("SizeY: ", grabResult.Height)
-            img = grabResult.Array
-            return ret, img
-        return False, None
+            img = grab_result.Array
+            self._grab_result = grab_result
+
+        return ret, img
 
 
     def __str__(self):
-        return 'Pylon Camera stream @ {} and acqu. time {}'.format(self.get_fps(), self.get_exposure_time())
+        template = 'Pylon Camera stream @ %s and exposure time %s'
+        return template % (str(self.framerate).zfill(4), str(self.exposure_time).zfill(8))
 
     def release(self):
-        self.grabResult.Release()
+        self._grab_result.Release()
 
-@export
 class WebCamStream(StandardStream):
 
-    def __init__(self, tracker, video=None):
+    def __init__(self, *args, video_path=None, **kwargs):
 
-        super(WebCamStream, self).__init__(tracker)
+        self._video_path = video_path
 
-        if video == 0:
+        if self._video_path is None:
             logger.info("Attempting to open webcam")
-            self.cap = cv2.VideoCapture(video)
+            self.cap = cv2.VideoCapture(0)
             logger.info("Webcam opened successfully")
 
-        elif video != 0:
-            logger.info("Opening {}!".format(video))
-            self.cap = cv2.VideoCapture(video.__str__())
-        
+        elif self._video_path is not None:
+            logger.info("Opening %s!", self._video_path)
+            self.cap = cv2.VideoCapture(self._video_path)
 
+        super().__init__(*args, **kwargs)
 
-    def get_fps(self):
-        fps = self.cap.get(5)
-        return fps
+    @property
+    def framerate(self):
+        return self._framerate
 
-#    def get_time_position(self, frame_count):
-#        t = frame_count / self.get_fps()
-#        return t
+    @property
+    def resolution(self):
+        return self._resolution
 
-    def get_width(self):
-        width = int(self.cap.get(3))
-        return width
+    @property
+    def shape(self):
+        return int(self.cap.get(4)), int(self.cap.get(3))
 
-    def get_height(self):
-        height = int(self.cap.get(4))
-        return height 
+    @resolution.getter
+    def resolution(self):
+        # TODO Is int needed here?
+        self._resolution = (int(self.cap.get(3)), int(self.cap.get(4)))
+        return self._resolution
 
-    def set_fps(self, fps):
+    @resolution.setter
+    def resolution(self):
+        raise NotImplementedError
 
-        #import ipdb
-        #ipdb.set_trace()
+    @property
+    def exposure_time(self):
+        return self._settings["exposure_time"]
 
-        if self.get_fps() != fps:
-            logger.info("Setting fps to {}".format(fps))
-            self.cap.set(5, fps)
+    @framerate.getter
+    def framerate(self):
+        self._settings["framerate"] = self.cap.get(5)
+        return self._settings["framerate"]
 
-    def set_exposure_time(self, at):
-        logger.warning("Change of exposure time not implemented")
-        return None
+    @framerate.setter
+    def framerate(self, framerate):
+        self.cap.set(5, framerate)
+        self._settings["framerate"] = framerate
 
+    @exposure_time.setter
+    def exposure_time(self, exposure_time):
+        raise NotImplementedError
 
-    def get_exposure_time(self):
-        logger.warning("Get of exposure time is not implemented")
-        return 0
-        
- #   def set_width(self, width):
- #       if self.stream.get_width() != width:
- #           self.stream.set(3, width)
- #   def set_height(self, height):
- #       if self.stream.get_height() != height:
- #           self.stream.set(4, height)
+    @exposure_time.getter
+    def exposure_time(self):
+        raise NotImplementedError
 
     def read_frame(self):
         ret, img = self.cap.read()
         return ret, img
-   
+
     def release(self):
         self.cap.release()
 
-CAMERAS = {"pylon": PylonStream, "webcam": WebCamStream}
+CAMERAS = {
+    "pylon": PylonStream,
+    "webcam": WebCamStream
+}

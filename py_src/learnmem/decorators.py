@@ -1,15 +1,15 @@
-__all__ = []
-import functools
-import traceback
+from functools import wraps
 import logging
+import time
+import traceback
+
+from learnmem.helpers import get_machine_id
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-def export(defn):
-    globals()[defn.__name__] = defn
-    __all__.append(defn.__name__)
-    return defn
+id = get_machine_id()
 
 def mixedomatic(cls):
     """ Mixed-in class decorator. """
@@ -34,73 +34,28 @@ def mixedomatic(cls):
     setattr(cls, '__init__', __init__)
     return cls
 
-# def if_record_event(control_thread):
-def if_record_event(f):
-    def wrapper(self, *args, **kwargs):
-        is_set = self.control_thread.record_event.is_set()
-        if not is_set:
-            return True            
-        return f(self, *args, **kwargs)
-    return wrapper
-    # return _if_record_event
 
-# def if_record_event(control_thread):
-def if_not_record_event(f):
-    def wrapper(self, *args, **kwargs):
-        is_set = self.control_thread.record_event.is_set()
-        if is_set:
-            return True            
-        return f(self, *args, **kwargs)
-    return wrapper
-    # return _if_record_event
+class WrongMachineID(Exception):
+    r"""
+    An exception to be raised when the id
+    parsed from the requested URL
+    does not match that of the local machine
+    """
+    pass
 
+def wrong_id(f):
+    def wrapper(**kwargs):
+        if kwargs["id"] != id:
+            raise WrongMachineID
+        else:
+            if "id" in f.__code__.co_varnames:
+                return f(**kwargs)
+            else:
+                kwargs.pop('id')
+                return f(**kwargs)
 
-
-def if_play_event(f):
-    def wrapper(self, *args, **kwargs):
-        is_set = self.control_thread.play_event.is_set()
-        if not is_set:
-            return True            
-        return f(self, *args, **kwargs)
-    return wrapper
-    # return _if_record_event
-
-# def if_record_event(control_thread):
-# def if_config_loaded(f):
-#     def wrapper(self, *args, **kwargs):
-#         config_loaded = not self.control_thread.config is None
-#         if not config_loaded:
-#             print('config is not loaded')
-#             return True            
-#         return f(self, *args, **kwargs)
-#     return wrapper
-    # return _if_record_event
-
-
-def if_not_record_end_event(f):
-    def wrapper(self, *args, **kwargs):
-        record_end_set = self.control_thread.record_end.is_set()
-        
-        if record_end_set:
-            if not getattr(self.control_thread, "exit_message_shown", False):
-                self.control_thread.getLogger(name='LeMDT.cli_app').info('End of paradigm reached. No recording anymore. Quit to either remove or save the results! :)')
-                self.control_thread.getLogger(name='LeMDT.cli_app').info('Press enter to return back to the options menu')
-                self.control_thread.exit_message_shown = True
-            return True            
-        return f(self, *args, **kwargs)
     return wrapper
 
-
-
-def if_not_self_stream(f):
-    def wrapper(self, *args, **kwargs):
-        stream_available = not self.control_thread.tracker.stream is None
-        if stream_available:
-            print('Skip stream')
-            self.log.info(sef.control_thread.tracker.stream)
-            return True            
-        return f(self, *args, **kwargs)
-    return wrapper
 
 def error_decorator(func):
     """
@@ -127,4 +82,24 @@ def warning_decorator(func):
             return {'error': str(e)}
     return func_wrapper
 
-    
+
+def retry(ExceptionToCheck, tries=1, delay=1, backoff=2):
+    """Retry calling the decorated function using an exponential backoff.
+
+    http://www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
+    original from: http://wiki.python.org/moin/PythonDecoratorLibrary#Retry
+    """
+    def deco_retry(f):
+        @wraps(f)
+        def f_retry(*args, **kwargs):
+            mtries, mdelay = tries, delay
+            while mtries > 1:
+                try:
+                    return f(*args, **kwargs)
+                except ExceptionToCheck as e:
+                    time.sleep(mdelay)
+                    mtries -= 1
+                    mdelay *= backoff
+            return f(*args, **kwargs)
+        return f_retry
+    return deco_retry

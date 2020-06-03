@@ -1,0 +1,73 @@
+<!-- home.html -->
+<div class="intro" style="background-color: #0e0e0e; padding: 20px; color: white;">
+
+    <div class="row">
+        <div class="col-sm-9">
+            <h1>Welcome to the IDOC Platform @ Liu Lab</h1>
+        </div>
+        <div class="col-sm-3">
+            <img src="/static/img/vib.png" style="width:96px; padding:10px">
+            <img src="/static/img/kul.png" style="width:96px; padding:10px  ">
+        </div>
+
+    </div>
+</div>
+
+<p>
+    Welcome to the Individual <em>Drosophila</em> Optogenetics Conditioner.
+    This program allows you to schedule hardware events with an ArduinoMega board so you can interact with flies
+    and condition their preference for stimuli. The software comes with a Tracker module that enables quantification
+    of the pre and post-conditioning preference.
+    Conditioning can be performed by exposition to either an <em>a priori</em> neutral odor or an optogenetically active light,
+    paired with an electro shock.
+    The software allows you to fine tune the intensity of the electro shocks and the intensity of the optogenetic light.
+    Analysis is done with R.
+</p>
+
+<div class='placeholder' style='width: 100%; height: 500px'>
+
+</div>
+
+<table class="table table-striped" ng-cloak>
+    <thead>
+        <th>
+            Name
+        </th>
+        <th>
+            Location
+        </th>
+        <th>
+            Tracker
+        </th>
+        <th>
+            Controller
+        </th>
+
+    </thead>
+    <tbody>
+        <tr ng-repeat="device in devices">
+
+            <td>
+                <div ng-if="device.info.status != 'offline'">
+                    <a ng-href="/#idoc/{{device.id}}" target="_blank">
+                    <span>{{device.name}}</span>
+                    </a>
+                </div>
+                <div ng-if="device.info.status == 'offline'">
+                    <span>{{device.name}}</span>
+                </div>
+            </td>
+
+            <td>
+                <span>{{device.location}}</span>
+            </td>
+            <td>
+                <span>{{device.tracker.status  || "offline" }}</span>
+            </td>
+            <td>
+                <span>{{device.controller.status || "offline" }}</span>
+            </td>
+        </tr>
+    </tbody>
+
+</table>

@@ -1,35 +1,28 @@
 # Standard library imports
-import datetime
 import logging
-import sys
-import threading
-import time
 
 # Third party imports
 import coloredlogs
 import cv2
 import imutils
 import numpy as np
-from pathlib import Path
 from sklearn.cluster import KMeans
 
 # Local application imports
 
 from learnmem.server.trackers.features import Arena, Fly
 from learnmem.server.io.cameras import CAMERAS
-from learnmem.decorators import export, if_not_self_stream
 from learnmem.configuration import LearnMemConfiguration
-from learnmem import PROJECT_DIR
+from learnmem.server.core.base import Base, Root
 
 # Set up package configurations
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-cv2_version = cv2.__version__
-coloredlogs.install()
+cv2_version = cv2.__version__ # pylint: disable=no-member
 
-def crop_stream(img, crop):
+def crop_camera(img, crop):
     width = img.shape[1]
     fw = width//crop
     y0 = fw * (crop // 2)
@@ -50,29 +43,53 @@ class LessArenasThanTargetError(Exception):
     Used to signal the target number of arenas (usually 20) was not detected in a frame
     """
 
-@export
-class SimpleTracker():
+class SimpleTracker(Base, Root):
 
     _live_feed_path = '/tmp/last_img.jpg'
-    row_all_flies = None
+    row_all_flies = {}
+    _info = {}
+
     frame_color = None
     frame_original = None
+    _columns = ["frame_count", "arena", "x", "y"]
 
-    columns = ["frame_count", "arena", "x", "y"]
-
-    def __init__(self, control_thread, camera="opencv", video=None):
-        """
+    def __init__(self, *args, camera_name="opencv", video_path=None, **kwargs):
+        r"""
         Setup video recording parameters.
+
+        :param camera_name: Codename of the camera selected by the user.
+        Must match one of the keys in CAMERAS
+        :type camera_name: str
+
+        :param video: Path to video file for offline tracking. If None, live tracking is performed.
+        :type video: str
         """
+        super().__init__(*args, **kwargs)
 
-        self.recursive_calls = 0
+        # Load a camera
+        self._camera_name = camera_name
+        self.video_path = video_path
+        self.load_camera(self.video_path)
 
-        # Assignment
-        self.control_thread = control_thread
-        self.camera = camera
-        self.video = video
-        self.failed_read_frame = 0
+        # tracking framerate
+        # if we are reading from a video
+        # it will be limited by the processing capacity of the PC
+        # if we are reading from a live feed
+        # unless the feed has very high FPS,
+        # the tracking framerate is given by the camera framerate
+        self._framerate = 0
 
+        # Config variables
+        config = LearnMemConfiguration()
+        self.targets = config.content["arena"]["targets"]
+        self.sampled_framerate = 0
+        self.block_size = config.content["arena"]["block_size"]
+        self.param1 = config.content["arena"]["param1"]
+        self.crop = config.content["tracker"]["crop"]
+        self.kernel_factor = config.content["arena"]["kernel_factor"]
+        self.kernel = np.ones((self.kernel_factor, self.kernel_factor), np.uint8)
+        self.N = config.content["tracker"]["N"]
+        self._delta_t = 2
 
         # Results variables
         # how many flies are found in the whole experiment
@@ -80,83 +97,49 @@ class SimpleTracker():
         self.found_flies = 0
         # frames recorded since pressing play
         self.frame_count = 0
-        # frames recorded since pressing record
-        self.record_frame_count = 0
         # flies detected in the last frame
         self.old_found = 0
         # number of arenas where no fly was detected
         self.missing_fly = 0
 
-        CFG = LearnMemConfiguration()
-        # Config variables
-        self.fps = CFG.content["tracker"]["fps"]
-        self.targets = CFG.content["arena"]["targets"]
-        self.sampled_fps = 0
-        self.block_size = CFG.content["arena"]["block_size"]
-        self.param1 = CFG.content["arena"]["param1"]
-        self.crop = CFG.content["tracker"]["crop"]
-        self.kernel_factor = CFG.content["arena"]["kernel_factor"]
-        self.kernel = np.ones((self.kernel_factor, self.kernel_factor), np.uint8)
-        self.N = CFG.content["tracker"]["N"]
-
-
-        self.failed_arena_path = Path(PROJECT_DIR, CFG.content['tracker']['fail'])
-        self.failed_arena_path.mkdir(parents=True, exist_ok=True)
-
-
-        ## TODO
-        ## Find a way to get camera.Width.SetValue(whatever) to work
-        ## Currently returns error: the node is not writable
-        # if VIDEO_WIDTH != 1280:
-        #     cap.set(3, 1280)
-        # if VIDEO_HEIGHT != 1024:
-        #     cap.set(4, 1024)
-
-
-        self.status = True
+        self.stacked_arenas = []
+        self.arena_contours = []
+        self.fraction_area = 1
 
         self.arenas = {}
         self.masks = {}
 
 
-        display_feed_thread = threading.Thread(target=self.display_feed)
-        display_feed_thread.start()
+    @property
+    def columns(self):
+        return self._columns
 
+    @property
+    def camera(self):
+        return self._submodules["camera"]
 
-    def display_feed(self):
-        #while not self.control_thread.exit.is_set() and type(self.control_thread.frame_color) is np.ndarray:
-        while not self.control_thread.exit.is_set():
+    @camera.setter
+    def camera(self, camera):
+        self._submodules["camera"] = camera
+        self._settings.update(camera.settings)
 
-            try:
-                cv2.imwrite(self._live_feed_path, self.control_thread.frame_color)
-                time.sleep(.2)
-            except Exception as e:
-                logger.exception(e)
-
-
-    # @if_not_self_stream
-    def load_camera(self):
+    # @if_not_self_camera
+    def load_camera(self, video_path=None):
         """
-        Populate the stream attribute of the Tracker class
+        Populate the camera attribute of the Tracker class
         Make it an instance of the classes in CAMERAS.py
         """
 
-        if self.video is not None:
-            self.video = Path(self.video)
+        config = LearnMemConfiguration()
+        self._CameraClass = CAMERAS[self._camera_name] # pylint: disable=invalid-name
 
-            if self.video.is_file():
-                self.stream = CAMERAS[self.camera](self, self.video.__str__())
-            else:
-                logger.error("Video under provided path not found. Check for typos")
-        else:
-            self.stream = CAMERAS[self.camera](self, 0)
+        self.camera = self._CameraClass(video_path=video_path)
 
-        if self.fps and self.video:
-            # Set the FPS of the camera
-            self.stream.set_fps(self.fps)
+        # TODO What happens when we are reading a video?
+        self.camera.framerate = config.content["tracker"]["framerate"]
+        self.receive()
 
-        self.video_width, self.video_height = self.stream.get_dimensions()
-        logger.info("Stream has shape w: %d h:%d", self.video_width, self.video_height)
+        logger.info("camera has shape w: %d h:%d", *self.camera.resolution)
 
     def init_image_arrays(self):
         """
@@ -164,16 +147,18 @@ class SimpleTracker():
         These are required for the GUI to display something before start
         """
 
+        # TODO Sort this mess
+
         # Make accu_image an array of size heightxwidthxnframes that will
         # store in the :, :, i element the result of the tracking for frame i
-        self.accu_image = np.zeros((self.video_height, self.video_width, self.N), np.uint8)
+        self.accu_image = np.zeros((*self.camera.shape, self.N), np.uint8)
 
         # self.img = np.zeros((self.video_height, self.video_width, 3), np.uint8)
-        self.transform = np.zeros((self.video_height, self.video_width), np.uint8)
-        self.gray_masked = np.zeros((self.video_height, self.video_width), np.uint8)
-        self.frame_color = np.zeros((self.video_height, self.video_width, 3), np.uint8)
-        self.gray_color = np.zeros((self.video_height, self.video_width, 3), np.uint8)
-        self.gray_gui = np.zeros((self.video_height, self.video_width), np.uint8)
+        self.transform = np.zeros(*self.camera.shape, np.uint8)
+        self.gray_masked = np.zeros(self.camera.shape, np.uint8)
+        self.frame_color = np.zeros(self.camera.shape, np.uint8)
+        self.gray_color = np.zeros(self.camera.shape, np.uint8)
+        self.gray_gui = np.zeros(self.camera.shape, np.uint8)
 
     def rotate_frame(self, img, rotation=180):
         # Rotate the image by certan angles, 0, 90, 180, 270, etc.
@@ -189,13 +174,13 @@ class SimpleTracker():
 
         ## TODO Dont make coordinates of text hardcoded
         ###################################################
-        cv2.putText(img, 'Frame: '+ str(self.record_frame_count), (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (40, 170, 0), 2)
-        cv2.putText(img, 'Time: '+  str(int(self.control_thread.timestamp_seconds)), (1000, 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (40, 170, 0), 2)
+        # cv2.putText(img, 'Frame: '+ str(self.record_frame_count), (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (40, 170, 0), 2)
+        # cv2.putText(img, 'Time since tracker running: '+  str(int(self.timestamp_seconds)), (1000, 25), cv2.FONT_HERSHEY_SIMPLEX, 1, (40, 170, 0), 2)
         cv2.putText(img, 'LEFT', (25, 525), cv2.FONT_HERSHEY_SIMPLEX, 1, (40, 170, 0), 2)
         cv2.putText(img, 'RIGHT', (1100, 525), cv2.FONT_HERSHEY_SIMPLEX, 1, (40, 170, 0), 2)
         return img
 
-    def find_arenas(self, gray, RangeLow1 = 0, RangeUp1 = 255):
+    def find_arenas(self, gray, range_low_1=0, range_up_1=255):
         """
         Performs Otsu thresholding followed by morphological transformations to improve the signal/noise.
         Input image is the average image
@@ -204,8 +189,8 @@ class SimpleTracker():
         More info on Otsu thresholding: https://docs.opencv.org/3.4/d7/d4d/tutorial_py_thresholding.html
 
         gray: Gray frame as output of read_frame()
-        RangeLow1: value assigned to pixels below the Otsu threshold
-        RangeUp1: value assigned to pixels above the Otsu threshold
+        range_low_1: value assigned to pixels below the Otsu threshold
+        range_up_1: value assigned to pixels above the Otsu threshold
         kernel_factor: size of the square kernel used in blurring and openings
         """
 
@@ -217,7 +202,7 @@ class SimpleTracker():
             average = self.accu_image[:, :, self.frame_count].astype('uint8')
 
         image_blur = cv2.GaussianBlur(average, (self.kernel_factor, self.kernel_factor), 0)
-        _, thresholded = cv2.threshold(image_blur, RangeLow1, RangeUp1, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        _, thresholded = cv2.threshold(image_blur, range_low_1, range_up_1, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
         #arena_opening = cv2.morphologyEx(image1, cv2.MORPH_OPEN, self.kernel, iterations = 2)
 
         if cv2_version[0] == '4':
@@ -230,8 +215,8 @@ class SimpleTracker():
         # specially on ROI 10
         contour_mask = np.zeros_like(gray)
 
-        for c in arena_contours:
-            cv2.fillPoly(contour_mask, pts = [c], color=(255, 255, 255))
+        for contour in arena_contours:
+            cv2.fillPoly(contour_mask, pts=[contour], color=(255, 255, 255))
 
 
 
@@ -252,46 +237,18 @@ class SimpleTracker():
         return arena_contours
 
     def track(self):
+        # TODO  Either rewrite the whole thing
+        # ditch for an already existing Tracker class
+        # that we can integrate here
 
-        CFG = LearnMemConfiguration()
+        config = LearnMemConfiguration()
+        targets = config.content["arena"]["targets"]
 
-        targets = CFG.content["arena"]["targets"]
-
-    # THIS FUNCTION NEEDS TO BE SPLIT INTO AT LEAST 2
-
-        if not self.control_thread.exit.is_set():
-            # # Check if experiment is over
-            # if self.control_thread.timestamp_seconds > self.control_thread.duration:
-            #     logger.info("Experiment duration is reached. Closing")
-            #     #self.save_record()
-            #     return False
-
-            # How much time has passed since we started tracking?
-            if self.control_thread.record_event.is_set():
-                self.control_thread.timestamp_datetime = datetime.datetime.now() - self.control_thread.record_start
-                self.control_thread.timestamp_seconds = self.control_thread.timestamp_datetime.total_seconds()
+        if not self.stopped:
 
             # Read a new frame
-            success, frame = self.stream.read_frame()
-            self.frame_original
-
-            # If ret is False, a new frame could not be read
-            # Exit
-            if not success:
-                if self.control_thread.video is None:
-                    print(success)
-                    print("Closing")
-                    self.failed_read_frame =+ 1
-                    logger.warning('Recursive call to track() {}'.format(self.recursive_calls))
-                    raise CouldNotReadFrameError("Could not read frame")
-                else:
-                    logger.info("Stream or video is finished. Closing")
-                    self.close()
-                    self.control_thread.stream_finished = True
-                    return False
-
-
-            frame = crop_stream(frame, self.crop)
+            _, frame = self.camera.read_frame()
+            frame = crop_camera(frame, self.crop)
 
             # Make single channel i.e. grayscale
             if len(frame.shape) == 3:
@@ -304,8 +261,9 @@ class SimpleTracker():
             # Annotate frame
             frame_color = self.annotate_frame(gray_color)
 
+
             # Find arenas for the first N frames
-            if self.frame_count < self.N and self.frame_count > 0 or not self.control_thread.arena_ok_event.is_set():
+            if self.frame_count < self.N and self.frame_count > 0 or not self.ready:
                 self.arena_contours = self.find_arenas(gray)
 
             if self.arena_contours is None:
@@ -315,8 +273,12 @@ class SimpleTracker():
 
             if found_targets < int(targets):
                 self.frame_count += 1
-                self.control_thread.frame_color = gray_color
+                self.frame_color = gray_color
                 raise LessArenasThanTargetError("Number of putative arenas found less than target. Discarding frame")
+
+
+            if not self.ready:
+                return True
 
 
             transform = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, self.block_size, self.param1)
@@ -344,7 +306,7 @@ class SimpleTracker():
                     # continue means we actually WON'T continue with the current arena
                     continue
 
-                elif id_arena <= targets:
+                if id_arena <= targets:
                     arenas_list[id_arena-1] = arena
                     # Update the id_arena to account for one more arena detected
                     id_arena += 1
@@ -355,40 +317,31 @@ class SimpleTracker():
 
             if found_arenas != self.targets:
                 self.frame_count += 1
-                self.control_thread.frame_color = gray_color
-                self.control_thread.fraction_area *= 0.99
                 raise LessArenasThanTargetError("Number of arenas found not equal to target. Discarding frame")
 
 
-            columns = CFG.content['arena']['columns']
+            columns = config.content['arena']['columns']
             x_coord = np.array([a.corners[1][0] for a in arenas_list])
             kmeans = KMeans(n_clusters=columns).fit(x_coord.reshape(len(x_coord), 1))
 
             cluster_mean_x = [0, ] * columns
             cluster_centers = list(range(columns))
-            for i, c in enumerate(range(columns)):
-                cluster_mean_x[i] = np.mean(x_coord[kmeans.labels_ == c])
+            for i, col in enumerate(range(columns)):
+                cluster_mean_x[i] = np.mean(x_coord[kmeans.labels_ == col])
 
             indices = sorted(range(len(cluster_mean_x)), key=lambda k: cluster_mean_x[k])
             labels = np.array(cluster_centers)[indices][kmeans.labels_]
             #print(labels)
 
-            for i, a in enumerate(arenas_list):
-                a.set_column(labels[i])
+            for i, arena in enumerate(arenas_list):
+                arena.set_column(labels[i])
 
 
-            # sort arenas by position!!
-            sorted_arenas_list = []
             # sort the arenas_list using the br corner attribute (.corners[1])
             # the corner is a tuple showing (x, y)
             # we want to sort first on y ([1]) and then on x ([0])
             # both in decreasing order because the
-
-
-
-            sorted_arenas_br_to_tl_horizontally = sorted(arenas_list, key=lambda a: (a.column, a.corners[1][1]))
-
-            self.row_all_flies = {}
+            sorted_arenas_br_to_tl_horizontally = sorted(arenas_list, key=lambda arena: (arena.column, arena.corners[1][1]))
 
             for identity, arena in enumerate(sorted_arenas_br_to_tl_horizontally):
 
@@ -442,13 +395,13 @@ class SimpleTracker():
                     # cv2.imwrite(Path(self.failed_arena_path, fname).__str__(), gray_crop)
                     continue
                 elif len(putative_flies) > 1:
-                    logger.debug("Arena {} in frame {}. Multiple flies found".format(arena.identity, self.frame_count))
-                    fly = sorted(putative_flies, key = lambda f: f.area, reverse=True)[0]
+                    logger.debug("Arena %d in frame #%d. Multiple flies found", arena.identity, self.frame_count)
+                    fly = sorted(putative_flies, key=lambda f: f.area, reverse=True)[0]
                 else:
                     fly = putative_flies[0]
 
 
-                logger.debug("Fly {} in arena {} validated with area {} and length {}".format(fly.identity, fly.arena.identity, fly.area, fly.diagonal))
+                logger.debug("Fly %d in arena %d validated with area %3.f and length %3.f", fly.identity, fly.arena.identity, fly.area, fly.diagonal)
 
                 row = {
                     "frame": self.frame_count,
@@ -475,21 +428,20 @@ class SimpleTracker():
 
 
             # Update GUI graphics
-            self.control_thread.frame_color = frame_color
             for i, arena in enumerate(sorted_arenas_br_to_tl_horizontally):
                 arena_crop = arena.crop(frame_color)
-                self.control_thread.stacked_arenas[i] = imutils.resize(arena_crop, width=arena_crop.shape[1]*3)
+                self.stacked_arenas[i] = imutils.resize(arena_crop, width=arena_crop.shape[1]*3)
 
             # TODO: Make into utils function
             #self.control_thread.stacked_arenas = self.stack_arenas(arenas_dict)
 
             # Print warning if number of flies in new frame is not the same as in previous
             if self.old_found != self.found_flies:
-                logger.debug("Found {} flies in frame {}".format(self.found_flies, self.frame_count))
+                logger.debug("Found %d flies in frame %d", self.found_flies, self.frame_count)
             self.old_found = self.found_flies
             self.found_flies = 0
 
-            self.update_counts()
+            self.frame_count += 1
 
 
             return True
@@ -502,34 +454,68 @@ class SimpleTracker():
             #self.save_prompt()
             return None
 
-    def update_counts(self):
-        self.frame_count += 1
-        if self.control_thread.record_event.is_set():
-                self.record_frame_count += 1
 
-        if self.frame_count % 100 == 0:
-            logger.info("Frame #{}".format(self.frame_count))
+    @property
+    def frame_count(self):
+        return self._frame_count
+
+    @frame_count.setter
+    def frame_count(self, value):
+        self._frame_count = value
+        if self._frame_count % 100 == 0:
+            logger.info("Frame #%s", (str(self._frame_count).zfill(5)))
+
+    @property
+    def ready(self):
+        return self._ready_event.is_set()
+
+    @ready.setter
+    def ready(self, value):
+        r"""
+        Set me from an owning class so the behavior of track changes.
+        """
+        if value is True:
+            self._ready_event.set()
 
 
+    @property
+    def framerate(self):
+        return self._framerate
 
-    def sample_fps(self, interval_duration=2):
+    @framerate.getter
+    def framerate(self):
 
-        while not self.control_thread.exit.is_set():
+        # if not even started yet!
+        if not self.running:
+            framerate = 0
+
+        # elif live feed
+        elif self.video_path is None:
+            framerate = self.camera.framerate
+
+        # if video
+        elif self.running and not self.stopped:
             before = self.frame_count
-            self.control_thread.exit.wait(interval_duration)
+            self._end_event.wait(self._delta_t)
             after = self.frame_count
-            sampled_fps = (after - before) / interval_duration
-            self.sampled_fps = sampled_fps
+            framerate = (after - before) / self._delta_t
 
-    def _sample_fps(self):
 
-        sample_fps_thread = threading.Thread(
-            name = "sample_fps",
-            target = self.sample_fps,
-            kwargs={"interval_duration": 2}
-        )
-        sample_fps_thread.start()
+        self._framerate = framerate
+        return self._framerate
 
+
+    @property
+    def info(self):
+        return self._info
+
+    @info.getter
+    def info(self):
+        logging.debug('Requesting SimpleTracker.info')
+        self._info.update({
+            "more_info": "more_info"
+        })
+        return self._info
 
     def run(self):
         """
@@ -538,83 +524,41 @@ class SimpleTracker():
         When while is finished, run self.close()
         Signal the exit event has been set if not yet
         This is the target function of the intermediate thread
-        and it runs self.track an indefinite amount of time
+        and it runs self.track an indefinite amount of time.
         """
-        error_counts = {LessArenasThanTargetError: 0, CouldNotReadFrameError: 0}
-        self.status = True
-        while self.status and not self.control_thread.exit.is_set():
+
+        super().run()
+
+        while not self.stopped:
+
             try:
-                self.status = self.track()
-                self._sample_fps()
-                self.merge_masks()
-                self.control_thread.gray_gui = cv2.bitwise_and(self.transform, self.main_mask)
-                self.recursive_calls += 1
+                if self.track() is not True:
+                    break
 
-            except (LessArenasThanTargetError, CouldNotReadFrameError) as e:
-                # status is one of the errors that track can return
-                # increase the counter accordingly
-                error_counts[type(e)] += 1
-                for error, count in error_counts.items():
-                    if count > 99999999999999999999999:
-                        print(error_counts)
-                        raise error
+            except (LessArenasThanTargetError, CouldNotReadFrameError):
+                self.fraction_area * 0.99
 
-                self.status = True
+        logger.debug("SimpleTracker.run detected stopped signal")
 
-        self.close()
-
-    def toprun(self):
+    def stop(self):
         """
-        Create an intermediate thread between the main
-        and the tracker thread, and start it
-        """
-
-        tracker_thread = threading.Thread(
-            name = "tracker_thread",
-            target = self.run
-        )
-
-        tracker_thread.start()
-        self.control_thread.tracker_thread = tracker_thread
-        return None
-
-    def close(self):
-        """
-        Release thre stream
+        Release thre camera
         Save the cached data
-        If the exit event is not yet set, call control_thread.close()
         """
-        self.stream.release()
-        self.control_thread.saver.stop_video()
-        logger.info("Tracking stopped")
-        logger.info("{} arenas in {} frames analyzed".format(20 * self.frame_count, self.frame_count))
-        logger.info("Number of arenas that fly is not detected in is {}".format(self.missing_fly))
-        self.control_thread.saver.store_and_clear()
+        super().stop()
+        self.camera.stop()
+        # TODO Move this to the control thread
+        # self.control_thread.saver.store_and_clear()
 
-        # if not self.control_thread.exit.is_set(): self.control_thread.close()
 
-    def merge_masks(self):
-
-        masks = self.masks.values()
-        if len(masks) != 0:
-            masks = np.array(list(masks))
-            main_mask = np.bitwise_or.reduce(masks)
-        else:
-            main_mask = np.full((self.video_height, self.video_width, 3), 255, dtype=np.uint8)
-
-        self.main_mask = main_mask
 
 if __name__ == "__main__":
     import argparse
-    from .control_thread import control_thread
 
     ap = argparse.ArgumentParser()
     ap.add_argument("-v", "--video")
-    ap.add_argument("-c", "--camera", type = str, default = "opencv", help="Stream source")
-    ap.add_argument("-g", "--gui", type = str, help="tkinter/opencv")
-    args = vars(ap.parse_args())
+    ap.add_argument("-c", "--camera_name", type=str, default="opencv", help="camera source")
+    ap.add_argument("-g", "--gui", type=str, help="tkinter/opencv")
+    ARGS = vars(ap.parse_args())
 
-    control_thread = ControlThread(track = True, camera = args["camera"], video = args["video"], gui = args["gui"])
-    control_thread.start()
-
-
+    # TODO Implement a main function for testing or independent running

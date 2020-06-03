@@ -2,7 +2,6 @@
 import logging
 import os
 import os.path
-from threading import Event
 import traceback
 
 # Third party imports
@@ -13,18 +12,21 @@ import pandas as pd
 # from learnmem.decorators import if_record_event, if_not_record_end_event
 from learnmem.configuration import LearnMemConfiguration
 from learnmem.helpers import get_machine_id, get_machine_name
+from learnmem.server.core.base import Settings, Root
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-CFG = LearnMemConfiguration()
+config = LearnMemConfiguration()
 
-MAX_N_ROWS_TO_INSERT = CFG.content["io"]["max_n_rows_to_insert"]
+MAX_N_ROWS_TO_INSERT = config.content["io"]["max_n_rows_to_insert"]
 
-# Set up package configurations
-
-# https://stackoverflow.com/questions/16740887/how-to-handle-incoming-real-time-data-with-python-pandas/17056022
-class SimpleSaver:
+#TODO Needs refactoring
+class SimpleSaver(Settings, Root):
+    r"""
+    Save results to a csv file styled in the format:
+        start_datetime + '_learnmem_' + self._machine_id + .csv
+    """
 
     output_dir = ""
     store = None
@@ -33,36 +35,38 @@ class SimpleSaver:
     video_writers = None
     _columns = []
     _output_csv = ""
-    _record_event = Event()
-    _stop_event = Event()
     resolution = (None, None)
-    framerate = 0
-    _cache = None
 
-    def __init__(self, control, track, result_dir, cache=None):
+    def __init__(self, result_dir, *args, control=False, track=False, **kwargs):
 
-        if cache is not None:
-            self._cache.extend(cache)
-        else:
-            self._cache = []
 
+        self._cache = {}
         self.control = control
+        if self.control:
+            self._cache['control'] = []
         self.track = track
-        self._machine_id = get_machine_id()
-        self._machine_name = get_machine_name()
+        if self.track:
+            self._cache['track'] = []
+
         self.result_dir = result_dir
+        config = LearnMemConfiguration()
+        self.video_format = config.content["saver"]["video_format"]
+        self.framerate = config.content["saver"]["framerate"]
+        self.resolution = config.content["saver"]["resolution"]
+
+        super().__init__(*args, **kwargs)
+
 
     def set_columns(self, columns):
         self._columns = columns
 
 
     def stop(self):
-        self._stop_event.set()
-        logger.info("csv file is %s", self._output_csv)
+        pass
 
-        if self.track:
-            self.stop_video()
-
+        # self.stop_video()
+        # for cache in self._cache:
+        #     self.store_and_clear(cache)
 
     def launch(self, start_datetime, resolution=None, framerate=None):
         """
@@ -73,8 +77,8 @@ class SimpleSaver:
         # prepare output directories
         self.output_dir = os.path.join(
             self.result_dir,  # root
-            self._machine_id,
-            self._machine_name,
+            get_machine_id(),
+            get_machine_name(),
             start_datetime
         )
 
@@ -84,7 +88,7 @@ class SimpleSaver:
         os.makedirs(self.output_dir, exist_ok=False)
         # os.mkdirs(os.path.join(self.output_dir, "frames"))
 
-        prefix = start_datetime + '_learnmem_' + self._machine_id
+        prefix = start_datetime + '_learnmem_' + get_machine_id()
 
         self._output_csv = os.path.join(self.output_dir, prefix + ".csv")
 
@@ -98,79 +102,57 @@ class SimpleSaver:
             video_out_fourcc = ['H264', 'XVID', 'MJPG', 'DIVX', 'FMP4', 'MP4V']
             vifc = video_out_fourcc[3]
 
-            video_format = CFG.content["saver"]["video_format"]
-            self.framerate = CFG.content["saver"]["framerate"] or framerate
-            self.resolution = CFG.content["saver"]["resolution"] or resolution
+
 
             logger.info('FPS of output videos: %.3f', framerate)
 
             self.video_writers = [
                 cv2.VideoWriter(
-                    os.path.join(self.output_dir, prefix + suffix + video_format),
+                    os.path.join(self.output_dir, prefix + suffix + self.video_format),
                     cv2.VideoWriter_fourcc(*vifc),
                     self.framerate, self.resolution
                 ) for suffix in ["_original.", "_annotated."]]
 
-            self._record_event.set()
-        else:
-            self._record_event.set()
 
-    def save_odors(self, odor_A, odor_B):
+    def save_odors(self, odor_a, odor_b):
         path2file = os.path.join(self.output_dir, "odors.csv")
         handle = open(path2file, 'w')
-        handle.write('odor_A,odor_B\n')
-        handle.write('{},{}\n'.format(odor_A, odor_B))
+        handle.write('odor_a,odor_b\n')
+        handle.write('{},{}\n'.format(odor_a, odor_b))
         handle.close()
 
-    def process_row(self, d):
+    def process_row(self, d, table_name):
         """
         Append row d to the store
         append the list of rows to the HDF5 store and clear the list.
         """
 
-        if not self._record_event.is_set():
-            logger.warning("record event is not yet set. Your data will not be saved")
-
-            return
-
-        if self._stop_event.is_set():
-            self.store_and_clear()
-            return
-
         if len(self._cache) >= MAX_N_ROWS_TO_INSERT:
-            self.store_and_clear()
+            self.store_and_clear(table_name)
 
-        probe = {
-            hardware: d[hardware] for hardware in
-            d if hardware in [e.ljust(16) for e in
-            ["ODOR_A_LEFT", "ODOR_A_RIGHT", "ODOR_B_LEFT", "ODOR_B_RIGHT"]]
-        }
+        self._cache[table_name].append(d)
 
-        logger.debug(probe)
-        self._cache.append(d)
-        # logger.warning(self._cache)
-
-    def store_and_clear(self):
+    def store_and_clear(self, table_name):
         """
         Convert the cache list to a DataFrame and append that to HDF5.
         """
 
         try:
-            df = pd.DataFrame.from_records(self._cache)[self._columns]
+            df = pd.DataFrame.from_records(self._cache[table_name])[self._columns[table_name]]
 
-        except KeyError as e:
+        except KeyError as error:
             logger.warning("No data was collected. Did you press the record button?")
             logger.warning(traceback.print_exc())
-            logger.warning(self._cache)
-            logger.warning(self._columns)
-            raise e
+            logger.warning(self._cache[table_name])
+            logger.warning(self._columns[table_name])
+            raise error
 
-        except Exception as e:
+        except Exception as error:
             logger.warning('There was an error saving the data')
             logger.warning(traceback.print_exc())
-            logger.warning(self._cache)
-            logger.warning(self._columns)
-            raise e
+            logger.warning(self._cache[table_name])
+            logger.warning(self._columns[table_name])
+            raise error
         else:
             self._cache.clear()
 
@@ -183,16 +165,14 @@ class SimpleSaver:
         # save to csv
         try:
             # append data
-            with open(self._output_csv, "a") as fh:
-                df.to_csv(fh, header=False)
+            with open(self._output_csv, "a") as filehandle:
+                df.to_csv(filehandle, header=False)
 
         except FileNotFoundError:
             logger.warning('File already removed. Not saving cache')
 
     def save_video(self, frame_anot, frame_orig):
 
-        if not self._record_event.is_set():
-            return
 
         imgs = [frame_orig, frame_anot]
         imgs_3_channels = []

@@ -5,24 +5,29 @@ These classes are instantiated by a Programmer instance
 taking the user input and the information from a Controller instance
 """
 # Standard library imports
-import time
 import logging
-from threading import Thread, Event
+from threading import Thread, Event, BrokenBarrierError
+import time
 
+from learnmem.server.core.base import Base, Root
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 #pylint: disable=W0223
 
-class BaseControllerThread(Thread):
+class BaseControllerThread(Base, Root):
+    r"""
+    Abstract class for parallel execution of pins in a Dummy or Pyfirmata board
+    This implementation requires each event is driven by a separate thread.
+    """
 
-    _stop_event = 'exit'
-    _t0 = 0
     _modes = {"output": "o", "pwm": "p"}
     _board = None
     pin_state = None
-    board_name = "ArduinoDummy"
 
-    def __init__(self, i, hardware, board, pin_state, pin_number, start, end, *args, value=1, sampling_rate=10.0, **kwargs):
+    def __init__(
+            self, i, hardware, board, pin_state, pin_number, start, end, *args,
+            value=1, sampling_rate=10.0, **kwargs
+        ):
         r"""
 
         :param i: A unique identifier for each instance
@@ -35,11 +40,13 @@ class BaseControllerThread(Thread):
         :type hardware: ``str`
 
         :param board:
-        An object of type pyfirmata board that is shared across threads and contains handlers for the physical board pins
+        An object of type pyfirmata board that is shared across threads
+        and contains handlers for the physical board pins.
         It needs to provide get_pin and write methods.
 
         :param pin_state:
-        A dictionary storing pairs of pin numbers and their corresponding state i.e. turned on or off.
+        A dictionary storing pairs of pin numbers and their corresponding state
+        i.e. turned on or off.
         It is updated live and shared by all the threads in run in the same Controller class
         This way, it can be used to query the state of the whole Controller.
 
@@ -56,13 +63,17 @@ class BaseControllerThread(Thread):
         :type end: ``float``
 
         :param value:
-        Value to which a pin is set to. If equal to 0.0 or 1.0, it will be coerced to 0 or 1 and the pin will open in digital mode
-        If it is a float between 0 and 1, it is not coerced and the pin is opened in pwm mode with that intensity (max intensity is 1).
+        Value to which a pin is set to. If equal to 0.0 or 1.0,
+        it will be coerced to 0 or 1 and the pin will open in digital mode.
+        If it is a float between 0 and 1,
+        it is not coerced and the pin is opened in pwm mode with that intensity
+        (max intensity is 1).
 
         :type value ``float``
 
         :param sampling_rate:
-        Frequency in Hertz (s-1) with which the thread will check if it should move on in the target function. Default 10.
+        Frequency in Hertz (s-1) with which the thread will check
+        if it should move on in the target function. Default 10.
         :type sampling_rate: ``float``
 
         :param args:
@@ -73,6 +84,7 @@ class BaseControllerThread(Thread):
         Extra keyword arguments for the Thread class.
         :type kwargs: ``dictionary``
         """
+        super().__init__(*args, **kwargs)
 
         self.index = i
         self._hardware = hardware
@@ -81,26 +93,40 @@ class BaseControllerThread(Thread):
         self._barriers = {}
         self._pin = None
 
-
-        logger.debug("Address from class %s of pin_state in memory %s", self.__class__.__name__, id(self.pin_state))
+        logger.debug(
+            "Address from class %s of pin_state in memory %s",
+            self.__class__.__name__, id(self.pin_state)
+        )
 
         self.pin_number = pin_number
-        self.start_time = start
-        self.end_time = end
+        self.start_seconds = start
+        self.end_seconds = end
         self._value = value
         self.sampling_rate = sampling_rate
-        super().__init__(*args, **kwargs)
 
     @property
     def name(self):
+        r"""
+        Unique thread identifier
+        with format HARDWARE@PIN_NUMBER-i
+        """
         return f"{self._hardware}@{str(self.pin_number).zfill(3)}-{self.index}"
 
     @property
     def duration(self):
-        return self.end_time - self.start_time
+        r"""
+        Seconds since the thread will first turn on the pin
+        until it turns it off for the last time.
+        """
+        return self.end_seconds - self.start_seconds
 
     @property
     def value(self):
+        r"""
+        Value the thread writes to the pin
+        everytime it _turns_on().
+        If < 1, it requires PWM support
+        """
         if self._value in [0.0, 1.0]:
             return int(self._value)
         else:
@@ -108,23 +134,38 @@ class BaseControllerThread(Thread):
 
     @property
     def mode(self):
+        r"""
+        Based on self.value, if integer (0 or 1)
+        the pin is selected in output mode
+        otherwise in pwm mode.
+        """
+        #TODO Support input mode too
 
         if self.value is int:
             return self._modes["output"]
         else:
             return self._modes["pwm"]
 
-        #TODO Support input mode too
-
-    @property
-    def t0(self):
-        return self._t0
-
-    def set_t0(self, t0):
-        self._t0 = t0
 
     def add_barrier(self, barrier, name):
+        r"""
+        Set barrier as a blocking element during execution of the thread
+        in the name position
+        name = start -> before turning the pin on for the first time
+        name = end -> after turning the pin off for the last time
+        (right before self.run() is over).
+        """
         self._barriers[name] = barrier
+
+    def is_wave(self):
+        r"""
+        If True, the thread implements a duty cycle
+        during the execution of self.turn_on()
+        This is currently determined by the name of the class
+        starting with Wave
+        """
+        value = self.__class__.__name__[:4] == "Wave"
+        return value
 
     def turn_on(self):
         # TODO This will set the value of the pin in the convenience monitor
@@ -148,37 +189,41 @@ class BaseControllerThread(Thread):
         # implemented in a subclass
         raise NotImplementedError
 
-    @property
-    def time_passed(self):
-        return time.time() - self._t0
-
     def run(self):
+
+        super().run()
 
         logger.debug(
             "%s (class %s) is starting to run",
             self.name, self.__class__.__name__
         )
 
-        while self.time_passed < self.start_time:
-
-            # if self._hardware == "ODOR_A_RIGHT".ljust(16):
-            #     logger.info(self.time_passed)
-
+        while self.elapsed_seconds < self.start_seconds:
             time.sleep(1/self.sampling_rate)
+            if self.stopped:
+                logger.info('%s is stopping early', self.name)
+                self.turn_off()
+                return
+
 
         # make sure all contemporaneous threads start as close to each other as possible
         # this call locks the thread until the contemporaneous threads reach the same state
         try:
             self._barriers["start"].wait()
-        except KeyError:
-            pass
+        except (KeyError, BrokenBarrierError):
+            logger.info('%s is stopping early', self.name)
+            return
 
         # turn on
         self.turn_on()
 
         # wait until you should turn off
-        while self.time_passed < self.end_time:
+        while self.elapsed_seconds < self.end_seconds:
             time.sleep(1/self.sampling_rate)
+            if self.stopped:
+                logger.info('%s is stopping early', self.name)
+                self.turn_off()
+                return
 
         # turn off
         self.turn_off()
@@ -187,9 +232,23 @@ class BaseControllerThread(Thread):
         # and those that should start right afterwards
         try:
             self._barriers["end"].wait()
-        except KeyError:
-            pass
+        except (KeyError, BrokenBarrierError):
+            logger.info('%s is stopping early', self.name)
+            return
 
+    def abort(self):
+        r"""
+        Stop execution by setting the end_event and aborting barriers.
+        This invalidates the barriers, which means the threads won't block
+        when they reach them.
+        """
+        for barrier in self._barriers.values():
+            barrier.abort()
+
+    def stop(self):
+        super().stop()
+        self.abort()
+        self.turn_off()
 
 class WaveBaseControllerThread(BaseControllerThread):
     r"""
@@ -201,21 +260,34 @@ class WaveBaseControllerThread(BaseControllerThread):
     it turns on for on seconds and off for off seconds.
     """
 
-    def __init__(self, on, off, *args, **kwargs):
+    def __init__(self, seconds_on, seconds_off, *args, **kwargs):
         r"""
-        :param on: Time in seconds the pin should stay on in each cycle.
-        :type on: ``float``
+        :param seconds_on: Time in seconds the pin should stay on in each cycle.
+        :type seconds_on: ``float``
 
-        :param off: Time in seconds the pin should stay off in each cycle.
-        :type off: ``float``
+        :param seconds_off: Time in seconds the pin should stay off in each cycle.
+        :type seconds_off: ``float``
         """
-
-        self.on = on
-        self.off = off
+        self._seconds_on = seconds_on
+        self._seconds_off = seconds_off
         self._shore = Event()
-
         self._on_thread = Thread(target=self.wave)
         super().__init__(*args, **kwargs)
+
+
+    @property
+    def shore(self):
+        return self._shore.is_set()
+
+    @shore.setter
+    def shore(self, value):
+        if not self._shore.is_set():
+            if value is True:
+                self._shore.set()
+
+    def stop(self):
+        self.shore = True
+        super().stop()
 
     def wave(self):
         r"""
@@ -225,9 +297,9 @@ class WaveBaseControllerThread(BaseControllerThread):
 
         while not self._shore.is_set():
             self._turn_on()
-            self._shore.wait(self.on)
+            self._shore.wait(self._seconds_on)
             self._turn_off()
-            self._shore.wait(self.off)
+            self._shore.wait(self._seconds_off)
         logger.info(
             "%s (class %s) has reached the shore",
             self.name, self.__class__.__name__
@@ -262,7 +334,6 @@ class ArduinoMixin():
     pin_number = None
     _value = 1
     mode = None
-    board_name = "ArduinoX"
 
     @property
     def pin(self):
@@ -301,7 +372,7 @@ class DummyMixin():
         if self._hardware != "ONBOARD_LED".ljust(16):
             logger.info(
                 "%s (class %s) is setting %s to %.8f @ %.4f",
-                self.name, self.__class__.__name__, self._hardware, self.value, self.time_passed
+                self.name, self.__class__.__name__, self._hardware, self.value, self.elapsed_seconds
             )
 
     def _turn_off(self):
@@ -309,7 +380,7 @@ class DummyMixin():
         if self._hardware != "ONBOARD_LED".ljust(16):
             logger.info(
                 "%s (class %s) is setting %s to %.8f @ %.4f",
-                self.name, self.__class__.__name__, self._hardware, 0, self.time_passed
+                self.name, self.__class__.__name__, self._hardware, 0, self.elapsed_seconds
             )
 
 class DefaultDummyThread(DummyMixin, BaseControllerThread):

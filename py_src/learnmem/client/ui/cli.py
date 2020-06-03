@@ -20,7 +20,7 @@ logger.setLevel(logging.INFO)
 
 
 def RepresentsInt(s):
-    try: 
+    try:
         int(s)
         return True
     except ValueError:
@@ -34,12 +34,6 @@ class CLIGui():
 
     def __init__(self):
 
-        
-        self.ds = DeviceScanner()
-        self.ds.start()
-        self._device = self.ds.get_device(0)
-        
-        
         CFG = LearnMemConfiguration()
 
         self.odor_A = CFG.content["experiment"]["odor_A"]
@@ -66,8 +60,8 @@ class CLIGui():
 
     @property
     def programs(self):
-        return self._device.info["programs"]      
-            
+        return self._device.info["programs"]
+
     def let_user_pick(self, menu_name):
         print("Please choose:")
         options = self.menus[menu_name]
@@ -76,26 +70,26 @@ class CLIGui():
         i = input("Enter number: ")
         if i == '':
             i = self.let_user_pick(menu_name)
-        
+
         while not RepresentsInt(i):
             logger.warning('You entered answer: {}'.format(i))
             logger.warning('This is not valid. Try again!')
             i = self.let_user_pick(menu_name)
-        
+
         result = int(i)
         return result
 
     def run(self):
         '''
         '''
-       
+
         try:
             menu_name = self.menu_name
 
             success = self.proceed(menu_name, self.answer)
             self.display_log(success, menu_name)
 
-            
+
             key_too_large = self.answer > len(self.menus[menu_name])
 
             if self.answer == 2 and menu_name == "general":
@@ -107,16 +101,14 @@ class CLIGui():
             elif self.answer == 7 and menu_name == "general":
                 menu_name = "Rsettings"
 
-
             elif not success:
                 menu_name = "general"
 
             elif success and menu_name == 'programs':
                 menu_name = "general"
-            
+
             elif key_too_large:
                 logger.warning('Sorry, the number you entered does not match any option. Please enter a valid number!')
-
 
             self.answer = self.let_user_pick(menu_name)
             #print(self.answer)
@@ -130,10 +122,10 @@ class CLIGui():
             logger.warning('I do not understand that answer')
             logger.warning(e)
             # self._error_event.set()
-            
+
         if self._error_event.is_set():
             self.close()
- 
+
     def close(self):
         """
         Quit the GUI and close the remote control thread
@@ -152,28 +144,28 @@ class CLIGui():
     def name_odors(self):
         self.odor_A = input('Name of odor A: ')
         self.odor_B = input('Name of odor B: ')
-             
+
 
     def proceed(self, menu_name, answer):
-        
+
         while len(self.menus[menu_name]) < answer-1:
             logger.warning('You entered answer: {}'.format(answer))
             logger.warning('This is not valid. Try again!')
             answer = self.let_user_pick(menu_name)
-            
+
         options = self.menus[menu_name][answer-1]
         switch_menu = self.answer == len(self.menus[menu_name])
         if switch_menu:
             return False
-                
-                
+
+
         if menu_name == "general":
             if not self._device.info["play_event"] and answer == 1 and self._device.info["track"]:
                 self._device.control("play")
 
                 subprocess.call(['python',  '-m',  'webbrowser',  "file:///tmp/last_img.jpg"])
                 return True
-            
+
             elif answer == 3:
                 pass
                 # handled by its submenu
@@ -183,7 +175,7 @@ class CLIGui():
                 return True
 
             elif not self._device.info["arena_ok_event"] and answer == 5:
-              
+
                 logger.info(f'Acquistion time: {self._device.info["acquistion_time"]}')
                 logger.info(f'FPS: {self._device.info["fps"]}')
                 odors = " ".join([self._device.info["odor_A"], self._device.info["odor_B"]])
@@ -224,17 +216,17 @@ class CLIGui():
             if answer == 1:
                 self.r_session.run()
                 return True
-            
+
             elif answer < len(self.menus[menu_name]):
 
                 try:
-                    
+
                     param_name = self.menus[menu_name][answer-1]
                 except IndexError:
                     pass
 
                 param_value = int(input("Enter new {}: ".format(param_name)))
-                # TODO Send settings to the r_session        
+                # TODO Send settings to the r_session
                 return True
 
 
@@ -242,7 +234,7 @@ class CLIGui():
 
             settings_options = [e.split('(')[0] if len(e.split('(')) > 1 else e for e in self.menus[menu_name]]
             settings_options = [e.split(' ')[1] if len(e.split(' ')) > 1 else e for e in settings_options]
-            
+
             if answer == settings_options.index('fps')+1:
                 self.update_setting("fps")
 
@@ -254,7 +246,7 @@ class CLIGui():
 
 
     def prompt_new_value(self, info, param_name):
-            
+
         old_value = info[param_name]
         logger.info('{} is set to {}'.format(param_name, old_value))
         value = float(input("Enter new {}: ".format(param_name)))
@@ -280,12 +272,12 @@ class CLIGui():
         if success:
             try:
                 effect = self.effects[menu_name][self.answer-1]
-                    
-                if not effect is None:    
+
+                if not effect is None:
                     logger.info(effect.format(""))
                 # else:
                 #     logger.info(effect)
-                
+
                 time.sleep(2)
             except IndexError:
                 pass
@@ -307,11 +299,11 @@ class CLIGui():
                         }
                 )
 
-            logger.debug('Background progress bar')        
-            progress_bar_thread.start()        
+            logger.debug('Background progress bar')
+            progress_bar_thread.start()
 
         else:
-            logger.debug('Foreground progress bar')          
+            logger.debug('Foreground progress bar')
             self.progress_bar_main(seconds, until_event=until_event, name=name)
 
         return event_done

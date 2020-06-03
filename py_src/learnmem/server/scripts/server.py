@@ -5,191 +5,300 @@
 import argparse
 import json
 import logging
+import logging.handlers
 import signal
-import sys
+from threading import Thread
 
-import coloredlogs
-from learnmem.decorators import warning_decorator, error_decorator
-from learnmem.server.core.control_thread import ControlThread
-from learnmem.helpers import get_machine_id, get_git_version
-from learnmem.configuration import LearnMemConfiguration
 import bottle
+import coloredlogs
+import urllib.parse
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+from learnmem.decorators import warning_decorator, error_decorator, wrong_id
+from learnmem.server.core.control_thread import ControlThread
+from learnmem.helpers import get_machine_id, get_git_version, get_server
+from learnmem.configuration import LearnMemConfiguration
+
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    datefmt='%m-%d %H:%M',
+                    filename='IDOC.log',
+                    filemode='w')
+
+logger = logging.getLogger('')
+
+socket_handler = logging.handlers.SocketHandler(
+    'localhost',
+    logging.handlers.DEFAULT_TCP_LOGGING_PORT
+)
+socket_handler.setLevel(logging.INFO)
+logger.addHandler(socket_handler)
+coloredlogs.install()
+
 
 app = bottle.Bottle()
 STATIC_DIR = "../static"
 
-@app.post("/update")
+@app.post("/settings/<id>")
 @warning_decorator
+@wrong_id
 def update():
+    r"""
+    Receive the new settings passed by the user
+    via a POST request in JSON format.
+    A partial update is ok i.e. not all parameters
+    need to be supplied, only those changing.
+    A dictionary with the current values is returned
+    upong GETting to this same URL.
+    """
+    settings_json = bottle.request.body.read() # pylint: disable=no-member
+    settings = json.loads(settings_json)
+    control.settings = settings
+    return {"status": "success"}
 
-    data = bottle.request.body.read()
-    data = json.loads(data)
-    control.update(**data)
 
-@app.get("/camera_settings")
+@app.get("/settings/<id>")
+@wrong_id
 @warning_decorator
-def get_device_info():
-    return {""}
+def report():
+    r"""
+    Return current value of the settings to the user
+    Settings can be updated by POSTing to the same URL.
+    """
+    settings = control.settings
+    return settings
 
 
-@app.get("/data")
+@app.get("/info/<id>")
 @warning_decorator
-def info():
+@wrong_id
+def inform():
+    r"""
+    Return information about the control thread to the user,
+    contained in the info property.
+    """
     return control.info
 
+@app.get('/id')
+@error_decorator
+def get_id():
+    r"""
+    Return the content of /etc/machine-id to the user.
+    URLs are suffixed in the API to check the supplied id
+    with the id of the machine.
+    A mismatch is interpreted as a user mistake and a
+    WrongMachineID expception is raised.
+    """
+    return {"id": control.info["id"]}
 
-@app.post("/close")
+
+@app.post('/load_program/<id>')
 @warning_decorator
-def close():
-
-    data = bottle.request.body.read()
-    data = json.loads(data)
-
-    status = control.close(answer=data["answer"])
-    return status
-
-@app.post('/load_program')
-@warning_decorator
+@wrong_id
 def load_program():
+    r"""
+    Update the hardware program loaded in IDOC.
+    Do this by posting an object with key program_path
+    and value the filename of one of the csv files in the
+    programs_dir.
+    programs_dir is defined in the config file under
+    folders > programs > path.
+    A list of the programs can be retrieved by GETting to /list_programs/.
+    """
+    post_data = bottle.request.body.read() # pylint: disable=no-member
+    data_decoded = urllib.parse.parse_qs(post_data.decode())
+    print(data_decoded)
+    program_path = data_decoded["program_path"][0]
+    control.load_program(program_path=program_path)
+    return {"status": "success"}
 
-    data = bottle.request.body.read()
-    data = json.loads(data)
-    control.load_program(program_path=data["program_path"])
 
-
-@app.get('/list_programs')
+@app.get('/list_programs/<id>')
 @warning_decorator
+@wrong_id
 def list_programs():
-
+    r"""
+    Get a list of the available programs that the user
+    can select via POSTing to /load_program.
+    This is also available in info["controller"]["programs"].
+    """
     return control.list_programs()
 
-@app.get('/mapping')
+@app.get('/mapping/<id>')
 @warning_decorator
+@wrong_id
 def mapping():
-
+    r"""
+    Tell the user that is the hardware-board pin mapping loaded in IDOC
+    This is also available in info["controller"]["mapping"].
+    """
     return control.mapping
 
-
-@app.get('/pin_state')
+@app.get('/pin_state/<id>')
 @warning_decorator
+@wrong_id
 def pin_state():
-
+    r"""
+    Return the status of the board pins
+    This is also available in info["controller"]["pin_state"]
+    """
     return control.pin_state
 
 
-@app.get("/controls/<action>")
+@app.get('/controls/<submodule>/<action>/<id>')
 @warning_decorator
-def control(action):
+@wrong_id
+def control(submodule, action):
+    r"""
+    Command the IDOC modules.
+    Set a submodule as ready, start or stop it by supplying
+    ready, start and stop as action
+    Actions are available for the tracker and controller modules
+    as well as the control thread.
+    """
+    if submodule == "control_thread" and action == "stop":
+        # exit the application completely
+        stop()
 
-    if action == "play":
-        control.play()
+    return control.command(submodule, action)
 
-    if action == "ok_arena":
-        control.ok_arena()
+@app.get('/logs/<id>')
+@warning_decorator
+@wrong_id
+def get_logs():
+    r"""
+    Return the last 10 logs generated in the control thread.
+    """
+    # return the last 10 logs
+    logs = control.logs()
+    logs["logs"] = logs["logs"][::-1][:10][::-1]
+    return logs
 
-    elif action == "record":
-        control.record()
 
 # Arguments to follow the command, adding video, etc options
-ap = argparse.ArgumentParser()
-ap.add_argument("--control", action='store_true', dest='control', help="Shall I run Arduino?")
-ap.add_argument("--no-control", action='store_false', dest='control')
-ap.add_argument("--track", action='store_true', dest='track', help="Shall I track flies?")
-ap.add_argument("--no-track", action='store_false', dest='track', help="Shall I track flies?")
-ap.add_argument("-r", "--reporting", action='store_true')
-ap.add_argument("-c", "--camera",      type=str, help="Stream source", choices=["webcam", "pylon"], default='pylon')
-# ap.add_argument("--config",            type=str, help="Path to config.yaml file")
-ap.add_argument("-e", "--experimenter",type=str, help="Add name of the experimenter/operator")
-ap.add_argument("-f", "--fps",         type=int, help="Frames per second in the opened stream. Default as stated in the __init__ method in Tracker, is set to 2")
-ap.add_argument("-g", "--gui_name",    type=str, help="tkinter/opencv", choices=['opencv', 'tkinter', 'cli'])
-ap.add_argument("-l", "--log_dir",     type=str, help="Absolute path to directory where log files will be stored")
-ap.add_argument("-o", "--output_path", type=str, help="Absolute path to directory where output files will be stored")
-ap.add_argument("-m", "--mapping_path",     type=str, help="Absolute path to csv providing pin number-pin name mapping", )
-ap.add_argument("-p", "--port",        type=int)
-ap.add_argument("--arduino_port",      type=str, help="Absolute path to the Arduino port. Usually '/dev/ttyACM0' in Linux and COM in Windows")
-ap.add_argument("--program_path",           type=str, help="Absolute path to csv providing the Arduino top level program")
-ap.add_argument("-u", "--time",        type=str, help="Time unit to be used", default="m")
-ap.add_argument("-v", "--video",       type=str, help="location to the video file", default=None)
-ap.add_argument("-b", "--board",       type=str, help="Name of Arduino board in use", choices=["ArduinoUno", "ArduinoMega", "ArduinoDummy"])
-ap.add_argument("-D", "--debug",       action='store_true', dest="debug")
-ap.set_defaults(
-    control=False, track=False, output_path="lemdt_results",
-    gui_name='cli', log_dir='.', port=9000, arduino_port="/dev/ttyACM0", camera='pylon', experimenter="Sayed", board='ArduinoDummy'
-
+parser = argparse.ArgumentParser(
+    prog="IDOC - The Individual Drosophila Optogenetic Conditioner",
+    description="A modular package to track flies\
+        while running a preset paradigm of hardware events controlled by an Arduino board."
 )
 
-CFG = LearnMemConfiguration()
+# Control module
+parser.add_argument(
+    "--control", action='store_true', dest='control',
+    help="Shall %(prog)s run Arduino?"
+)
+parser.add_argument("--no-control", action='store_false', dest='control')
+parser.add_argument(
+    "-m", "--mapping_path", type=str,
+    help="Absolute path to csv providing pin number-pin name mapping"
+)
+parser.add_argument(
+    "--program_path", type=str,
+    help="Absolute path to csv providing the Arduino top level program"
+)
+parser.add_argument(
+    "-b", "--board_name", type=str,
+    help="Name of Arduino board in use", choices=["ArduinoUno", "ArduinoMega", "ArduinoDummy"]
+)
+parser.add_argument(
+    "--arduino_port", type=str,
+    help="Absolute path to the Arduino port. Usually '/dev/ttyACM0' in Linux and COM in Windows"
+)
 
+# Track module
+parser.add_argument(
+    "--track", action='store_true', dest='track',
+    help="Shall %(prog)s track flies?"
+)
+parser.add_argument(
+    "--no-track", action='store_false', dest='track',
+    help="Shall %(prog)s track flies?"
+)
 
-data = vars(ap.parse_args())
+parser.add_argument("-c", "--camera", type=str, help="Stream source", choices=["webcam", "pylon"])
+parser.add_argument(
+    "-f", "--framerate", type=int,
+    help="Frames per second in the opened stream, overrides config."
+)
+parser.add_argument(
+    "-v", "--video-path", type=str, dest='video_path',
+    help="location to the video file"
+)
+
+# Save module
+parser.add_argument(
+    "--save", action='store_true', dest='save',
+    help="Shall %(prog)s save the results? You can decide not to save later"
+)
+parser.add_argument(
+    "--no-save", action='store_false', dest='save',
+    help="Shall %(prog)s save the results? You can decide not to save later"
+)
+parser.add_argument(
+    "-o", "--output_path", type=str,
+    help="Absolute path to directory where output files will be stored"
+    )
+
+# General application module
+parser.add_argument("-e", "--experimenter", type=str, help="Add name of the experimenter/operator")
+parser.add_argument(
+    "-l", "--log_dir", type=str,
+    help="Absolute path to directory where log files will be stored"
+)
+
+parser.add_argument("-p", "--port", type=int)
+
+parser.add_argument("-D", "--debug", action='store_true', dest="debug")
+parser.set_defaults(
+    # TODO Change output_path
+    control=False, track=False, output_path="lemdt_results", save=True,
+    log_dir='.', port=9000, arduino_port="/dev/ttyACM0", camera='pylon',
+    experimenter="Sayed"
+)
+
+config = LearnMemConfiguration()
+data = vars(parser.parse_args())
 
 machine_id = get_machine_id()
 version = get_git_version()
-result_dir = CFG.content["folders"]["results"]["path"]
+RESULT_DIR = config.content["folders"]["results"]["path"]
+PORT = data.pop("port") or config.content["network"]["port"]
 
-
-PORT = data.pop("port") or CFG.content["network"]["port"]
-
-logger.info("Running server on port %d", PORT)
-
-# DEBUG = data.pop("debug") or CFG.content["network"]["port"]
-data.pop("debug")
-DEBUG = CFG.content["network"]["port"]
+DEBUG = data.pop("debug") or config.content["network"]["port"]
 
 control = ControlThread(
     machine_id=machine_id,
     version=version,
-    result_dir=result_dir,
+    result_dir=RESULT_DIR,
     experiment_data=data,
 )
 
-control.start()
 
-logger.info("Started ControlThread")
+
+def run(port):
+    server = get_server(port)
+    logger.info("Running bottle on server %s, port %d", server, port)
+    bottle.run(app, host='0.0.0.0', port=port, debug=DEBUG, server=server)
+
+server_thread = Thread(target=run, name="bottle", args=(PORT,))
 
 def stop(signo=None, _frame=None):
-    global control
-    logging.info("Received signal %s", signo)
-    control.close()
-    sys.exit(0)
+    r"""
+    A function to bind the arrival of specific signals to an action.
+    """
+    logger.info("Received signal %s", signo)
+    control.stop()
+    # if 'cherrypy' in bottle.server_names:
+    logger.info("Executing cherrypy server stop")
+    bottle.server_names['cherrypy'].stop() # pylint: disable=no-member
+    return
+
 
 signals = ('TERM', 'HUP', 'INT')
 for sig in signals:
     signal.signal(getattr(signal, 'SIG' + sig), stop)
 
-class CherootServer(bottle.ServerAdapter):
-    def run(self, handler): # pragma: no cover
-        from cheroot import wsgi
-        from cheroot.ssl import builtin
-        self.options['bind_addr'] = (self.host, self.port)
-        self.options['wsgi_app'] = handler
-        certfile = self.options.pop('certfile', None)
-        keyfile = self.options.pop('keyfile', None)
-        chainfile = self.options.pop('chainfile', None)
-        server = wsgi.Server(**self.options)
-        if certfile and keyfile:
-            server.ssl_adapter = builtin.BuiltinSSLAdapter(
-                    certfile, keyfile, chainfile)
-        try:
-            server.start()
-        finally:
-            server.stop()
+def main():
+    control.start()
+    server_thread.start()
 
-SERVER = "cheroot"
-try:
-    #This checks if the patch has to be applied or not. We check if bottle has declared cherootserver
-    #we assume that we are using cherrypy > 9
-    from bottle import CherootServer
-except Exception as e:
-    #Trick bottle to think that cheroot is actulay cherrypy server, modifies the server_names allowed in bottle
-    #so we use cheroot in background.
-    SERVER="cherrypy"
-    bottle.server_names["cherrypy"]=CherootServer(host='0.0.0.0', port=PORT)
-    logger.warning("Cherrypy version is bigger than 9, we have to change to cheroot server")
-    logger.warning(e)
-#########
-
-bottle.run(app, host='0.0.0.0', port=PORT, debug=DEBUG, server=SERVER)
+main()

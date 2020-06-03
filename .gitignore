@@ -117,3 +117,7 @@ scripts/make_app.sh
 
 LeMDT/logs/*
 .vscode/
+**/pypylon
+**/swig*
+
+

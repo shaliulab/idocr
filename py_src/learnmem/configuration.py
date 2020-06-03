@@ -43,11 +43,11 @@ class LearnMemConfiguration(object):
         },
 
         'tracker': {
-            'fps': 10, 'experimenter': 'Sayed', 'crop': 1, 'N': 10, 'fail': 'failed_arenas/'
+            'framerate': 10, 'experimenter': 'Sayed', 'crop': 1, 'N': 10, 'fail': 'failed_arenas/'
         },
 
         'controller': {
-            'board': 'ArduinoMega',
+            'board_name': 'ArduinoMega',
             'mapping_path': '/1TB/Cloud/Lab/Gitlab/learnmem/py_src/mappings/mega.csv'
         },
 
@@ -75,7 +75,8 @@ class LearnMemConfiguration(object):
             "decision_zone_mm": 10,
             "min_exits_required": 5,
             "max_time_minutes": 60,
-            "sampling_rate": 50
+            "sampling_rate": 50,
+            "location": None
         }
     }
 

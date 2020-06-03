@@ -1,4 +1,11 @@
+r"""
+Boards that a Controller class can drive with the program generated
+in a Programmer class.
+For now, only a dummy board that just logs to the screen and adaptor classes
+from pyfirmata are available.
+"""
 import logging
+
 
 from pyfirmata import Arduino, ArduinoMega
 
@@ -32,3 +39,5 @@ class ArduinoMegaBoard(ArduinoMega):
     to select the right ControllerThreads
     """
     board_compatible = "ArduinoX"
+
+BOARDS = {'ArduinoUno': ArduinoBoard, 'ArduinoMega': ArduinoMegaBoard, 'ArduinoDummy': ArduinoDummy}
