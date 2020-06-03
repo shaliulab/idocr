@@ -1,20 +1,24 @@
 # Standard library imports
 import datetime
 import logging
-# import shutil
+import os.path
 
 # Local application imports
 from learnmem.server.controllers.controllers import Controller
 from learnmem.server.core.base import Base, Root
-from learnmem.server.trackers.simple_tracker import SimpleTracker
+from learnmem.server.core.recognizer import Recognizer
+# from learnmem.server.trackers.simple_tracker import SimpleTracker
 from learnmem.server.trackers.adaptive_bg_tracker import AdaptiveBGModel
-from learnmem.server.io.saver import SimpleSaver
+from learnmem.server.io.result_writer import CSVResultWriter
 from learnmem.configuration import LearnMemConfiguration
 from learnmem.helpers import get_machine_id, get_machine_name
+from learnmem.server.io.pylon_camera import PylonCamera
+from learnmem.server.io.opencv_camera import OpenCVCamera
+from learnmem.server.roi_builders.roi_builders import DefaultROIBuilder
+from learnmem.server.roi_builders.target_roi_builder import IDOCROIBuilder
+from learnmem.server.drawers.drawers import DefaultDrawer
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
 
 class ControlThread(Base, Root):
     r"""
@@ -24,27 +28,48 @@ class ControlThread(Base, Root):
 
     _option_dict = {
 
+        'roi_builder': {
+            'possible_classes': [
+                IDOCROIBuilder
+            ],
+            'default_class': IDOCROIBuilder
+        },
+
         'tracker': {
             'possible_classes': [
                 #DefaultTracker,
-                SimpleTracker, AdaptiveBGModel
+                AdaptiveBGModel
                 #AdaptiveBGModel
             ],
-            'default_class': SimpleTracker
+            'default_class': AdaptiveBGModel
         },
 
-        'saver': {
+        'drawer': {
             'possible_classes': [
-
-                SimpleSaver
+                DefaultDrawer
             ],
-            'default_class': SimpleSaver
+            'default_class': DefaultDrawer
+
+        },
+
+        'camera': {
+            'possible_classes': [
+                PylonCamera, OpenCVCamera
+            ],
+            'default_class': PylonCamera
+        },
+
+        'result_writer': {
+            'possible_classes': [
+                CSVResultWriter
+            ],
+            'default_class': CSVResultWriter
         }
     }
 
+    # TODO Clean this
     _odor_a = "A" #overriden by conf and user
     _odor_b = "B" #overriden by conf and user
-    _columns = ["t"]
     sampling_rate = 50 # overriden by conf
 
 
@@ -54,30 +79,28 @@ class ControlThread(Base, Root):
         self._settings = {"adaptation_time": 0}
         self._submodules = {}
 
-
         self.machine_id = machine_id
         self.version = version
         self._result_dir = result_dir
 
         # TODO: Fix this dirty init function
-        config = LearnMemConfiguration()
-        for k in config.content['experiment']:
-            setattr(self, k, config.content['experiment'][k])
+        self._config = LearnMemConfiguration()
+        for k in self._config.content['experiment']:
+            setattr(self, k, self._config.content['experiment'][k])
 
         ## Assignment of attributes
         self.control = experiment_data['control']
-        self.track = experiment_data['track']
+        self.recognize = experiment_data['recognize']
         self.save = experiment_data['save']
 
         # self.reporting = experiment_data["reporting"]
-        self.camera = experiment_data["camera"]
-        self.video_path = experiment_data["video_path"]
-
-        self.mapping_path = experiment_data["mapping_path"] or config.content['controller']['mapping_path']  # pylint: disable=line-too-long
+        self.camera_name = experiment_data["camera"]
+        self._video_path = experiment_data["video_path"]
+        self.mapping_path = experiment_data["mapping_path"] or self._config.content['controller']['mapping_path']  # pylint: disable=line-too-long
         self.program_path = experiment_data["program_path"]
         self.output_path = experiment_data["output_path"]
         self.arduino_port = experiment_data["arduino_port"]
-        self.board_name = experiment_data["board_name"] or config.content['controller']['board_name'] # pylint: disable=line-too-long
+        self.board_name = experiment_data["board_name"] or self._config.content['controller']['board_name'] # pylint: disable=line-too-long
         self.experimenter = experiment_data["experimenter"]
         self._status = {}
 
@@ -91,15 +114,14 @@ class ControlThread(Base, Root):
     @info.getter
     def info(self):
 
-        config = LearnMemConfiguration()
-        logging.debug('Control thread is updating the info')
+        # logger.debug('Control thread is updating the info')
         status = 'offline'
 
-        if self.track:
-            self._info["tracker"] = self.tracker.info
+        if self.recognize:
+            self._info["recognizer"] = self.recognizer.info
             status = 'running'
         else:
-            self._info["tracker"] = {"status": "offline"}
+            self._info["recognizer"] = {"status": "offline"}
 
         if self.control:
             self._info["controller"] = self.controller.info
@@ -110,17 +132,17 @@ class ControlThread(Base, Root):
 
         self._info.update({
             "id": get_machine_id(),
-            "location": config.content["experiment"]["location"],
+            "location": self._config.content["experiment"]["location"],
             "name": get_machine_name(),
             "status": status
 
         })
-        logging.debug('ControlThread.info OK')
+        # logger.debug('ControlThread.info OK')
         return self._info
 
-    @property
-    def adaptation_time(self):
-        return self._settings['adaptation_time']
+    # @property
+    # def adaptation_time(self):
+    #     return self._settings['adaptation_time']
 
     def logs(self):
         return {"logs": []}
@@ -132,9 +154,9 @@ class ControlThread(Base, Root):
         return False
 
     @property
-    def tracking(self):
-        if self.tracker is not None:
-            return self.tracker.status == 'running'
+    def recognizing(self):
+        if self.recognize is not None:
+            return self.recognizer.status == 'running'
         return False
 
     @property
@@ -147,68 +169,28 @@ class ControlThread(Base, Root):
         """
 
         self._status.update({
-            "tracker": self.tracking,
+            "recognizer": self.recognizing,
             "controller": self.controlling,
         })
 
 
         if not self.running:
             self._status["control_thread"] = "idle"
-            return self._status
 
-        if self.ready and not self.running:
+        elif self.ready and not self.running:
             self._status["control_thread"] = 'ready'
-            return self._status
 
-        if self.running and not self.stopped:
+        elif self.running and not self.stopped:
             self._status["control_thread"] = "running"
-            return self._status
 
-        if self.stopped:
+        elif self.stopped:
             self._status["control_thread"] = "stopped"
-            return self._status
 
         else:
             logger.warning('%s status undefined', self.__class__.__name__)
             self._status["control_thread"] = 'undefined'
-            return self._status
 
-    def stop(self):
-        r"""
-        Respond to user input by stopping all dependent modules.
-        and setting your status to stopped.
-        """
-
-        super().stop()
-        if self.track:
-            self.tracker.stop()
-
-        if self.controller:
-            self.controller.stop()
-
-        self.saver.stop()
-
-        # answer = 'Y'
-
-        # if answer == 'N':
-        #     try:
-        #         logger.info('Removing files')
-        #         shutil.rmtree(self.saver.output_dir)
-        #     # in case the output_dir is not declared yet
-        #     # because we are closing early
-        #     except TypeError:
-        #         pass
-        # elif answer == 'Y':
-        #     logger.info('Keeping files')
-        #     # self.saver.copy_logs(self.config)
-
-        # else:
-        #     pass
-
-        # TODO Come up with a more elegant solution than this
-        # https://stackoverflow.com/questions/4541190/how-to-close-a-thread-from-within
-        # sys.exit(0)
-        return
+        return self._status
 
 
     def load_program(self, program_path):
@@ -218,6 +200,20 @@ class ControlThread(Base, Root):
         # TODO remove me
         logger.info("Running controller.list()")
         return self.controller.list()
+
+
+    @property
+    def video_out(self):
+        if self._video_path is None:
+            self._video_out = filename = self.start_datetime + '_idoc_' + get_machine_id() + ".csv"
+            self._video_out = os.path.join(
+                self.result_writer.result_dir,
+                filename
+            )
+        else:
+            self._video_out = self._video_path
+
+        return self._video_out
 
     @property
     def mapping(self):
@@ -230,16 +226,16 @@ class ControlThread(Base, Root):
         if self.control:
             return self.controller.pin_state
 
-
     @property
-    def tracker(self):
-        if self.track:
-            return self._submodules["tracker"]
+    def recognizer(self):
 
-    @tracker.setter
-    def tracker(self, tracker):
-        self._submodules["tracker"] = tracker
-        self._settings.update(tracker.settings)
+        return self._submodules["recognizer"]
+
+    @recognizer.setter
+    def recognizer(self, recognizer):
+        self._submodules["recognizer"] = recognizer
+        self._settings.update(recognizer.settings)
+
 
     @property
     def controller(self):
@@ -252,13 +248,12 @@ class ControlThread(Base, Root):
         self._settings.update(controller.settings)
 
     @property
-    def saver(self):
-        return self._submodules["saver"]
+    def result_writer(self):
+        return self._submodules["result_writer"]
 
-    @saver.setter
-    def saver(self, saver):
-        self._submodules["saver"] = saver
-
+    @result_writer.setter
+    def result_writer(self, result_writer):
+        self._submodules["result_writer"] = result_writer
 
     def command(self, submodule, action):
         r"""
@@ -278,72 +273,133 @@ class ControlThread(Base, Root):
             instance.run()
 
         else:
-            logging.info("Action %s is not valid. Please select one in [run, stop ready].", action)
+            logger.info("Action %s is not valid. Please select one in [run, stop ready].", action)
 
 
         return self.status
 
-    def run(self):
-        r"""
-        Initialize a controller
-        """
-        super().run()
+
+    def start_result_writer(self):
+        logger.info('Starting result writer')
+        result_writer_class = self._option_dict['result_writer']['default_class']
+        result_writer_args = self._config.content['io']['result_writer']['args']
+        result_writer_kwargs = self._config.content['io']['result_writer']['kwargs']
+
+        self.result_writer = result_writer_class(
+            start_datetime= self.start_datetime,
+            *result_writer_args,
+            **result_writer_kwargs
+        )
+
+
+    def start_controller(self):
+        logger.debug('Starting controller')
+        self.controller = Controller(
+            mapping_path=self.mapping_path,
+            program_path=self.program_path,
+            board_name=self.board_name,
+            arduino_port=self.arduino_port
+        )
+        self._settings.update(self.controller.settings)
+
+
+    def start_recognizer(self):
+        logger.debug('Starting recognizer function')
+
+        roi_builder_class = self._option_dict["roi_builder"]['default_class']
+
+        roi_builder = roi_builder_class()
+
+        tracker_class = self._option_dict['tracker']['default_class']
+        camera_class_name = self._config.content['io']['camera']['class']
+
+        for cls in self._option_dict['camera']['possible_classes']:
+            if camera_class_name == cls.__name__:
+                camera_class = cls
+
+        self._option_dict['camera']['default_class']
+        drawer_class = self._option_dict['drawer']['default_class']
+
+        camera_args = self._config.content['io']['camera']['args']
+        camera_kwargs = self._config.content['io']['camera']['kwargs']
+
+        camera = camera_class(*camera_args, **camera_kwargs)
+
+        drawer_args = self._config.content['drawer']['args']
+        drawer_kwargs = self._config.content['drawer']['kwargs']
+        drawer = drawer_class(*drawer_args, video_out=self.video_out, **drawer_kwargs)
+
+        try:
+            rois = roi_builder.build(camera)
+        except Exception as error:
+            logger.warning(error)
+            roi_builder_class = DefaultROIBuilder
+            roi_builder = roi_builder_class()
+            rois = roi_builder.build(camera)
+
+        self.recognizer = Recognizer(camera, tracker_class, self.result_writer, drawer, rois=rois)
+        self.recognizer.start()
+
+
+    def start_submodules(self):
+
+        logger.debug("Starting submodules")
+        logger.debug(self._submodules)
+
+        self.start_result_writer()
 
         if self.control:
-            logger.info('Initializing controller board')
-            controller = Controller(
-                mapping_path=self.mapping_path,
-                program_path=self.program_path,
-                board_name=self.board_name,
-                arduino_port=self.arduino_port
-            )
-            self._settings.update(controller.settings)
+            self.start_controller()
 
-            self._columns.extend(controller.columns)
-            self.controller = controller
+        if self.recognize:
+            self.start_recognizer()
 
-        if self.track:
-            logger.info('Initializing tracker')
-            print(self.camera)
-            tracker = self._option_dict['tracker']['default_class'](
-                camera_name=self.camera,
-                video_path=self.video_path
-            )
+        logger.debug(self._submodules)
 
-            tracker.load_camera()
-            tracker.init_image_arrays()
 
-            self._columns.extend(tracker.columns)
-            self.tracker = tracker
+    @property
+    def last_drawn_frame(self):
+        if self.recognize:
+            return self.recognizer.drawer.last_drawn_frame
+        else:
+            return None
 
-        self.saver = self._option_dict['saver']['default_class'](
-            control=self.control, # TODO Remove dependency
-            track=self.track, # Remove dependency
-            result_dir=self._result_dir
-        )
-        self.saver.set_columns(self._columns)
+    def run(self):
+        r"""
+        Start all the submodules.
+        """
+        super().run()
+        self.start_submodules()
 
         while not self.stopped:
-
-            # if self.control and self.save:
-            #     if self.controller.running:
-            #         # TODO update pin_state
-            #         self.saver.push_controller_data(data)
-
-            #         if self.controller.stopped:
-            #             self.saver.stop()
-            #             break
-
-            # if self.track and self.save:
-            #     for row in self.tracker.row_all_flies.values():
-            #         row.update(self.data)
-            #         self.saver.save_video(
-            #             self.tracker.frame_original,
-            #             self.tracker.frame_color
-            #         )
-
+            # TODO
             # TODO check next frame has come!
+
+            try:
+                pass
+                # print("")
+                # shape = self.last_drawn_frame.shape
+                # print("Shape %s" % " ".join([str(e) for e in shape]))
+
+            except AttributeError as error:
+                logger.warning(error)
+
             self._end_event.wait(1/self.sampling_rate)
 
+        return
 
+    def stop(self):
+        r"""
+        Respond to user input by stopping all dependent modules.
+        and setting your status to stopped.
+        """
+
+        super().stop()
+        if self.recognize:
+            self.recognizer.stop()
+
+        if self.controller:
+            self.controller.stop()
+
+        self.result_writer.stop()
         return

@@ -1,6 +1,8 @@
 import os, json, datetime
 import logging
 
+import numpy as np
+
 class LearnMemConfiguration(object):
     '''
     Handles the learnmem configuration parameters
@@ -18,8 +20,7 @@ class LearnMemConfiguration(object):
         },
 
         'folders' : {
-                        'results' : {'path' : '/learnmem_data/results', 'description' : 'Where tracking data will be saved by the backup daemon.'},
-                        'video' : {'path' : '/learn_mem/videos', 'description' : 'Where video chunks (h264) will be saved by the backup daemon'},
+                        'results' : {'path' : '/learnmem_data/results', 'description' : 'Where data will be saved by the saver class.'},
                         'temporary' : {'path' : '/ethoscope_data/results', 'description' : 'A temporary location for downloading data.'},
                         'programs': {'path': '/1TB/Cloud/Lab/Gitlab/learnmem/py_src/programs', 'description' : 'Where csv files containing hardware programs are stored.'}
         },
@@ -29,32 +30,38 @@ class LearnMemConfiguration(object):
         },
 
         'io': {
-            #'max_n_rows_to_insert': 30000
-            'max_n_rows_to_insert': 1
-        },
+            'result_writer': {
+                'args': (),
+                'kwargs': {
+                    'max_n_rows_to_insert': 1,
+                }
+            },
 
-        'arena': {
-            'min_area': 1000, 'block_size': 9, 'param1': 13, 'kernel_factor': 5, 'rangelow': 0, 'rangeup': 255,
-            'targets': 20, 'columns': 2, 'width': 65, 'height': 12
-        },
-
-        'fly': {
-                'min_length': 2, 'min_dist_arena': 1, 'max_area': 30, 'min_area': 10, 'min_intensity': 20
-        },
-
-        'tracker': {
-            'framerate': 10, 'experimenter': 'Sayed', 'crop': 1, 'N': 10, 'fail': 'failed_arenas/'
+            'camera': {
+                'class': "OpenCVCamera",
+                'args': (),
+                'kwargs': {
+                    'framerate': 10, 'exposure_time': 5000,
+                    'drop_each': 1, 'max_duration': np.inf
+                }
+                # 'experimenter': 'Sayed', 'crop': 1, 'N': 10, 'fail': 'failed_arenas/'
+            }
         },
 
         'controller': {
-            'board_name': 'ArduinoMega',
+            'board_name': 'ArduinoDummy',
             'mapping_path': '/1TB/Cloud/Lab/Gitlab/learnmem/py_src/mappings/mega.csv'
         },
 
-        'saver': {
-            'video_format': "avi",
-            'framerate': 5,
-            'resolution': (1280, 960)
+        'drawer': {
+            'args': (),
+            'kwargs': {
+                'draw_frames': False,
+                'video_out_fourcc': "DIVX",
+                'video_out_fps': 2
+            },
+            'last_drawn_path': "/tmp/last_img.png",
+            'last_annot_path': "/tmp/last_img_annot.png",
         },
 
         'pwm': {
@@ -103,7 +110,7 @@ class LearnMemConfiguration(object):
             with open(self._config_file, 'w') as json_data_file:
                 json.dump(self._settings, json_data_file)
 
-            logging.info('Saved ethoscope configuration file to %s' % self._config_file)
+            logging.info('Saved idoc configuration file to %s', self._config_file)
 
         except:
             raise ValueError ('Problem writing to file % s' % self._config_file)

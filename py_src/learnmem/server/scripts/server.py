@@ -18,25 +18,28 @@ from learnmem.server.core.control_thread import ControlThread
 from learnmem.helpers import get_machine_id, get_git_version, get_server
 from learnmem.configuration import LearnMemConfiguration
 
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M',
                     filename='IDOC.log',
                     filemode='w')
 
 logger = logging.getLogger('')
+coloredlogs.install()
 
 socket_handler = logging.handlers.SocketHandler(
     'localhost',
     logging.handlers.DEFAULT_TCP_LOGGING_PORT
 )
-socket_handler.setLevel(logging.INFO)
 logger.addHandler(socket_handler)
-coloredlogs.install()
 
 
 app = bottle.Bottle()
 STATIC_DIR = "../static"
+
+@app.route('/static/<filepath:path>')
+def server_static(filepath):
+    return bottle.static_file(filepath, root="/")
 
 @app.post("/settings/<id>")
 @warning_decorator
@@ -152,7 +155,7 @@ def control(submodule, action):
     Command the IDOC modules.
     Set a submodule as ready, start or stop it by supplying
     ready, start and stop as action
-    Actions are available for the tracker and controller modules
+    Actions are available for the recognizer and controller modules
     as well as the control thread.
     """
     if submodule == "control_thread" and action == "stop":
@@ -177,7 +180,7 @@ def get_logs():
 # Arguments to follow the command, adding video, etc options
 parser = argparse.ArgumentParser(
     prog="IDOC - The Individual Drosophila Optogenetic Conditioner",
-    description="A modular package to track flies\
+    description="A modular package to monitor flies\
         while running a preset paradigm of hardware events controlled by an Arduino board."
 )
 
@@ -206,11 +209,11 @@ parser.add_argument(
 
 # Track module
 parser.add_argument(
-    "--track", action='store_true', dest='track',
+    "--recognize", action='store_true', dest='recognize',
     help="Shall %(prog)s track flies?"
 )
 parser.add_argument(
-    "--no-track", action='store_false', dest='track',
+    "--no-recognize", action='store_false', dest='recognize',
     help="Shall %(prog)s track flies?"
 )
 
@@ -248,9 +251,12 @@ parser.add_argument(
 parser.add_argument("-p", "--port", type=int)
 
 parser.add_argument("-D", "--debug", action='store_true', dest="debug")
+
+
+
 parser.set_defaults(
     # TODO Change output_path
-    control=False, track=False, output_path="lemdt_results", save=True,
+    control=False, recognize=False, output_path="lemdt_results", save=True,
     log_dir='.', port=9000, arduino_port="/dev/ttyACM0", camera='pylon',
     experimenter="Sayed"
 )
@@ -264,6 +270,13 @@ RESULT_DIR = config.content["folders"]["results"]["path"]
 PORT = data.pop("port") or config.content["network"]["port"]
 
 DEBUG = data.pop("debug") or config.content["network"]["port"]
+
+if DEBUG:
+    logger.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
+
+
 
 control = ControlThread(
     machine_id=machine_id,

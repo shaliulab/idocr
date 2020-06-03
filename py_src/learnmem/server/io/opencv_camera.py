@@ -1,0 +1,100 @@
+import logging
+import time
+import traceback
+
+import cv2
+
+from learnmem.server.core.base import Root
+from learnmem.server.io.cameras import AdaptorCamera
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+
+class OpenCVCamera(AdaptorCamera, Root):
+
+    def __init__(self, *args, video_path=None, **kwargs):
+
+        if video_path is None:
+            self._video_path = 0 # capture from a webcam
+
+        else:
+            self._video_path = video_path
+        super().__init__(*args, **kwargs)
+
+    def is_last_frame(self):
+        return False
+
+    def _time_stamp(self):
+
+        if self._video_path == 0:
+            now = time.time()
+            timestamp = now - self._start_time
+        else:
+            timestamp = self.camera.get(cv2.CAP_PROP_POS_MSEC)
+
+        return timestamp
+
+    def is_opened(self):
+        return self.camera.isOpened()
+
+    def _next_image(self):
+        try:
+            ret, img = self.camera.read()
+            return img
+        except Exception as error:
+            logger.warning(error)
+            logger.warning(traceback.print_exc())
+
+    def open(self):
+        self.camera = cv2.VideoCapture(self._video_path)
+
+    def close(self):
+        self.camera.close()
+
+    def restart(self):
+        self.close()
+        self.open()
+
+    @property
+    def framerate(self):
+        return self._settings["framerate"]
+
+    @framerate.getter
+    def framerate(self):
+        self._settings["framerate"] = self.camera.get(5)
+        return self._settings["framerate"]
+
+    @framerate.setter
+    def framerate(self, framerate):
+        self.camera.set(5, framerate)
+        self._settings["framerate"] = framerate
+
+    @property
+    def resolution(self):
+        return self._settings["resolution"]
+
+    @resolution.getter
+    def resolution(self):
+        # TODO Is int needed here?
+        self._settings["resolution"] = (int(self.camera.get(3)), int(self.camera.get(4)))
+        return self._settings["resolution"]
+
+    @property
+    def exposure_time(self):
+        return self._settings["exposure_time"]
+
+    @exposure_time.setter
+    def exposure_time(self, exposure_time):
+        self.camera.set(cv2.CAP_PROP_EXPOSURE, exposure_time)
+        self._settings["exposure_time"] = exposure_time
+
+    @exposure_time.getter
+    def exposure_time(self):
+        exposure_time = self.camera.get(cv2.CAP_PROP_EXPOSURE)
+        self._settings["exposure_time"] = exposure_time
+        return self._settings["exposure_time"]
+
+    @property
+    def shape(self):
+        return int(self.camera.get(4)), int(self.camera.get(3))

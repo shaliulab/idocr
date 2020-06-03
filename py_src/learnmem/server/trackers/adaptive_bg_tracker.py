@@ -132,7 +132,7 @@ class ObjectModel(Root):
         cv2.cvtColor(img[y : y + h, x : x + w, :], cv2.COLOR_BGR2GRAY, sub_grey)
         sub_mask.fill(0)
 
-        cv2.drawContours(sub_mask, [contour], -1, 255,-1, offset=(-x,-y))
+        cv2.drawContours(sub_mask, [contour], -1, 255, -1, offset=(-x,-y))
         mean_col = cv2.mean(sub_grey, sub_mask)[0]
 
 
@@ -179,7 +179,7 @@ class BackgroundModel(Root):
         # starts with the fastest learning rate
         self._current_half_life = self._min_half_life
 
-        # fixme theoretically this should depend on time, not frame index
+        # FIXME theoretically this should depend on time, not frame index
         self._increment = increment
         # the mean background
         self._bg_mean = None
@@ -256,7 +256,7 @@ class AdaptiveBGModel(BaseTracker, Root):
 
     fg_model = ObjectModel()
 
-    def __init__(self, roi, *args, data=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         An adaptive background subtraction model to find position of one animal in one roi.
 
@@ -286,7 +286,7 @@ class AdaptiveBGModel(BaseTracker, Root):
         self._buff_fg_diff = None
         self._old_sum_fg = 0
 
-        super(AdaptiveBGModel, self).__init__(roi, data, *args, *kwargs)
+        super().__init__(*args, *kwargs)
 
     def _pre_process_input_minimal(self, img, mask, t, darker_fg=True):
         blur_rad = int(self._object_expected_size * np.max(img.shape) / 2.0)
@@ -386,9 +386,7 @@ class AdaptiveBGModel(BaseTracker, Root):
             self._buff_fg = np.empty_like(grey)
             self._buff_object = np.empty_like(grey)
             self._buff_fg_backup = np.empty_like(grey)
-  #          self._buff_fg_diff = np.empty_like(grey)
             self._old_pos = 0.0 +0.0j
-   #         self._old_sum_fg = 0
             raise NoPositionError
 
         bg = self._bg_model.bg_img.astype(np.uint8)

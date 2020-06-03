@@ -3,14 +3,16 @@ import traceback
 
 import pandas as pd
 
+from learnmem.server.hardware.interfaces.interfaces import DefaultInterface
 from learnmem.server.controllers.boards import BOARDS
 from learnmem.server.programmers.programmers import Programmer
 from learnmem.server.core.base import Base, Root
 
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-class Controller(Base, Root):
+class Controller(DefaultInterface, Base, Root):
     r"""
     Interface between a programmer, its threads and the control_thread.
     Reports the state of the controller functionality.
@@ -44,8 +46,11 @@ class Controller(Base, Root):
         :param kwargs: Extra keyword arguments for the threading.Thread constructor.
         """
 
+        DefaultInterface.__init__(self)
+        # import ipdb; ipdb.set_trace()
         super().__init__(*args, **kwargs)
-
+        # import ipdb; ipdb.set_trace()
+        print(self._submodules)
 
 
         # Build a dictionary mapping hardware to pin number
@@ -61,6 +66,9 @@ class Controller(Base, Root):
         # Programmer instance that processes user input
         # into a 'program', an organized sequence of events
         # that turn on and off the pins in the board
+        print(self._submodules)
+        print("self._submodules")
+
         self._submodules['programmer'] = self._programmerClass(
             self._board, self._pin_state, sampling_rate,
             self._mapping, program_path=program_path
@@ -89,13 +97,13 @@ class Controller(Base, Root):
         Add to the default info dictionary (status and time_zero)
         the following controller specific properties
         """
-        logging.debug('Requesting Controller.info')
+        # logging.debug('Requesting Controller.info')
         self._info.update({
             "programs": self._submodules['programmer'].list(),
             "pin_state": self.pin_state,
             "mapping": self.mapping,
         })
-        logging.debug('Controller.info OK')
+        # logging.debug('Controller.info OK')
 
         return self._info
 
@@ -157,22 +165,6 @@ class Controller(Base, Root):
         return mapping_formatted
         # TODO additional processing steps to guarantee standard mapping format
 
-    def stop(self):
-
-        super().stop()
-
-        for thread in self._submodules['programmer'].program:
-            thread.stop()
-
-        for thread in self._submodules['programmer'].program:
-            if thread.is_alive():
-                thread.join()
-                logger.info("Joined %s", thread.name)
-                # print({t.name: t.is_alive() for t in self._submodules['programmer'].program})
-
-        logger.debug("Done joining!")
-
-
     @property
     def columns(self):
         r"""
@@ -204,3 +196,24 @@ class Controller(Base, Root):
                 logger.info(thread)
                 logger.warning(traceback.print_exc())
                 raise error
+
+
+    def stop(self):
+
+        super().stop()
+
+        for thread in self._submodules['programmer'].program:
+            thread.stop()
+
+        for thread in self._submodules['programmer'].program:
+            if thread.is_alive():
+                thread.join()
+                logger.info("Joined %s", thread.name)
+                # print({t.name: t.is_alive() for t in self._submodules['programmer'].program})
+
+        logger.debug("Done joining!")
+
+
+    # TODO
+    def warm_up(self):
+        pass

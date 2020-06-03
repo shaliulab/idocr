@@ -3,6 +3,7 @@
 import logging
 from threading import Thread
 import time
+import urllib.error, urllib.request
 
 import requests
 
@@ -31,7 +32,19 @@ class Device(Thread, HTTPMixin):
             # 'machine_info' : "machine",
             # 'update' : "update"
             }
-    def __init__(self, ip, port=9000, *args, **kwargs):
+
+
+
+    _allowed_instructions_status = { "stream": ["stopped"],
+                                     "start": ["stopped"],
+                                     "start_record": ["stopped"],
+                                     "stop": ["streaming", "running", "recording"],
+                                     "poweroff": ["stopped"],
+                                     "reboot" : ["stopped"],
+                                     "restart" : ["stopped"],
+                                     "offline": []}
+
+    def __init__(self, ip, *args, port=9000, **kwargs):
 
         self._ip = ip
         self._port = port
@@ -64,7 +77,7 @@ class Device(Thread, HTTPMixin):
 
     def get_programs(self):
         url = f"http.//{self._ip}:{self._port}/list_programs/%s" % self.id
-        self._programs = self._get_json(url)
+        return self._get_json(url)
 
     def post_program(self, program_path):
 
@@ -144,6 +157,26 @@ class Device(Thread, HTTPMixin):
 
         print('About to start TCP server...')
         self._tcpserver.serve_until_stopped()
+
+    def last_image(self):
+        """
+        Collects the last drawn image fromt the device
+        TODO: on the device side, this should not rely on an actuale image file but be fished from memory
+        """
+        # we return none if the device is not in a stoppable status (e.g. running, recording)
+        if self.info["status"] not in self._allowed_instructions_status["stop"]:
+            return None
+        try:
+            img_path = self.info["recognizer"]["last_annot_path"].lstrip("/")
+        except KeyError:
+            raise KeyError("Cannot find last image for device %s" % self._id)
+
+        img_url = "http://%s:%i/%s/%s" % (self._ip, self._port, self._remote_pages['static'], img_path)
+        try:
+            return urllib.request.urlopen(img_url, timeout=5)
+        except urllib.error.HTTPError:
+
+            raise Exception("Could not get image for ip = %s (id = %s)" % (self._ip, self._id))
 
 
 class DeviceScanner(Thread):

@@ -2,9 +2,11 @@ import argparse
 import datetime
 import logging
 import os
+import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.parse
 
@@ -27,7 +29,7 @@ logging.basicConfig(
 
 app = bottle.Bottle()
 STATIC_DIR = "../../static"
-
+tmp_imgs_dir = tempfile.mkdtemp(prefix="idoc_images")
 
 
 ap = argparse.ArgumentParser()
@@ -74,6 +76,36 @@ def get_device_by_id(id):
 @app.get('/idoc/<id>')
 def redirection_to_idoc(id):
     return bottle.redirect('/#/idoc/'+id)
+
+@app.route('/tmp_static/<filepath:path>')
+def server_tmp_static(filepath):
+    return bottle.static_file(filepath, root=tmp_imgs_dir)
+
+
+def cache_img(file_like, basename):
+    if not file_like:
+        #TODO return link to "broken img"
+        return ""
+    local_file = os.path.join(tmp_imgs_dir, basename)
+    tmp_file = tempfile.mktemp(prefix="idoc_", suffix=".jpg")
+    with open(tmp_file, "wb") as lf:
+        lf.write(file_like.read())
+    shutil.move(tmp_file, local_file)
+    return server_tmp_static(os.path.basename(local_file))
+
+
+#Get the information of one Sleep Monitor
+@app.get('/device/<id>/last_img')
+@error_decorator
+def get_device_last_img(id):
+    device = ds.get_device_by_id(id)
+    if device.info["recognizer"]["status"] == "running":
+        file_like = device.last_image()
+        if not file_like:
+            raise Exception("No image for %s" % id)
+
+        basename = os.path.join(tmp_imgs_dir, id + "_last_img.jpg")
+        return cache_img(file_like, basename)
 
 
 @app.get('/device/<id>/info')

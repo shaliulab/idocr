@@ -14,7 +14,8 @@ import logging
 from threading import Thread, Event
 import datetime
 
-from learnmem.helpers import hours_minutes_seconds, iso_format
+from learnmem.helpers import hours_minutes_seconds, iso_format, MachineDatetime
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -97,25 +98,20 @@ class Settings(Root):
             self._settings.update(submodule.settings)
 
 
-class Status(Thread, Root):
+class Status(Root):
     r"""
-    Make use of threading.Event instances to report status of subclasses
-    and alter their behaviour accordingly.
-    Also nice for reporting to the user.
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.running = False
+        self.ready = False
+        self.stopped = False
+        self._time_zero = None
         self._status = "idle"
 
-        self._start_event = Event()
-        self._ready_event = Event()
-        self._end_event = Event()
         self._info = {}
-        self._time_zero = None
-
-
-
         self._info.update({
             "status": self._status,
             "elapsed_time": self.elapsed_time
@@ -138,6 +134,7 @@ class Status(Thread, Root):
         )
         return time_diff
 
+
     @property
     def elapsed_seconds(self):
         r"""
@@ -151,6 +148,9 @@ class Status(Thread, Root):
         logging.warning(self._time_zero)
         return time_diff
 
+    @property
+    def start_datetime(self):
+        return self._start_datetime
 
     @property
     def time_zero(self):
@@ -192,6 +192,28 @@ class Status(Thread, Root):
             self._status = 'undefined'
             return self._status
 
+    def run(self):
+        self.running = True
+        self._time_zero = datetime.datetime.now()
+        self._start_datetime = MachineDatetime.now().machineformat()
+
+    def stop(self):
+        self.stopped = True
+
+
+
+class StatusThread(Status, Thread, Root):
+    r"""
+    Make use of threading.Event instances to report status of subclasses
+    and alter their behaviour accordingly.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._start_event = Event()
+        self._ready_event = Event()
+        self._end_event = Event()
+
     def reset(self):
 
         self._start_event.clear()
@@ -206,10 +228,6 @@ class Status(Thread, Root):
     def running(self, value):
         if value is True:
             self._start_event.set()
-
-    def run(self):
-        self.running = True
-        self._time_zero = datetime.datetime.now()
 
     @property
     def ready(self):
@@ -229,14 +247,40 @@ class Status(Thread, Root):
         if value is True:
             self._end_event.set()
 
-    def stop(self):
-        self.stopped = True
+class DescribedObject(Root):
+    r"""
+    An object that contains a ``description`` attribute.
+    This is used to parse user option for the web interface.
+    This way, users can send option to the different objects used.
+    ``description`` is a dictionary with the fields "overview" and "arguments".
+    "overview" is simply a string. "arguments" is a list of dictionaries. Each has the field:
+
+     * name: The name of the argument as it is in "__init__"
+     * description: "A user friendly description of the argument"
+     * type: "number", "datetime", "daterange" and "string".
+     * min, max and step: only for type "number",
+       defines the accepted limits of the arguments
+       as well as the increment in the user interface
+     * default: the default value
+
+    Each argument must match a argument in `__init__`.
+    """
+    _description = None
+
+    def __init__(sef, *args, **kwargs):
+        print(args)
+        super().__init__(*args, **kwargs)
+
+    @property
+    def description(self): # pylint: disable=missing-function-docstring
+        return self._description
 
 
-class Base(Settings, Status, Root):
+class Base(Settings, StatusThread, Root):
     r"""
     Provide the functionality in Settings and Status simultaneously,
     which is the standard in IDOC.
     """
     def __init__(self, *args, **kwargs): # pylint: disable=useless-super-delegation
         super().__init__(*args, **kwargs)
+

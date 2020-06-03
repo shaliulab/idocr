@@ -2,7 +2,7 @@ __author__ = 'quentin'
 
 from collections import deque
 
-from learnmem.server.utils.description  import DescribedObject
+from learnmem.server.core.base import DescribedObject
 from learnmem.server.core.variables import IsInferredVariable
 from learnmem.server.core.base import Root
 
@@ -11,7 +11,7 @@ class NoPositionError(Exception):
     Used to abort tracking. When it is raised within the ``_find_position`` method,
     data is inferred from previous position.
     """
-    pass
+    pass # pylint: disable=unnecessary-pass
 
 class BaseTracker(DescribedObject, Root):
     # data_point = None
@@ -34,8 +34,9 @@ class BaseTracker(DescribedObject, Root):
         self._last_non_inferred_time = 0
         self._last_time_point = 0
         self._max_history_length = 250 * 1000  # in milliseconds
+        self._old_pos = 0.0 +0.0j
 
-        super().__init__(*args, *kwargs)
+        super().__init__(*args, **kwargs)
 
         # self._max_history_length = 500   # in milliseconds
         # if self.data_point is None:

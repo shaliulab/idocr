@@ -11,6 +11,27 @@ import git
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+class MachineDatetime(datetime.datetime):
+    r"""
+    A convenient class that expands datetime.datetime
+    by having an extra format which matches the one
+    IDOC uses to write timestamps in folders and files.
+    """
+
+    def machineformat(self):
+        year = self.year
+        month = self.month
+        day = self.day
+
+        hour = self.hour
+        minute = self.minute
+        second = self.second
+
+        date = "%s-%s-%s" % (str(year).zfill(4), str(month).zfill(2), str(day).zfill(2))
+        clock_time = "%s-%s-%s" % (str(hour).zfill(2), str(minute).zfill(2), str(second).zfill(2))
+        return "%s_%s" % (date, clock_time)
+
+
 def hours_minutes_seconds(timedelta):
     return timedelta.seconds//3600, (timedelta.seconds//60)%60, timedelta.seconds%60
 
