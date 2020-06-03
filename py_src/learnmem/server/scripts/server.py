@@ -224,7 +224,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "-v", "--video-path", type=str, dest='video_path',
-    help="location to the video file"
+    help="location of the input video file"
 )
 
 # Save module

@@ -20,12 +20,13 @@ class PylonCamera(AdaptorCamera, Root):
     Drive a Basler camera using pypylon.
     """
 
-    def __init__(self, *args, timeout=5000, **kwargs):
+    def __init__(self, *args, timeout=5000, video_path=None, **kwargs):
 
         super().__init__(*args, **kwargs)
         # TODO Put this stuff in the config
         self._max_failed_count = 10
         self._timeout = timeout
+        self._video_path = video_path
 
     def is_last_frame(self):
         return False

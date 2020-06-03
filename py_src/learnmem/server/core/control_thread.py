@@ -15,7 +15,7 @@ from learnmem.helpers import get_machine_id, get_machine_name
 from learnmem.server.io.pylon_camera import PylonCamera
 from learnmem.server.io.opencv_camera import OpenCVCamera
 from learnmem.server.roi_builders.roi_builders import DefaultROIBuilder
-from learnmem.server.roi_builders.target_roi_builder import IDOCROIBuilder
+from learnmem.server.roi_builders.high_contrast_roi_builder import HighContrastROIBuilder
 from learnmem.server.drawers.drawers import DefaultDrawer
 
 logger = logging.getLogger(__name__)
@@ -30,9 +30,9 @@ class ControlThread(Base, Root):
 
         'roi_builder': {
             'possible_classes': [
-                IDOCROIBuilder
+                HighContrastROIBuilder, DefaultROIBuilder
             ],
-            'default_class': IDOCROIBuilder
+            'default_class': HighContrastROIBuilder
         },
 
         'tracker': {
@@ -96,6 +96,7 @@ class ControlThread(Base, Root):
         # self.reporting = experiment_data["reporting"]
         self.camera_name = experiment_data["camera"]
         self._video_path = experiment_data["video_path"]
+        self._video_out = None
         self.mapping_path = experiment_data["mapping_path"] or self._config.content['controller']['mapping_path']  # pylint: disable=line-too-long
         self.program_path = experiment_data["program_path"]
         self.output_path = experiment_data["output_path"]
@@ -204,14 +205,12 @@ class ControlThread(Base, Root):
 
     @property
     def video_out(self):
-        if self._video_path is None:
-            self._video_out = filename = self.start_datetime + '_idoc_' + get_machine_id() + ".csv"
-            self._video_out = os.path.join(
-                self.result_writer.result_dir,
-                filename
-            )
-        else:
-            self._video_out = self._video_path
+
+        filename = self.start_datetime + '_idoc_' + get_machine_id() + ".csv"
+        self._video_out = os.path.join(
+            self.result_writer.result_dir,
+            filename
+        )
 
         return self._video_out
 
@@ -323,11 +322,18 @@ class ControlThread(Base, Root):
         camera_args = self._config.content['io']['camera']['args']
         camera_kwargs = self._config.content['io']['camera']['kwargs']
 
-        camera = camera_class(*camera_args, **camera_kwargs)
-
+        camera = camera_class(
+            *camera_args,
+            video_path=self._video_path,
+            **camera_kwargs
+        )
+        # import ipdb; ipdb.set_trace()
         drawer_args = self._config.content['drawer']['args']
         drawer_kwargs = self._config.content['drawer']['kwargs']
-        drawer = drawer_class(*drawer_args, video_out=self.video_out, **drawer_kwargs)
+        drawer = drawer_class(
+            *drawer_args,
+            video_out=self.video_out,
+            **drawer_kwargs)
 
         try:
             rois = roi_builder.build(camera)

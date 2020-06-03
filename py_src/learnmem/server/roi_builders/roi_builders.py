@@ -3,17 +3,14 @@ __author__ = 'quentin'
 
 import logging
 import traceback
+import os.path
+
 import cv2
-import os
-import time
-
 import numpy as np
-
 
 from learnmem.server.core.base import DescribedObject
 from learnmem.server.core.roi import ROI
 from learnmem.server.utils.debug import IDOCException, EthoscopeException
-
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +93,7 @@ class BaseROIBuilder(DescribedObject):
 
         return result
 
-    def _rois_from_img(self,img, input=None):
+    def _rois_from_img(self, img, input=None):
         raise NotImplementedError
 
     def _spatial_sorting(self, rois):

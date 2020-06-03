@@ -45,7 +45,7 @@ class Recognizer(Base, Root):
         :param args: additional arguments passed to the tracking algorithm
         :param kwargs: additional keyword arguments passed to the tracking algorithm
         """
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         self._submodules["camera"] = camera
         self._last_frame_idx = 0
@@ -71,6 +71,7 @@ class Recognizer(Base, Root):
             raise NotImplementedError("rois must exist (cannot be None)")
 
         if stimulators is None:
+            
             self._unit_trackers = [TrackingUnit(tracker_class, r, None, *args, **kwargs) for r in rois]
 
         elif len(stimulators) == len(rois):

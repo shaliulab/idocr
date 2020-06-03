@@ -4,9 +4,9 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 
-def center2rect(center, height, left, right, angle):
+def center2rect(center, height, left, right):
 
-    half_h = height//2
+    half_h = height // 2
 
     tl = center + np.array([-left, -half_h])
     tr = center + np.array([+right, -half_h])
@@ -15,12 +15,6 @@ def center2rect(center, height, left, right, angle):
 
     ct = np.array([tl, tr, br, bl], dtype=np.int32)
     return ct
-
-def find_quadrant(shape, center):
-    # todo dont hardcode this
-    left = center[0] < (shape[1] / 2)
-    top = center[1] > (shape[0] / 2)
-    return (left, top)
 
 def contour_center(cnt):
     M = cv2.moments(cnt)

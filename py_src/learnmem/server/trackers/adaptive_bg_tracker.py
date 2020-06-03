@@ -84,7 +84,7 @@ class ObjectModel(Root):
     def distance(self, features, time):
         if time - self._last_updated_time > self._max_unupdated_duration:
             logging.warning("FG model not updated for too long. Resetting.")
-            self.__init__(self._history_length)
+            self.__init__(history_length=self._history_length)
             return 0
 
         if not self._is_ready:
