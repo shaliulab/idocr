@@ -42,7 +42,7 @@ class BaseDrawer(Base, Root):
 
         self._video_out = video_out
         self._draw_frames = draw_frames
-        self._video_writer = None
+        self._video_writers = {}
         self._window_name = "ethoscope_" + str(os.getpid())
         self._video_out_fourcc = video_out_fourcc
         self._video_out_fps = video_out_fps
@@ -99,9 +99,7 @@ class BaseDrawer(Base, Root):
         """
 
         self._last_drawn_frame = img.copy()
-
         img = self._annotate_frame(self._last_drawn_frame, tracking_units, positions, roi)
-
         self._last_annot_frame = img
 
         if self._draw_frames:
@@ -119,7 +117,7 @@ class BaseDrawer(Base, Root):
             # print(VideoWriter_fourcc(*self._video_out_fourcc))
             self._video_writers = {
 
-                "raw": self._video_writer = cv2.VideoWriter(
+                "raw": cv2.VideoWriter(
                     # path to resulting video
                     self._video_out,
                     # codec
@@ -130,7 +128,7 @@ class BaseDrawer(Base, Root):
                     (img.shape[1], img.shape[0])
                 ),
 
-                "annot": self._video_writer = cv2.VideoWriter(
+                "annot": cv2.VideoWriter(
                     # path to resulting video
                     self._video_out.replace(".avi", "_annot.avi"), # TODO More elegant way of deriving the path
                     # codec
