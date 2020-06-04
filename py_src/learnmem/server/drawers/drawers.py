@@ -50,7 +50,7 @@ class BaseDrawer(Base, Root):
             cv2.namedWindow(self._window_name, cv2.WINDOW_AUTOSIZE)
         self._last_drawn_frame = None
         self.arena = None
-        self._config = LearnMemConfiguration()
+        print(self._video_out)
 
     def _annotate_frame(self, img, tracking_units, positions, roi):
         """
@@ -102,6 +102,7 @@ class BaseDrawer(Base, Root):
 
         img = self._annotate_frame(self._last_drawn_frame, tracking_units, positions, roi)
 
+        self._last_annot_frame = img
 
         if self._draw_frames:
             cv2.imshow(self._window_name, self._last_drawn_frame)
@@ -110,25 +111,40 @@ class BaseDrawer(Base, Root):
         if self._video_out is None:
             return self._last_drawn_frame
 
-        if self._video_writer is None:
+        if len(self._video_writers) == 0:
 
             # print(self._video_out)
             # print(self._video_out_fps)
             # print(img.shape)
             # print(VideoWriter_fourcc(*self._video_out_fourcc))
+            self._video_writers = {
 
-            self._video_writer = cv2.VideoWriter(
-                # path to resulting video
-                self._video_out,
-                # codec
-                VideoWriter_fourcc(*self._video_out_fourcc),
-                # framerate
-                self._video_out_fps,
-                # resolution (reverse of first two dims in shape)
-                (img.shape[1], img.shape[0])
-            )
+                "raw": self._video_writer = cv2.VideoWriter(
+                    # path to resulting video
+                    self._video_out,
+                    # codec
+                    VideoWriter_fourcc(*self._video_out_fourcc),
+                    # framerate
+                    self._video_out_fps,
+                    # resolution (reverse of first two dims in shape)
+                    (img.shape[1], img.shape[0])
+                ),
 
-        self._video_writer.write(self._last_drawn_frame)
+                "annot": self._video_writer = cv2.VideoWriter(
+                    # path to resulting video
+                    self._video_out.replace(".avi", "_annot.avi"), # TODO More elegant way of deriving the path
+                    # codec
+                    VideoWriter_fourcc(*self._video_out_fourcc),
+                    # framerate
+                    self._video_out_fps,
+                    # resolution (reverse of first two dims in shape)
+                    (img.shape[1], img.shape[0])
+                )
+            }
+
+
+        self._video_writer["raw"].write(self._last_drawn_frame)
+        self._video_writer["annot"].write(self._last_annot_frame)
 
         return img
 
