@@ -44,16 +44,16 @@ class BaseCamera(Base, Root):
                 if not at_least_one_frame:
                     raise Exception("Camera could not read the first frame")
                 break
-            t, out = self._next_time_image()
+            time_s, out = self._next_time_image()
             if out is None:
                 break
-            t_ms = int(1000*t)
+            t_ms = int(1000 * time_s)
             at_least_one_frame = True
 
             if (self._frame_idx % self._settings["drop_each"]) == 0:
                 yield t_ms, out
 
-            if self._settings["max_duration"] is not None and t > self._settings["max_duration"]:
+            if self._settings["max_duration"] is not None and t_ms > self._settings["max_duration"]:
                 break
 
     def _next_time_image(self):

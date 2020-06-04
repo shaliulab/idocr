@@ -268,7 +268,6 @@ class DescribedObject(Root):
     _description = None
 
     def __init__(sef, *args, **kwargs):
-        print(args)
         super().__init__(*args, **kwargs)
 
     @property

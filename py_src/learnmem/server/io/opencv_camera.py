@@ -13,13 +13,14 @@ logger.setLevel(logging.INFO)
 
 class OpenCVCamera(AdaptorCamera, Root):
 
-    def __init__(self, *args, video_path=None, **kwargs):
+    def __init__(self, *args, video_path=None, wrap=False, **kwargs):
 
         if video_path is None:
             self._video_path = 0 # capture from a webcam
-
         else:
             self._video_path = video_path
+
+        self._wrap = wrap
         super().__init__(*args, **kwargs)
 
     def is_last_frame(self):
@@ -29,11 +30,13 @@ class OpenCVCamera(AdaptorCamera, Root):
 
         if self._video_path == 0:
             now = time.time()
-            timestamp = now - self._start_time
+            time_s = now - self._start_time
         else:
-            timestamp = self.camera.get(cv2.CAP_PROP_POS_MSEC)
+            time_s = self.camera.get(cv2.CAP_PROP_POS_MSEC) / 1000
 
-        return timestamp
+        print(time_s)
+
+        return time_s
 
     def is_opened(self):
         return self.camera.isOpened()
@@ -41,6 +44,11 @@ class OpenCVCamera(AdaptorCamera, Root):
     def _next_image(self):
         try:
             ret, img = self.camera.read()
+            if self._wrap and not ret:
+                logger.info("Rewinding video to the start")
+                self.camera.set(cv2.CAP_PROP_POS_MSEC, 0)
+                ret, img = self.camera.read()
+
             return img
         except Exception as error:
             logger.warning(error)

@@ -375,9 +375,9 @@ class TargetGridROIBuilder(BaseROIBuilder):
         # cv2.imwrite(os.path.join(os.environ["HOME"], "target_detection_segmented_dots2.png" ), map_bin_dots)
         return sorted_src_pts
 
-    def _rois_from_img(self, img):
+    def _rois_from_img(self, input):
 
-        self._img = img
+        self._img = input
         if os.path.exists(self._rois_pickle_file):
             with open(self._rois_pickle_file, "rb") as fh:
                 import pickle

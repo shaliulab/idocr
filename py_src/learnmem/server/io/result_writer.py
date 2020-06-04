@@ -29,7 +29,7 @@ class CSVResultWriter(Settings, Status, Root):
         super().run()
 
         self._max_n_rows_to_insert = max_n_rows_to_insert
-        updated_tables = ["ROI_%d" % i for i in range(nrois)]
+        updated_tables = ["ROI_%d" % i for i in range(1,nrois+1)]
         updated_tables.extend("CONTROLLER_EVENTS")
         self._updated_tables = updated_tables
         self._static_tables = ["METADATA", "ROI_MAP", "VAR_MAP"]
@@ -45,6 +45,7 @@ class CSVResultWriter(Settings, Status, Root):
             get_machine_name(),
             start_datetime
         )
+        print(self._result_dir)
 
         logger.debug('Output will be saved in %s', self._result_dir)
         os.makedirs(self._result_dir, exist_ok=False)
@@ -67,18 +68,18 @@ class CSVResultWriter(Settings, Status, Root):
         metadata.to_csv(path2file)
 
 
-    def write(self, t, roi, data_rows):
+    def write(self, t_ms, roi, data_rows):
         """
-        Store a new tracking DataPoint
+        An adaptor for the DataPoint instances to be compatible
+        with process_row
         """
-        t = int(round(t))
+        t_ms = int(round(t_ms))
         roi_id = roi.idx
+        table_name = "ROI_%d" % roi.idx
 
         for row in data_rows:
-            data_points = (0, t) + tuple(row.values())
-            # TODO Actually save and dont just print
-            # print(data_points)
-            # print(roi_id)
+            data_points = {**{"id": 0, "t_ms": t_ms}, **{v.header_name: v for v in row.values()}}
+            self.process_row(data_points, table_name)
 
 
     def process_row(self, d, table_name):
@@ -116,4 +117,4 @@ class CSVResultWriter(Settings, Status, Root):
         records.to_csv(table_path, mode=mode, header=header)
         # Once the cache has been written to disk,
         # clear it from RAM
-        self._cache["table_name"].clear()
+        self._cache[table_name].clear()

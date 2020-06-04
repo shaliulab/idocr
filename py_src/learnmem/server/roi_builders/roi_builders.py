@@ -63,15 +63,14 @@ class BaseROIBuilder(DescribedObject):
             rois = self._rois_from_img(accum)
             img = accum
 
-            try:
-                for pt in self._sorted_src_pts:
-                    roi_build_with_dots = img.copy()
-                    roi_build_with_dots = cv2.circle(roi_build_with_dots, tuple(pt), 5, (0,255,0), -1)
+            # try:
+            #     for pt in self._sorted_src_pts:
+            #         roi_build_with_dots = img.copy()
+            #         roi_build_with_dots = cv2.circle(roi_build_with_dots, tuple(pt), 5, (0,255,0), -1)
 
-                cv2.imwrite(os.path.join(os.environ["HOME"], "roi_build_with_dots.png"), roi_build_with_dots)
-            except AttributeError as e:
-                logging.warning(e)
-
+            #     cv2.imwrite(os.path.join(os.environ["HOME"], "roi_build_with_dots.png"), roi_build_with_dots)
+            # except AttributeError as e:
+            #     logging.warning(e)
 
         except Exception as e:
             if not isinstance(input, np.ndarray):
@@ -85,15 +84,9 @@ class BaseROIBuilder(DescribedObject):
             rois = self._spatial_sorting(rois)
         else:
             rois = self._value_sorting(rois)
+        return rois
 
-        if self.__class__.__name__ == "FSLTargetROIBuilder":
-            result = (img, M, rois)
-        else:
-            result = rois
-
-        return result
-
-    def _rois_from_img(self, img, input=None):
+    def _rois_from_img(self, input=None):
         raise NotImplementedError
 
     def _spatial_sorting(self, rois):

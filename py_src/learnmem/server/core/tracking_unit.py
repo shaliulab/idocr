@@ -49,7 +49,7 @@ class TrackingUnit(object):
         """
         return self._roi
 
-    def get_last_positions(self,absolute=False):
+    def get_last_positions(self, absolute=False):
         """
         The last position of the animal monitored by this `TrackingUnit`
 
@@ -90,7 +90,6 @@ class TrackingUnit(object):
         :rtype:  :class:`~ethoscope.core.data_point.DataPoint`
         """
         data_rows = self._tracker.track(t, img)
-
         interact, result = self._stimulator.apply()
         if len(data_rows) == 0:
             return []

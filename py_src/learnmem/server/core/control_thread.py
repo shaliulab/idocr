@@ -2,6 +2,7 @@
 import datetime
 import logging
 import os.path
+import traceback
 
 # Local application imports
 from learnmem.server.controllers.controllers import Controller
@@ -17,6 +18,7 @@ from learnmem.server.io.opencv_camera import OpenCVCamera
 from learnmem.server.roi_builders.roi_builders import DefaultROIBuilder
 from learnmem.server.roi_builders.high_contrast_roi_builder import HighContrastROIBuilder
 from learnmem.server.drawers.drawers import DefaultDrawer
+from learnmem.server.utils.debug import IDOCException
 
 logger = logging.getLogger(__name__)
 
@@ -337,11 +339,15 @@ class ControlThread(Base, Root):
 
         try:
             rois = roi_builder.build(camera)
-        except Exception as error:
+
+        except IDOCException as error:
+            logger.warning(traceback.print_exc())
             logger.warning(error)
             roi_builder_class = DefaultROIBuilder
             roi_builder = roi_builder_class()
             rois = roi_builder.build(camera)
+
+        print(len(rois))
 
         self.recognizer = Recognizer(camera, tracker_class, self.result_writer, drawer, rois=rois)
         self.recognizer.start()

@@ -71,7 +71,7 @@ class Recognizer(Base, Root):
             raise NotImplementedError("rois must exist (cannot be None)")
 
         if stimulators is None:
-            
+
             self._unit_trackers = [TrackingUnit(tracker_class, r, None, *args, **kwargs) for r in rois]
 
         elif len(stimulators) == len(rois):
@@ -178,9 +178,7 @@ class Recognizer(Base, Root):
 
                 if self.drawer is not None:
                     annot = self.drawer.draw(frame, tracking_units=self._unit_trackers, positions=self._last_positions)
-
                     tick = int(round((t_ms/1000.0)/self._period))
-
 
                     if tick == self._last_tick:
                         pass

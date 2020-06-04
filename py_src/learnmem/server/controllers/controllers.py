@@ -49,8 +49,6 @@ class Controller(DefaultInterface, Base, Root):
         DefaultInterface.__init__(self)
         # import ipdb; ipdb.set_trace()
         super().__init__(*args, **kwargs)
-        # import ipdb; ipdb.set_trace()
-        print(self._submodules)
 
 
         # Build a dictionary mapping hardware to pin number
@@ -66,8 +64,6 @@ class Controller(DefaultInterface, Base, Root):
         # Programmer instance that processes user input
         # into a 'program', an organized sequence of events
         # that turn on and off the pins in the board
-        print(self._submodules)
-        print("self._submodules")
 
         self._submodules['programmer'] = self._programmerClass(
             self._board, self._pin_state, sampling_rate,

@@ -3,6 +3,7 @@ import logging
 
 import numpy as np
 
+
 class LearnMemConfiguration(object):
     '''
     Handles the learnmem configuration parameters
@@ -26,8 +27,12 @@ class LearnMemConfiguration(object):
         },
 
         'users' :   {
-                        'admin' : {'id' : 1, 'name' : 'admin', 'fullname' : '', 'PIN' : 9999, 'email' : '', 'telephone' : '', 'group': '', 'active' : False, 'isAdmin' : True, 'created' : datetime.datetime.now().timestamp() }
-        },
+                        'admin' : {
+                            'id' : 1, 'name' : 'admin', 'fullname' : '', 'PIN' : 9999, 'email' : '',
+                            'telephone' : '', 'group': '', 'active' : False, 'isAdmin' : True,
+                            'created' : datetime.datetime.now().timestamp()
+                        }
+                    },
 
         'io': {
             'result_writer': {
@@ -42,7 +47,7 @@ class LearnMemConfiguration(object):
                 'args': (),
                 'kwargs': {
                     'framerate': 10, 'exposure_time': 5000,
-                    'drop_each': 1, 'max_duration': np.inf
+                    'drop_each': 1, 'max_duration': np.inf, 'wrap': True
                 }
                 # 'experimenter': 'Sayed', 'crop': 1, 'N': 10, 'fail': 'failed_arenas/'
             }
@@ -131,3 +136,8 @@ class LearnMemConfiguration(object):
                 raise ValueError("File %s is not a valid configuration file" % self._config_file)
 
         return self._settings
+
+
+if __name__ == "__main__":
+    config = LearnMemConfiguration()
+    config.save()

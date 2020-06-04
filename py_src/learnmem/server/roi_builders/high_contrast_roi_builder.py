@@ -51,11 +51,10 @@ class HighContrastROIBuilder(BaseROIBuilder, Settings, Root):
 
         self._nrows = nrows
         self._ncols = ncols
-        self._min_width = 150
-        self._max_width = 600
-        self._min_height = 15
-        self._max_height = 60
-        self._min_thresh = 100
+        self._min_area = 1500
+        self._max_area = 2500
+
+        self._min_thresh = 0
         self._max_thresh = 255
         self._inter_thresh = 4
 
@@ -71,6 +70,10 @@ class HighContrastROIBuilder(BaseROIBuilder, Settings, Root):
 
             # bin = cv2.morphologyEx(bin, cv2.MORPH_TOPHAT, (9, 9))
             binary_image = cv2.erode(binary_image, np.ones((1, 10)))
+
+            # cv2.imshow('binary', binary_image)
+            # cv2.waitKey(0)
+
             if CV_VERSION == 3:
                 _, contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             else:
@@ -80,19 +83,16 @@ class HighContrastROIBuilder(BaseROIBuilder, Settings, Root):
                 return contours
 
         # cv2.imwrite(os.path.join(os.environ["HOME"], 'failed_roi_builder_binary.png'), bin_orig)
-        raise EthoscopeException
+        raise EthoscopeException("")
 
     @staticmethod
     def _find_center(contour):
         r"""
         Return the center of the bounding box of the contour.
         """
-        bounding_box = cv2.boundingRect(contour)
-        xy, wh = bounding_box
-
-        width = np.max(wh)
-        height = np.min(wh)
-        x, y = xy
+        x, y, w, h = cv2.boundingRect(contour)
+        width = np.max([w, h])
+        height = np.min([w, h])
         center = (x + width // 2, y + height // 2)
         return center
 
@@ -124,17 +124,19 @@ class HighContrastROIBuilder(BaseROIBuilder, Settings, Root):
             (polygon[0], polygon[1]+polygon[3])
         ]
 
-    def _rois_from_img(self, img, input=None):
+    def _rois_from_img(self, img):
         """
         Return a list of ROIS given a raw input frame.
         """
 
         rois = []
 
-        if not isinstance(input, np.ndarray):
-            img = self.fetch_frames(input)
+        if img.shape[2] == 3:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = img
 
-        binary_img = self._threshold(img)[:, :, 0]
+        binary_img = self._threshold(gray)
 
         try:
             contours = self._find_contours(binary_img)
@@ -148,26 +150,39 @@ class HighContrastROIBuilder(BaseROIBuilder, Settings, Root):
             if quadrant[1] == 'l':
                 side = 'left'
 
-            rois.append(ROI(contour, idx=idx+1, side=side))
+            roi = ROI(contour, idx=idx+1, side=side)
+            rois.append(roi)
+            print(-roi.get_feature_dict()['x'] // 200)
+
+
+        rois = sorted(rois, key=lambda roi: (roi.get_feature_dict()['x'] // 200, roi.get_feature_dict()['y']))
+        for idx, roi in enumerate(rois):
+            roi._idx = idx + 1
 
         return rois
 
     def _get_roi_score_map(self, img, threshold_value):
 
         # start a score_map set to 0 everywhere
-        score_map = np.zeros((img.shape[0], img.shape[1], 2), dtype=np.uint8)
+        score_map = np.zeros(img.shape, dtype=np.uint8)
 
         # perform binary thresholding
         thresh = cv2.threshold(img, threshold_value, 255, cv2.THRESH_BINARY)[1]
 
+        # cv2.imshow('thresh', thresh)
+        # cv2.waitKey(0)
+
         # morphological operations to denoise
-        morph = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, np.ones((5, 5)), iterations=3)
+        morph = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, np.ones((5, 5)), iterations=5)
 
         # pad with only 1 pixel to avoid segmented regions touching the wall
         padded = cv2.copyMakeBorder(morph, 1, 1, 1, 1, cv2.BORDER_CONSTANT)
 
         # get edges
         edged = cv2.Canny(padded, 50, 100)
+
+        # cv2.imshow('edged', edged)
+        # cv2.waitKey(0)
 
         if CV_VERSION == 3:
             _, contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -179,16 +194,11 @@ class HighContrastROIBuilder(BaseROIBuilder, Settings, Root):
         for contour in contours:
             epsilon = 0.001 * cv2.arcLength(contour, True)
             approx_contour = cv2.approxPolyDP(contour, epsilon, True)
-            polygon = cv2.boundingRect(approx_contour)
+            area = cv2.contourArea(approx_contour)
 
-            _, _, w, h = polygon
-
-            width = max([w, h])
-            height = min([w, h])
-
-            if self._min_width < width < self._max_width and self._min_height < height < self._max_height:
-                contour = self._polygon2contour(polygon)
-                cv2.drawContours(score_map, [contour], -1, (255, 0), -1)
+            if self._min_area < area < self._max_area:
+                logger.debug(area)
+                cv2.drawContours(score_map, [approx_contour], -1, 1, -1)
 
         return score_map
 
@@ -211,7 +221,7 @@ class HighContrastROIBuilder(BaseROIBuilder, Settings, Root):
 
         # store the addition of all the score_map
         # computed on each iteration
-        placeholder = np.zeros(image.shape[:2], dtype=np.uint8)
+        placeholder = np.zeros(image.shape, dtype=np.uint8)
         blur = cv2.bilateralFilter(img, 10, 150, 150)
 
         for threshold_value in range(self._min_thresh, self._max_thresh, self._inter_thresh):
@@ -219,6 +229,9 @@ class HighContrastROIBuilder(BaseROIBuilder, Settings, Root):
             score_map = self._get_roi_score_map(blur, threshold_value)
             placeholder = cv2.add(placeholder, score_map)
 
+            # cv2.imshow('placeholder', placeholder)
+            # cv2.waitKey(0)
+
         # consider foreground any pixel with at least 10 matches
-        binary_image = cv2.threshold(placeholder, 10, 255, cv2.THRESH_BINARY)[1]
+        binary_image = cv2.threshold(placeholder, 5, 255, cv2.THRESH_BINARY)[1]
         return binary_image
