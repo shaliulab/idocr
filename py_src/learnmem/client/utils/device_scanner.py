@@ -3,13 +3,14 @@
 import logging
 from threading import Thread
 import time
-import urllib.error, urllib.request
+import urllib.error, urllib.request, urllib.parse
 
 import requests
 
 
 from learnmem.client.utils.logging_server import LogRecordSocketReceiver
 from learnmem.client.utils.mixins import HTTPMixin
+from learnmem.server.utils.debug import IDOCException # TODO MOve debug to the common level
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -52,7 +53,7 @@ class Device(Thread, HTTPMixin):
         self._settings = {}
         self._id_url = "http://%s:%i/%s" % (ip, port, self._remote_pages['id'])
         self._id = ""
-        self._logs_cache = {"logs": []}
+        self._logs_cache = []
         self._tcpserver = LogRecordSocketReceiver()
         super().__init__(*args, **kwargs)
 
@@ -68,35 +69,38 @@ class Device(Thread, HTTPMixin):
 
     def close(self, answer="Y"):
 
-        url = "http://%s:%d/close/%s" % self._ip, self._port, self.id
+        url = "http://%s:%d/close/%s" % (self._ip, self._port, self.id)
         self._get_json(url, post_data={"answer": answer})
 
-    # def get_metadata(self):
-    #     url = f"http://{self._ip}:{self._port}/metadata"
-    #     self._metadata = self._get_json(url)
-
-    def get_programs(self):
-        url = f"http.//{self._ip}:{self._port}/list_programs/%s" % self.id
+    def get_paradigms(self):
+        url = "http://%s:%d/list_paradigms/%s" % (self._ip, self._port, self.id)
         return self._get_json(url)
 
-    def post_program(self, program_path):
+    def post_paradigm(self, paradigm_path):
+        """
+        :param paradigm_path: A path to a paradigm.csv that IDOC controllers understand
+        :type paradigm_path: bytes
+        """
 
-        url = f"http://{self._ip}:{self._port}/load_program/%s" % self.id
-        requests.post(url, data={"program_path": program_path})
-        # self._get_json(url, post_data={"program_path": program_path})
+        # print(paradigm_path)
+        # b'{"paradigm_path": ["unittest_long.csv"]}'
+
+        url = "http://%s:%d/load_paradigm/%s" % (self._ip, self._port, self.id)
+        requests.post(url, data=paradigm_path)
+        # self._get_json(url, post_data={"paradigm_path": paradigm_path})
 
     def post(self, data):
-        url = f"http://{self._ip}:{self._port}/settings/%s" % self.id
+        url = "http://%s:%d/settings/%s" % (self._ip, self._port, self.id)
         self._get_json(url, post_data=data)
 
     @property
     def settings(self):
         return self._settings
 
-    @settings.getter
     def settings(self):
-        url = f"http://{self._ip}:{self._port}/settings/%s" % self.id
+        url = "http://%s:%d/settings/%s" % (self._ip, self._port, self.id)
         self._settings = self._get_json(url)
+        return self._settings
 
 
     @property
@@ -114,13 +118,9 @@ class Device(Thread, HTTPMixin):
         return self._logs_cache
 
     def post_logs(self, post_data):
-
-        # print("CACHE")
-        # print(self._logs_cache)
-        # print("INCOMING")
-        # print(post_data["logs"])
-        self._logs_cache["logs"].append(post_data["logs"])
-        return {"status": "success"}
+        parsed_data = urllib.parse.parse_qs(post_data.decode())
+        # print(parsed_data)
+        self._logs_cache.extend(parsed_data["logs"])
 
 
     def _reset_info(self):
@@ -204,8 +204,6 @@ class DeviceScanner(Thread):
     def get_device(self, idx):
         return self.devices[idx]
 
-
-
     def get_device_by_id(self, machine_id):
 
         for device in self.devices:
@@ -218,9 +216,7 @@ class DeviceScanner(Thread):
                 return device
 
         message = "Device with machine_id %s is not available." % machine_id
-        logging.warning("DEVICES")
-        logging.warning(self.devices)
-        raise Exception(message)
+        raise IDOCException(message)
 
     def run(self):
 

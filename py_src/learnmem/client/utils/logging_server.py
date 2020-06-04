@@ -60,7 +60,6 @@ class LogRecordStreamHandler(socketserver.StreamRequestHandler, HTTPMixin):
         # print(record.name)
         # print(machine_id)
         url = "http://%s:%d/device/%s/post_logs" % ("localhost", 80, machine_id)
-        print(url)
         # print(record.msg)
         # print(record.msg)
 

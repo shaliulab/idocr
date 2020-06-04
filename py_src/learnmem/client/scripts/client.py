@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import json
 import logging
 import os
 import shutil
@@ -8,7 +9,6 @@ import subprocess
 import sys
 import tempfile
 import time
-import urllib.parse
 
 import bottle
 import netifaces
@@ -112,7 +112,7 @@ def get_device_last_img(id):
 def info(id):
     return ds.get_device_by_id(id).info
 
-@app.get('/device/<id>/controls/<module>/<action>')
+@app.get('/device/<id>/controls/<submodule>/<action>')
 def device_actions(id, submodule, action):
     # supported actions:
     return ds.get_device_by_id(id).controls(submodule, action)
@@ -126,46 +126,33 @@ def post_settings(id):
 
 @app.get('/device/<id>/settings')
 def get_settings(id):
-    return ds.get_device_by_id(id).settings
+    settings = ds.get_device_by_id(id).settings()
+    return settings
 
 @app.get('/device/<id>/get_logs')
 def get_logs(id):
     logs = ds.get_device_by_id(id).get_logs()
     return logs
 
-
 @app.post('/device/<id>/post_logs')
 def post_logs(id):
-    post_data = bottle.request.body.read()
-    post_data = urllib.parse.parse_qs(post_data.decode())
+    post_data = bottle.request.body.read() # pylint: disable=no-member
+    ds.get_device_by_id(id).post_logs(post_data)
 
+
+@app.get('/device/<id>/list_paradigms')
+def get_paradigms(id):
+    paradigms = ds.get_device_by_id(id).get_paradigms()
+    return paradigms
+
+
+@app.post('/device/<id>/load_paradigm')
+def load_paradigm(id):
+    post_data = bottle.request.body.read() # pylint: disable=no-member
     if post_data is None:
         result = {"status": "failure"}
     else:
-        result = ds.get_device_by_id(id).post_logs(post_data)
-
-    return result
-
-
-@app.get('/device/<id>/list_programs')
-def get_programs(id):
-    programs = ds.get_device_by_id(id).get_programs()
-    return programs
-
-
-@app.post('/device/<id>/load_program')
-def load_program(id):
-    post_data = bottle.request.body.read()
-    post_data = urllib.parse.parse_qs(post_data.decode())
-    program_path = post_data["program_path"][0]
-    print("LOAD PROGRAM")
-    print(program_path)
-
-
-    if post_data is None:
-        result = {"status": "failure"}
-    else:
-        result = ds.get_device_by_id(id).post_program(program_path)
+        result = ds.get_device_by_id(id).post_paradigm(post_data)
 
     return result
 
