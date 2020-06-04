@@ -141,8 +141,8 @@ class BaseDrawer(Base, Root):
             }
 
 
-        self._video_writer["raw"].write(self._last_drawn_frame)
-        self._video_writer["annot"].write(self._last_annot_frame)
+        self._video_writers["raw"].write(self._last_drawn_frame)
+        self._video_writers["annot"].write(self._last_annot_frame)
 
         return img
 
@@ -151,8 +151,9 @@ class BaseDrawer(Base, Root):
             cv2.waitKey(1)
             cv2.destroyAllWindows()
             cv2.waitKey(1)
-        if self._video_writer is not None:
-            self._video_writer.release()
+        for video_writer in self._video_writers.values():
+            video_writer.release()
+
 
     def close(self):
         self.__del__()
