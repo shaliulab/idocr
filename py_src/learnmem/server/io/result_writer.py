@@ -30,7 +30,7 @@ class CSVResultWriter(Settings, Status, Root):
 
         self._max_n_rows_to_insert = max_n_rows_to_insert
         updated_tables = ["ROI_%d" % i for i in range(1, nrois+1)]
-        updated_tables.extend("CONTROLLER_EVENTS")
+        updated_tables.append("CONTROLLER_EVENTS")
         self._updated_tables = updated_tables
         self._static_tables = ["METADATA", "ROI_MAP", "VAR_MAP"]
 
@@ -81,6 +81,8 @@ class CSVResultWriter(Settings, Status, Root):
         """
         Store a new controller event
         """
+        data = {k.strip(" "): data[k] for k in data}
+
         if self.running and not self.stopped:
             if len(self._cache[table_name]) >= self._max_n_rows_to_insert:
                 self.store_and_clear(table_name)

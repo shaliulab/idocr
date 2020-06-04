@@ -173,6 +173,10 @@ class Status(Root):
         except KeyError:
             return None
 
+    @time_zero.setter
+    def time_zero(self, time_zero):
+        self._time_zero = time_zero
+
     @property
     def status(self):
         return self._status

@@ -26,7 +26,7 @@ class BaseControllerThread(Base, Root):
 
     def __init__(
             self, i, hardware, board, pin_state, pin_number, start, end, *args,
-            value=1, sampling_rate=10.0, **kwargs
+            value=1, sampling_rate=10.0, result_writer=None, **kwargs
         ):
         r"""
 
@@ -92,6 +92,7 @@ class BaseControllerThread(Base, Root):
         self.pin_state = pin_state
         self._barriers = {}
         self._pin = None
+        self._result_writer = result_writer
 
         logger.debug(
             "Address from class %s of pin_state in memory %s",
@@ -173,12 +174,14 @@ class BaseControllerThread(Base, Root):
         # even if the pin is controlled with a wave
         # Shall I change this so the monitor displays the wave?
 
-        logger.debug("Turning %s on (%s)", self._hardware, self.value)
+        logger.debug("Turning %s on (%s)", self._hardware, self._value)
+        self._notify(self._value)
         return self._turn_on()
 
     def turn_off(self):
 
         logger.debug("Turning %s  off (0)", self._hardware)
+        self._notify(0)
         return self._turn_off()
 
     def _turn_on(self):
@@ -189,9 +192,17 @@ class BaseControllerThread(Base, Root):
         # implemented in a subclass
         raise NotImplementedError
 
+
+    def _notify(self, value):
+        self.pin_state[self._hardware] = value
+        self._result_writer.process_row(
+            data={"t": time.time() - self.time_zero.timestamp(), **self.pin_state},
+            table_name="CONTROLLER_EVENTS"
+        )
+
     def run(self):
 
-        super().run()
+        self.running = True
 
         logger.debug(
             "%s (class %s) is starting to run",
@@ -305,6 +316,7 @@ class WaveBaseControllerThread(BaseControllerThread):
         as long as the _shore event is not set
         """
 
+        self._notify(self._value)
         while not self._shore.is_set():
             self._turn_on()
             self._shore.wait(self._seconds_on)
@@ -314,6 +326,7 @@ class WaveBaseControllerThread(BaseControllerThread):
             "%s (class %s) has reached the shore",
             self.name, self.__class__.__name__
         )
+        self._notify(0)
 
 
     def turn_on(self):
@@ -361,11 +374,9 @@ class ArduinoMixin():
         return self._board.get_pin('d:{self.pin_number}:{self.mode}')
 
     def _turn_on(self):
-        self.pin_state[self._hardware] = self.value
         self.pin.write(self.value)
 
     def _turn_off(self):
-        self.pin_state[self._hardware] = 0
         self.pin.write(0)
 
 class DummyMixin():
@@ -377,8 +388,6 @@ class DummyMixin():
     """
 
     def _turn_on(self):
-        self.pin_state[self._hardware] = self.value
-
         if self._hardware != "ONBOARD_LED".ljust(16):
             logger.info(
                 "%s (class %s) is setting %s to %.8f @ %.4f",
@@ -386,7 +395,6 @@ class DummyMixin():
             )
 
     def _turn_off(self):
-        self.pin_state[self._hardware] = 0
         if self._hardware != "ONBOARD_LED".ljust(16):
             logger.info(
                 "%s (class %s) is setting %s to %.8f @ %.4f",

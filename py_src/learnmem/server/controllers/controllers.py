@@ -24,7 +24,7 @@ class Controller(DefaultInterface, Base, Root):
     _programmerClass = Programmer
     valid_actions = ["start", "stop", "reset"]
 
-    def __init__(self, mapping_path, paradigm_path, *args, board_name='ArduinoDumy', arduino_port='/dev/ttyACM0', sampling_rate=10.0, **kwargs): # pylint: disable=line-too-long
+    def __init__(self, mapping_path, paradigm_path, result_writer, *args, board_name='ArduinoDumy', arduino_port='/dev/ttyACM0', sampling_rate=10.0, **kwargs): # pylint: disable=line-too-long
 
         r"""
         :param mapping_path: Path to a .csv showing which hardware is phisically wired to which pin.
@@ -67,11 +67,14 @@ class Controller(DefaultInterface, Base, Root):
         self._arduino_port = arduino_port
         self._board = BOARDS[self._board_name](self._arduino_port)
 
+        self._result_writer = result_writer
+
         # Programmer instance that processes user input
         # into a 'program', an organized sequence of events
         # that turn on and off the pins in the board
 
         self._submodules['programmer'] = self._programmerClass(
+            result_writer,
             self._board, self._pin_state, sampling_rate,
             self._mapping, paradigm_path=paradigm_path
         )
@@ -234,7 +237,7 @@ class Controller(DefaultInterface, Base, Root):
 
         for thread in self._submodules['programmer'].paradigm:
             try:
-
+                thread.time_zero = self.time_zero
                 thread.start()
             except Exception as error:
                 logger.info(thread)
@@ -264,12 +267,19 @@ class Controller(DefaultInterface, Base, Root):
 if __name__ == "__main__":
 
     from learnmem.configuration import LearnMemConfiguration
+    from learnmem.server.io.result_writer import CSVResultWriter
 
     config = LearnMemConfiguration()
+
+    result_writer = CSVResultWriter(
+        start_datetime="2000-01-01_00-00-00",
+        max_n_rows_to_insert=2
+    )
 
     controller = Controller(
         mapping_path=config.content["controller"]["mapping_path"],
         paradigm_path=config.content["controller"]["paradigm_path"],
+        result_writer=result_writer,
         board_name=config.content["controller"]["board_name"],
         arduino_port=config.content["controller"]["arduino_port"]
     )

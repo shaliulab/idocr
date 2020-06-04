@@ -301,6 +301,7 @@ class ControlThread(Base, Root):
         self.controller = Controller(
             mapping_path=self.mapping_path,
             paradigm_path=self.paradigm_path,
+            result_writer=result_writer,
             board_name=self.board_name,
             arduino_port=self.arduino_port
         )

@@ -38,10 +38,11 @@ class Programmer(Settings, Root):
     table = None
     _paradigms_dir = None
 
-    def __init__(self, board, pin_state, sampling_rate, mapping, paradigm_path, *args, **kwargs): # pylint: disable=line-too-long
+    def __init__(self, result_writer, board, pin_state, sampling_rate, mapping, paradigm_path, *args, **kwargs): # pylint: disable=line-too-long
 
         super().__init__(*args, **kwargs)
 
+        self._result_writer = result_writer
         self._paradigms_dir = config.content["folders"]["paradigms"]["path"]
         self._board = board
         self._sampling_rate = sampling_rate
@@ -331,6 +332,7 @@ class Programmer(Settings, Root):
 
             kwargs = {"i": str(i).zfill(3)}
             kwargs.update(self._parse(row, i))
+            kwargs["result_writer"] = self._result_writer
             logger.debug(kwargs)
 
             board_name = kwargs["board"].board_compatible
