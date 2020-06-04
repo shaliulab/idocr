@@ -1,4 +1,6 @@
+import datetime
 import logging
+import time
 import traceback
 
 import pandas as pd
@@ -20,16 +22,17 @@ class Controller(DefaultInterface, Base, Root):
     """
 
     _programmerClass = Programmer
+    valid_actions = ["start", "stop", "reset"]
 
-    def __init__(self, mapping_path, program_path, *args, board_name='ArduinoDumy', arduino_port='/dev/ttyACM0', sampling_rate=10.0, **kwargs): # pylint: disable=line-too-long
+    def __init__(self, mapping_path, paradigm_path, *args, board_name='ArduinoDumy', arduino_port='/dev/ttyACM0', sampling_rate=10.0, **kwargs): # pylint: disable=line-too-long
 
         r"""
         :param mapping_path: Path to a .csv showing which hardware is phisically wired to which pin.
         :type mapping_path: str
 
-        :param program_path: Path to .csv listing a sequence of pin trigger.
+        :param paradigm_path: Path to .csv listing a sequence of pin trigger.
         Read and processed by the programmer class.
-        :type program_path: str
+        :type paradigm_path: str
 
         :param args: Extra positional arguments for the threading.Thread constructor.
 
@@ -50,6 +53,9 @@ class Controller(DefaultInterface, Base, Root):
         # import ipdb; ipdb.set_trace()
         super().__init__(*args, **kwargs)
 
+        self._settings.update({
+            "adaptation_time": self._config.content["controller"]["adaptation_time"]
+        })
 
         # Build a dictionary mapping hardware to pin number
         self._mapping = self._load_mapping(mapping_path)
@@ -67,13 +73,42 @@ class Controller(DefaultInterface, Base, Root):
 
         self._submodules['programmer'] = self._programmerClass(
             self._board, self._pin_state, sampling_rate,
-            self._mapping, program_path=program_path
+            self._mapping, paradigm_path=paradigm_path
         )
         self._settings.update(self._submodules['programmer'].settings)
 
     # @property
     # def settings(self):
     #     return super()._settings
+
+    @property
+    def programmer(self):
+        return self._submodules["programmer"]
+
+    @property
+    def progress(self):
+        """
+        Return a float from 0 to 100 indicating how many of the
+        self.paradigm_duration seconds have passed since
+        the controller started running
+        """
+
+        if self._time_zero is None:
+            return 0
+        else:
+            diff = (datetime.datetime.now() - self._time_zero).total_seconds()
+
+        progress = diff / self._submodules['programmer'].duration
+        return progress * 100
+
+    @property
+    def adaptation_time(self):
+        return self._settings['adaptation_time']
+
+    @adaptation_time.setter
+    def adaptation_time(self, adaptation_time):
+        self._settings['adaptation_time'] = adaptation_time
+
 
     @property
     def mapping(self):
@@ -95,16 +130,18 @@ class Controller(DefaultInterface, Base, Root):
         """
         # logging.debug('Requesting Controller.info')
         self._info.update({
-            "programs": self._submodules['programmer'].list(),
+            "paradigms": self._submodules['programmer'].list(),
             "pin_state": self.pin_state,
             "mapping": self.mapping,
+            "progress": self.progress,
+            "duration": self._submodules['programmer'].duration
         })
         # logging.debug('Controller.info OK')
 
         return self._info
 
-    def load(self, program_path):
-        self._submodules['programmer'].program_path = program_path
+    def load(self, paradigm_path):
+        self._submodules['programmer'].paradigm_path = paradigm_path
 
     @property
     def pin_state(self):
@@ -134,7 +171,6 @@ class Controller(DefaultInterface, Base, Root):
 
 
             return
-
 
         mapping = {}
         logger.debug("mapping_df")
@@ -169,47 +205,74 @@ class Controller(DefaultInterface, Base, Root):
         """
         return list(self._mapping.keys())
 
-    def load_program(self, program_path):
-        self._submodules['programmer'].program_path = program_path
+    def load_paradigm(self, paradigm_path):
+        self._submodules['programmer'].paradigm_path = paradigm_path
 
+    @property
+    def ready(self):
+        return self._submodules["programmer"].paradigm_path is not None
+
+    @ready.setter
+    def ready(self, value):
+        return None
 
     def run(self):
         r"""
-        Start executing the threads in self._submodules['programmer'].program.
+        Start executing the threads in self._submodules['programmer'].paradigm.
         """
+
 
         super().run()
 
-        if not self._submodules['programmer'].loaded:
+
+        if not self._submodules['programmer'].ready:
             logger.warning("Please load a program before recording")
             logger.info(self._submodules['programmer'].list())
             return
 
-        for thread in self._submodules['programmer'].program:
+        print(self._submodules["programmer"].paradigm)
+
+        for thread in self._submodules['programmer'].paradigm:
             try:
+
                 thread.start()
             except Exception as error:
                 logger.info(thread)
-                logger.warning(traceback.print_exc())
-                raise error
-
+                logger.error(error)
+                logger.error(traceback.print_exc())
+                self.reset()
 
     def stop(self):
 
         super().stop()
 
-        for thread in self._submodules['programmer'].program:
+        for thread in self._submodules['programmer'].paradigm:
             thread.stop()
 
-        for thread in self._submodules['programmer'].program:
+        for thread in self._submodules['programmer'].paradigm:
             if thread.is_alive():
                 thread.join()
-                logger.info("Joined %s", thread.name)
-                # print({t.name: t.is_alive() for t in self._submodules['programmer'].program})
+                logger.debug("Joined %s", thread.name)
 
         logger.debug("Done joining!")
 
-
-    # TODO
+    # TODO Implement a warmup routine so th user can check the hardware
     def warm_up(self):
         pass
+
+
+if __name__ == "__main__":
+
+    from learnmem.configuration import LearnMemConfiguration
+
+    config = LearnMemConfiguration()
+
+    controller = Controller(
+        mapping_path=config.content["controller"]["mapping_path"],
+        paradigm_path=config.content["controller"]["paradigm_path"],
+        board_name=config.content["controller"]["board_name"],
+        arduino_port=config.content["controller"]["arduino_port"]
+    )
+
+    controller.start()
+    controller.join()

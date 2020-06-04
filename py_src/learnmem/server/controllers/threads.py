@@ -208,6 +208,11 @@ class BaseControllerThread(Base, Root):
 
         # make sure all contemporaneous threads start as close to each other as possible
         # this call locks the thread until the contemporaneous threads reach the same state
+        logger.debug(
+            "%s (class %s) reached the start barrier",
+            self.name, self.__class__.__name__
+        )
+
         try:
             self._barriers["start"].wait()
         except (KeyError, BrokenBarrierError):
@@ -230,6 +235,11 @@ class BaseControllerThread(Base, Root):
 
         # signal to other threads ending simultaneously
         # and those that should start right afterwards
+        logger.debug(
+            "%s (class %s) reached the end barrier",
+            self.name, self.__class__.__name__
+        )
+
         try:
             self._barriers["end"].wait()
         except (KeyError, BrokenBarrierError):

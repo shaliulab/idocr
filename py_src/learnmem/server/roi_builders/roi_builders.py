@@ -34,7 +34,8 @@ class BaseROIBuilder(DescribedObject):
         if isinstance(input, np.ndarray):
             accum = np.copy(input)
         else:
-            for idx, (t_ms, frame) in enumerate(input):
+            for idx, (_, frame) in enumerate(input):
+                print(frame.shape)
                 accum.append(frame)
                 if idx == 5:
                     break

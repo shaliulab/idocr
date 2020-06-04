@@ -75,10 +75,12 @@ class ControlThread(Base, Root):
     sampling_rate = 50 # overriden by conf
 
 
+    valid_actions = ["start", "stop", "start_experiment", "stop_experiment"]
+
     def __init__(self, machine_id, version, result_dir, experiment_data, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
-        self._settings = {"adaptation_time": 0}
+        self._settings = {}
         self._submodules = {}
 
         self.machine_id = machine_id
@@ -100,7 +102,7 @@ class ControlThread(Base, Root):
         self._video_path = experiment_data["video_path"]
         self._video_out = None
         self.mapping_path = experiment_data["mapping_path"] or self._config.content['controller']['mapping_path']  # pylint: disable=line-too-long
-        self.program_path = experiment_data["program_path"]
+        self.paradigm_path = experiment_data["paradigm_path"]
         self.output_path = experiment_data["output_path"]
         self.arduino_port = experiment_data["arduino_port"]
         self.board_name = experiment_data["board_name"] or self._config.content['controller']['board_name'] # pylint: disable=line-too-long
@@ -143,13 +145,6 @@ class ControlThread(Base, Root):
         # logger.debug('ControlThread.info OK')
         return self._info
 
-    # @property
-    # def adaptation_time(self):
-    #     return self._settings['adaptation_time']
-
-    def logs(self):
-        return {"logs": []}
-
     @property
     def controlling(self):
         if self.controller is not None:
@@ -168,8 +163,6 @@ class ControlThread(Base, Root):
 
     @status.getter
     def status(self):
-        r"""
-        """
 
         self._status.update({
             "recognizer": self.recognizing,
@@ -196,10 +189,10 @@ class ControlThread(Base, Root):
         return self._status
 
 
-    def load_program(self, program_path):
-        self.controller.load_program(program_path)
+    def load_paradigm(self, paradigm_path):
+        self.controller.load_paradigm(paradigm_path)
 
-    def list_programs(self):
+    def list_paradigms(self):
         # TODO remove me
         logger.info("Running controller.list()")
         return self.controller.list()
@@ -260,21 +253,31 @@ class ControlThread(Base, Root):
         r"""
         Control the submodules with actions
         """
-        if submodule == 'control_thread':
-            instance = self
-        else:
-            instance = self._submodules[submodule]
+        try:
+            if submodule == 'control_thread':
+                instance = self
 
-        if action in ['run', 'stop']:
-            getattr(instance, action)()
-        elif action in ['ready']:
-            setattr(instance, action, True)
+            elif submodule in self._submodules:
+                instance = self._submodules[submodule]
+            else:
+                logger.warning(
+                    "Please command one of the following modules: %s",
+                    " ".join(
+                        ["control_thread"] + list(self._submodules.keys())
+                    )
+                )
 
-        elif action == "start":
-            instance.run()
+            if action == "start" and instance.running:
+                logger.warning("%s is already running" % instance.__class__.__name__)
+                return self.status
 
-        else:
-            logger.info("Action %s is not valid. Please select one in [run, stop ready].", action)
+            else:
+                getattr(instance, action)()
+
+        except Exception as error:
+            logger.warning(error)
+            logger.warning(traceback.print_exc())
+            logger.info("Action %s is not valid. Please select one in %s.", action, ' '.join(instance.valid_actions))
 
 
         return self.status
@@ -287,7 +290,7 @@ class ControlThread(Base, Root):
         result_writer_kwargs = self._config.content['io']['result_writer']['kwargs']
 
         self.result_writer = result_writer_class(
-            start_datetime= self.start_datetime,
+            start_datetime=self.start_datetime,
             *result_writer_args,
             **result_writer_kwargs
         )
@@ -297,7 +300,7 @@ class ControlThread(Base, Root):
         logger.debug('Starting controller')
         self.controller = Controller(
             mapping_path=self.mapping_path,
-            program_path=self.program_path,
+            paradigm_path=self.paradigm_path,
             board_name=self.board_name,
             arduino_port=self.arduino_port
         )
@@ -307,51 +310,39 @@ class ControlThread(Base, Root):
     def start_recognizer(self):
         logger.debug('Starting recognizer function')
 
-        roi_builder_class = self._option_dict["roi_builder"]['default_class']
-
-        roi_builder = roi_builder_class()
-
-        tracker_class = self._option_dict['tracker']['default_class']
+        # Initialize camera (use the class declared in the config)
         camera_class_name = self._config.content['io']['camera']['class']
-
         for cls in self._option_dict['camera']['possible_classes']:
             if camera_class_name == cls.__name__:
                 camera_class = cls
 
-        self._option_dict['camera']['default_class']
-        drawer_class = self._option_dict['drawer']['default_class']
 
-        camera_args = self._config.content['io']['camera']['args']
-        camera_kwargs = self._config.content['io']['camera']['kwargs']
-
-        camera = camera_class(
-            *camera_args,
-            video_path=self._video_path,
-            **camera_kwargs
+        # Initialize roi_builder
+        roi_builder_class = self._option_dict["roi_builder"]['default_class']
+        roi_builder_args = self._config.content['roi_builder']['args']
+        roi_builder_kwargs = self._config.content['roi_builder']['kwargs']
+        roi_builder = roi_builder_class(
+            *roi_builder_args,
+            **roi_builder_kwargs
         )
-        # import ipdb; ipdb.set_trace()
+
+        # Initialize drawer
+        drawer_class = self._option_dict['drawer']['default_class']
         drawer_args = self._config.content['drawer']['args']
         drawer_kwargs = self._config.content['drawer']['kwargs']
         drawer = drawer_class(
             *drawer_args,
             video_out=self.video_out,
-            **drawer_kwargs)
+            **drawer_kwargs
+        )
 
-        try:
-            rois = roi_builder.build(camera)
-
-        except IDOCException as error:
-            logger.warning(traceback.print_exc())
-            logger.warning(error)
-            roi_builder_class = DefaultROIBuilder
-            roi_builder = roi_builder_class()
-            rois = roi_builder.build(camera)
-
-        print(len(rois))
-
-        self.recognizer = Recognizer(camera, tracker_class, self.result_writer, drawer, rois=rois)
-        self.recognizer.start()
-
+        # Pick tracker class and initialize recognizer
+        tracker_class = self._option_dict['tracker']['default_class']
+        self.recognizer = Recognizer(
+            tracker_class, camera_class, roi_builder, self.result_writer, drawer,
+            start_saving=True, video_path=self._video_path
+        )
+        self._settings.update(self.recognizer.settings)
 
     def start_submodules(self):
 
@@ -385,33 +376,92 @@ class ControlThread(Base, Root):
 
         while not self.stopped:
             # TODO
-            # TODO check next frame has come!
 
-            try:
-                pass
-                # print("")
-                # shape = self.last_drawn_frame.shape
-                # print("Shape %s" % " ".join([str(e) for e in shape]))
-
-            except AttributeError as error:
-                logger.warning(error)
-
+            # # TODO check next frame has come!
+            # self.recognizer.load_camera()
+            # # prepare recognizer upon user input
+            # self.recognizer.prepare()
+            # # start recognizer upon user input
+            # self.recognizer.start()
             self._end_event.wait(1/self.sampling_rate)
+            if self.controller.progress > 100:
+                self.stop_experiment()
+                break
 
         return
 
+
     def stop(self):
+        """
+        Stop everything!
+        """
+        super().stop()
+        self.stop_experiment()
+
+
+    def start_experiment(self):
         r"""
-        Respond to user input by stopping all dependent modules.
-        and setting your status to stopped.
+        Convenience combination of commands targeted to start an experiment
+
+        * The recognizer starts saving the position of the flies
+        * The controller starts executing its paradigm
         """
 
-        super().stop()
+        # set the self.start_datetime property to now with format
+        # %YYYYY-MM-DD_HH-MM-SS
+        self._set_start_datetime()
+
+        # allow the result_writer to write to disk the incoming data from now on
+        self.result_writer.running = True
+
+        if self.recognize:
+            if self.recognizer.running:
+                # tell the recognizer it can start_saving from now on
+                # please note it could alreadey be saving if start_saving=True
+                # was passed at init time and the result_writer was running
+                # if it was not True, then the time difference between now and when
+                # the recognizer started running will be substracted in the resulting data
+                # so as to align it to the controller
+                self.recognizer.start_saving()
+            else:
+                if not self.recognizer.ready:
+                    try:
+                        # if the recognizer is not ready, it needs to prepare:
+                        # * find the regions of interest (ROIS)
+                        # * bind a tracker to each ROI
+                        self.recognizer.prepare()
+                    except Exception as error:
+                        logger.warning("Could not prepare recognizer. Please try again")
+                        logger.warning(error)
+                        logger.warning(traceback.print_exc())
+                        return None
+
+                    # tell the recognizer it can start saving and the offset will be 0
+                    self.recognizer.start_saving(0)
+
+                # start tracking flies
+                self.recognizer.start()
+
+        if self.control:
+            # start the paradigm loaded in the controller
+            self.controller.start()
+
+    def stop_experiment(self):
+        """
+        Convenience combination of commands targeted to stop an experiment.
+
+        * The recognizer stops tracking and recording frames
+        * The controller stops doing experiments
+        * The result writer clears its cache
+
+        NOTE: This does not stop the execution of ControlThread.run().
+        Only the stop() method can do that.
+        """
+
         if self.recognize:
             self.recognizer.stop()
 
-        if self.controller:
+        if self.control:
             self.controller.stop()
 
-        self.result_writer.stop()
-        return
+        self.result_writer.clear()

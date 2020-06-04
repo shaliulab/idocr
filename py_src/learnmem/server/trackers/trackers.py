@@ -58,7 +58,8 @@ class BaseTracker(DescribedObject, Root):
         self._last_time_point = t
         try:
 
-            points = self._find_position(sub_img ,mask, t)
+            points = self._find_position(sub_img, mask, t)
+
             if not isinstance(points, list):
                 raise Exception("tracking algorithms are expected to return a LIST of DataPoints")
 

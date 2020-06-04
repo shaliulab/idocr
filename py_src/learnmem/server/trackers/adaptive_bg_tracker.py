@@ -205,7 +205,6 @@ class BackgroundModel(Root):
     def update(self, img_t, t, fg_mask=None):
         dt = float(t - self.last_t)
         if dt < 0:
-            # raise EthoscopeException("Negative time interval between two consecutive frames")
             raise NoPositionError("Negative time interval between two consecutive frames")
 
         # clip the half life to possible value:
@@ -274,7 +273,6 @@ class AdaptiveBGModel(BaseTracker, Root):
         self._smooth_mode_window_dt = 30 * 1000 #miliseconds
 
 
-        self._bg_model = BackgroundModel()
         self._max_m_log_lik = 5.5
         self._buff_grey = None
         self._buff_object = None
@@ -285,8 +283,9 @@ class AdaptiveBGModel(BaseTracker, Root):
         self._buff_fg_backup = None
         self._buff_fg_diff = None
         self._old_sum_fg = 0
-
+        self._bg_model = BackgroundModel()
         super().__init__(*args, *kwargs)
+
 
     def _pre_process_input_minimal(self, img, mask, t, darker_fg=True):
         blur_rad = int(self._object_expected_size * np.max(img.shape) / 2.0)
@@ -432,7 +431,7 @@ class AdaptiveBGModel(BaseTracker, Root):
             elif len(hulls) > 1:
                 is_ambiguous = True
             cluster_features = [self.fg_model.compute_features(img, h) for h in hulls]
-            all_distances = [self.fg_model.distance(cf,t) for cf in cluster_features]
+            all_distances = [self.fg_model.distance(cf, t) for cf in cluster_features]
             good_clust = np.argmin(all_distances)
 
             hull = hulls[good_clust]
@@ -477,7 +476,6 @@ class AdaptiveBGModel(BaseTracker, Root):
 
         self._old_pos = pos
 
-
         if mask is not None:
             cv2.bitwise_and(self._buff_fg, mask, self._buff_fg)
 
@@ -489,7 +487,6 @@ class AdaptiveBGModel(BaseTracker, Root):
             self._bg_model.update(grey, t, self._buff_fg)
 
         self.fg_model.update(img, hull, t)
-
         x_var = XPosVariable(int(round(x)))
         y_var = YPosVariable(int(round(y)))
         distance = XYDistance(int(xy_dist))

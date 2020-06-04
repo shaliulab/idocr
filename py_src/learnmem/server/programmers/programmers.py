@@ -1,5 +1,5 @@
 r"""
-Inform the user of the different program.csv available,
+Inform the user of the different paradigm.csv available,
 load one of them into memory,
 generate the parallel threads required to implement it in practice
 """
@@ -32,37 +32,36 @@ THREADS = {
 
 class Programmer(Settings, Root):
     r"""
-    Load user programs and prepare threads for concurrent control of an Arduino or Dummy board
+    Load user paradigms and prepare threads for concurrent control of an Arduino or Dummy board
     """
 
     table = None
-    _programs_dir = None
+    _paradigms_dir = None
 
-    def __init__(self, board, pin_state, sampling_rate, mapping, program_path, *args, **kwargs): # pylint: disable=line-too-long
+    def __init__(self, board, pin_state, sampling_rate, mapping, paradigm_path, *args, **kwargs): # pylint: disable=line-too-long
 
         super().__init__(*args, **kwargs)
 
-        self._programs_dir = config.content["folders"]["programs"]["path"]
+        self._paradigms_dir = config.content["folders"]["paradigms"]["path"]
         self._board = board
         self._sampling_rate = sampling_rate
         self._mapping = mapping
         self.pin_state = pin_state
         self._barriers = {}
-        self._program = []
+        self._paradigm = []
+        self.table = []
         self._submodules = {}
-        self._settings = {'program_path': None}
-
-        if self._mapping is not None:
-            self._settings['program_path'] = program_path
+        self._settings = {'paradigm_path': None}
+        self.paradigm_path = paradigm_path
 
 
     def list(self, dict_format=True):
         r"""
-        Fetch a list of the programs available in the program directory
+        Fetch a list of the paradigms available in the paradigm directory
         set in the config file
         This information is designed to be sent to the user.
         """
-        files = os.listdir(self._programs_dir)
+        files = os.listdir(self._paradigms_dir)
 
         if dict_format:
             return {i: f for i, f in enumerate(files) if f[::-1][:4][::-1] == ".csv"}
@@ -71,72 +70,81 @@ class Programmer(Settings, Root):
 
 
     @property
-    def program(self):
-        return self._program
+    def paradigm(self):
+        return self._paradigm
 
     @property
-    def loaded(self):
-        return self.ready
-
-    @loaded.setter
-    def loaded(self, value):
-        if value is True:
-            self.ready = True
+    def ready(self):
+        return self._paradigm is not None
 
     @property
-    def program_path(self):
-        if self._settings['program_path'] is None:
+    def paradigm_path(self):
+        if self._settings['paradigm_path'] is None:
             return None
         else:
-            return os.path.join(self._programs_dir, self._settings["program_path"])
+            return os.path.join(self._paradigms_dir, self._settings["paradigm_path"])
 
-    @program_path.setter
-    def program_path(self, program_path):
+    @property
+    def duration(self):
         r"""
-        Load the user provided program in csv format into Python
+        Return maximum value of end stored in the table
+        used to generate the paradigm
+        This is considered as the duration of the paradigm
+        The value is returned in seconds, assumming the user input was in seconds
+        """
+        ends = [row["end"] for row in self.table]
+        try:
+            duration = max(ends)
+            return duration
+
+        except ValueError:
+            return None
+
+    @paradigm_path.setter
+    def paradigm_path(self, paradigm_path):
+        r"""
+        Load the user provided paradigm in csv format into Python
         and prepare the corresponding threads so the Controller
         can run them.
         """
 
-        if program_path is None:
+        if paradigm_path is None:
             return
 
-        self._settings['program_path'] = program_path
+        self._settings['paradigm_path'] = paradigm_path
 
-        # load the data in program_path into Python
+        # load the data in paradigm_path into Python
 
         try:
-            self._load_table(program_path)
+            self._load_table(paradigm_path)
         except Exception as error:
-            logger.warning("Error reading your program into IDOC")
+            logger.warning("Error reading your paradigm into IDOC")
             logger.debug(error)
             logger.debug(traceback.print_exc())
             return
 
         if self.table is None:
-            logger.warning("Error reading your program into IDOC")
+            logger.warning("Error reading your paradigm into IDOC")
             return
 
-        # actually generate the threads that this program dictates
+        # actually generate the threads that this paradigm dictates
         try:
             self._prepare()
         except Exception as error:
-            logger.warning("Error loading your program into IDOC")
+            logger.warning("Error loading your paradigm into IDOC")
             logger.debug(error)
             logger.debug(traceback.print_exc())
             return
 
-        self.loaded = True
-
     @property
-    def absolute_program_path(self):
-        if self._settings["program_path"] is None:
+    def absolute_paradigm_path(self):
+        if self._settings["paradigm_path"] is None:
             return None
 
-        return os.path.join(self._programs_dir, self._settings["program_path"])
+        return os.path.join(self._paradigms_dir, self._settings["paradigm_path"])
 
 
-    def _load_table(self, program_path):
+    def _load_table(self, paradigm_path):
         r"""
         Load a csv into python in list format
         Each row becomes a dictionary inside the list
@@ -144,20 +152,23 @@ class Programmer(Settings, Root):
         as key-value pairs of the dictionary.
         """
 
-        if program_path is None:
+        # make sure the old table is removed, if any
+        self.table = []
+
+        if paradigm_path is None:
 
             self.table = None
-            self._program = None
+            self._paradigm = None
             return
 
-        elif program_path not in self.list(dict_format=False):
+        elif paradigm_path not in self.list(dict_format=False):
             self.table = None
-            self._program = None
-            logger.warning("The passed program does not exist!")
+            self._paradigm = None
+            logger.warning("The passed paradigm does not exist!")
             return
 
 
-        table_df = pd.read_csv(self.absolute_program_path)
+        table_df = pd.read_csv(self.absolute_paradigm_path)
         required_columns = ["start", "end", "on", "off"]
         missing_index = [not e in table_df.columns for e in required_columns]
 
@@ -165,24 +176,22 @@ class Programmer(Settings, Root):
         synonym_available = sum([e in table_df.columns for e in ["hardware", "pin_id"]])
 
         if len(missing_columns) != 0:
-            logger.warning("Provided program is not valid. Please provide columns %s", ' '.join(missing_columns))
+            logger.warning("Provided paradigm is not valid. Please provide columns %s", ' '.join(missing_columns))
             return
 
         if synonym_available != 1:
-            logger.warning("Please provide a column called hardware on your program")
+            logger.warning("Please provide a column called hardware on your paradigm")
             return
 
         if synonym_available == 2:
             table_df.drop(["pin_id"], index=1)
 
-        table = []
         for row_tuple in table_df.iterrows():
             row = row_tuple[1].to_dict()
-            row["start"] *= 60 # convert user input to seconds
-            row["end"] *= 60 # convert user input to seconds
-            table.append(row)
+            row["start"]
+            row["end"]
+            self.table.append(row)
 
-        self.table = table
         logger.debug(self.table)
 
 
@@ -193,11 +202,11 @@ class Programmer(Settings, Root):
         initializations.
         """
 
-        # XOR (signals invalid user input in the loaded program)
+        # XOR (signals invalid user input in the loaded paradigm)
         if np.isnan(row['on']) ^ np.isnan(row['off']):
             logger.warning(
-                "Row number %d in program %s is malformed",
-                i+1, self._settings['program_path']
+                "Row number %d in paradigm %s is malformed",
+                i+1, self._settings['paradigm_path']
             )
             logger.warning("You have defined either on or off but not the other")
             logger.warning("Ignoring row")
@@ -259,7 +268,7 @@ class Programmer(Settings, Root):
     def _make_barriers(self):
         r"""
         Generate barriers for perfect on-off alternation between threads
-        using the start and stop times of the threads in the program
+        using the start and stop times of the threads in the paradigm
         Make them so there is one and only one for every timepoint
         where at least one thread either stops or starts
         The barrier will expect as many threads
@@ -293,14 +302,14 @@ class Programmer(Settings, Root):
         return self._barriers
 
 
-    def _add_barriers(self, program):
+    def _add_barriers(self, paradigm):
         r"""
         Add the barriers to the threads in the right position.
         """
 
         # provide the threads with barriers for improved synchronization
         # at the expense of slightly increased waiting times
-        for thread in program:
+        for thread in paradigm:
 
             start_barrier = self._barriers[thread.start_seconds]
             thread.add_barrier(start_barrier, "start")
@@ -310,13 +319,13 @@ class Programmer(Settings, Root):
 
     def _prepare(self):
         r"""
-        Given a program_table, parse it
-        to produce a program by storing instances of
-        ControllerThread in the self._program list.
-        A program is a list of ControllerThread instances
+        Given a paradigm_table, parse it
+        to produce a paradigm by storing instances of
+        ControllerThread in the self._paradigm list.
+        A paradigm is a list of ControllerThread instances
         """
 
-        self._program = []
+        self._paradigm = []
 
         for i, row in enumerate(self.table):
 
@@ -336,8 +345,8 @@ class Programmer(Settings, Root):
                 **kwargs
             )
 
-            self._program.append(thread)
+            self._paradigm.append(thread)
 
         self._make_barriers()
-        self._add_barriers(self._program)
-        logger.debug(self._program)
+        self._add_barriers(self._paradigm)
+        logger.debug(self._paradigm)

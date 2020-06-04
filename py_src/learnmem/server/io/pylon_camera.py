@@ -67,17 +67,21 @@ class PylonCamera(AdaptorCamera, Root):
     def open(self):
 
         try:
+            super().open()
             self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
             self.camera.Open()
             # self.camera.StartGrabbingMax(numberOfImagesToGrab) # if we want to limit the number of frames
             logger.info("Pylon camera loaded successfully")
 
         except Exception as error:
-            logging.error(traceback.print_exc())
-            raise error
+            logger.error(error)
+            logger.error(traceback.print_exc())
+            self.reset()
+
 
     # called by BaseCamera.__exit__()
     def close(self):
+        super().close()
         self.camera.Close()
 
 

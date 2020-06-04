@@ -94,37 +94,41 @@ def get_id():
     return {"id": control.info["id"]}
 
 
-@app.post('/load_program/<id>')
+@app.post('/load_paradigm/<id>')
 @warning_decorator
 @wrong_id
-def load_program():
+def load_paradigm():
     r"""
-    Update the hardware program loaded in IDOC.
-    Do this by posting an object with key program_path
+    Update the hardware paradigm loaded in IDOC.
+    Do this by posting an object with key paradigm_path
     and value the filename of one of the csv files in the
-    programs_dir.
-    programs_dir is defined in the config file under
-    folders > programs > path.
-    A list of the programs can be retrieved by GETting to /list_programs/.
+    paradigms_dir.
+    paradigms_dir is defined in the config file under
+    folders > paradigms > path.
+    A list of the paradigms can be retrieved by GETting to /list_paradigms/.
     """
     post_data = bottle.request.body.read() # pylint: disable=no-member
-    data_decoded = urllib.parse.parse_qs(post_data.decode())
-    print(data_decoded)
-    program_path = data_decoded["program_path"][0]
-    control.load_program(program_path=program_path)
+    if isinstance(post_data, bytes):
+        data_decoded = post_data.decode()
+    else:
+        data_decoded = post_data
+
+    data_parsed = json.loads(data_decoded)
+    paradigm_path = data_parsed["paradigm_path"][0]
+    control.load_paradigm(paradigm_path=paradigm_path)
     return {"status": "success"}
 
 
-@app.get('/list_programs/<id>')
+@app.get('/list_paradigms/<id>')
 @warning_decorator
 @wrong_id
-def list_programs():
+def list_paradigm():
     r"""
-    Get a list of the available programs that the user
-    can select via POSTing to /load_program.
-    This is also available in info["controller"]["programs"].
+    Get a list of the available paradigms that the user
+    can select via POSTing to /load_paradigm.
+    This is also available in info["controller"]["paradigms"].
     """
-    return control.list_programs()
+    return control.list_paradigm()
 
 @app.get('/mapping/<id>')
 @warning_decorator
@@ -174,7 +178,8 @@ def get_logs():
     # return the last 10 logs
     logs = control.logs()
     logs["logs"] = logs["logs"][::-1][:10][::-1]
-    return logs
+    return json.dumps(logs).encode()
+
 
 
 # Arguments to follow the command, adding video, etc options
@@ -195,8 +200,8 @@ parser.add_argument(
     help="Absolute path to csv providing pin number-pin name mapping"
 )
 parser.add_argument(
-    "--program_path", type=str,
-    help="Absolute path to csv providing the Arduino top level program"
+    "--paradigm_path", type=str,
+    help="Absolute path to csv providing the Arduino top level paradigm"
 )
 parser.add_argument(
     "-b", "--board_name", type=str,

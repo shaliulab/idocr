@@ -22,7 +22,7 @@ class TrackingUnit(object):
         :param kwargs: additional keyword arguments passed to the tracking algorithm.
         """
 
-        self._tracker = tracking_class(roi,*args, **kwargs)
+        self._tracker = tracking_class(roi, *args, **kwargs)
         self._roi = roi
 
         if stimulator is not None:
@@ -63,10 +63,10 @@ class TrackingUnit(object):
         last_positions = self._tracker.positions[-1]
         if not absolute:
             return last_positions
-        out =[]
+        out = []
         for last_pos in last_positions:
             tmp_out = []
-            for k,i in list(last_pos.items()):
+            for k, i in list(last_pos.items()):
                 if isinstance(i, BaseRelativeVariable):
                     tmp_out.append(i.to_absolute(self.roi))
                 else:

@@ -29,7 +29,7 @@ class CSVResultWriter(Settings, Status, Root):
         super().run()
 
         self._max_n_rows_to_insert = max_n_rows_to_insert
-        updated_tables = ["ROI_%d" % i for i in range(1,nrois+1)]
+        updated_tables = ["ROI_%d" % i for i in range(1, nrois+1)]
         updated_tables.extend("CONTROLLER_EVENTS")
         self._updated_tables = updated_tables
         self._static_tables = ["METADATA", "ROI_MAP", "VAR_MAP"]
@@ -58,10 +58,6 @@ class CSVResultWriter(Settings, Status, Root):
     def result_dir(self):
         return self._result_dir
 
-
-    def stop(self):
-        pass
-
     def save_metadata(self, metadata):
         self._metadata = metadata
         path2file = os.path.join(self._result_dir, "metadata.csv")
@@ -74,7 +70,6 @@ class CSVResultWriter(Settings, Status, Root):
         with process_row
         """
         t_ms = int(round(t_ms))
-        roi_id = roi.idx
         table_name = "ROI_%d" % roi.idx
 
         for row in data_rows:
@@ -82,13 +77,14 @@ class CSVResultWriter(Settings, Status, Root):
             self.process_row(data_points, table_name)
 
 
-    def process_row(self, d, table_name):
+    def process_row(self, data, table_name):
         """
         Store a new controller event
         """
-        if len(self._cache[table_name]) >= self._max_n_rows_to_insert:
-            self.store_and_clear(table_name)
-        self._cache[table_name].append(d)
+        if self.running and not self.stopped:
+            if len(self._cache[table_name]) >= self._max_n_rows_to_insert:
+                self.store_and_clear(table_name)
+            self._cache[table_name].append(data)
 
     def get_table_path(self, table_name):
         filename = "%s_%s.csv" % (self._prefix, table_name.upper())
@@ -118,3 +114,14 @@ class CSVResultWriter(Settings, Status, Root):
         # Once the cache has been written to disk,
         # clear it from RAM
         self._cache[table_name].clear()
+
+
+    def clear(self):
+        """
+        Emtpy the cache of all the tables.
+        """
+        self.stopped = True
+        for table in self._cache:
+            self.store_and_clear(table)
+
+        self.reset()

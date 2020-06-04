@@ -14,6 +14,14 @@ from learnmem.server.core.base import Base, Root
 from learnmem.configuration import LearnMemConfiguration
 
 class BaseDrawer(Base, Root):
+
+    _font = cv2.FONT_HERSHEY_COMPLEX_SMALL
+    _black_colour = (0, 0, 0)
+    _roi_colour = (0, 255, 0)
+    _quality = cv2.IMWRITE_JPEG_QUALITY
+    _interaction_colour = (255, 0, 0)
+    _standard_colour = (0, 0, 255)
+
     def __init__(self, *args, video_out=None, draw_frames=True, video_out_fourcc="DIVX", video_out_fps=2, **kwargs):
         """
         A template class to annotate and save the processed frames. It can also save the annotated frames in a video
@@ -44,7 +52,7 @@ class BaseDrawer(Base, Root):
         self.arena = None
         self._config = LearnMemConfiguration()
 
-    def _annotate_frame(self, img, positions, tracking_units, roi):
+    def _annotate_frame(self, img, tracking_units, positions, roi):
         """
         Abstract method defining how frames should be annotated.
         The `img` array, which is passed by reference, is meant to be modified by this method.
@@ -73,8 +81,8 @@ class BaseDrawer(Base, Root):
 
     def write(self, orig, annot):
 
-        cv2.imwrite(self.last_drawn_path, orig, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
-        cv2.imwrite(self.last_annot_path, annot, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+        cv2.imwrite(self.last_drawn_path, orig, [int(self._quality), 50])
+        cv2.imwrite(self.last_annot_path, annot, [int(self._quality), 50])
 
 
     def draw(self, img, tracking_units, positions, roi=True):
@@ -132,6 +140,9 @@ class BaseDrawer(Base, Root):
         if self._video_writer is not None:
             self._video_writer.release()
 
+    def close(self):
+        self.__del__()
+
 
 class NullDrawer(BaseDrawer):
     def __init__(self):
@@ -140,8 +151,9 @@ class NullDrawer(BaseDrawer):
 
         :return:
         """
-        super(NullDrawer,self).__init__( draw_frames=False)
-    def _annotate_frame(self,img, positions, tracking_units):
+        super(NullDrawer, self).__init__(draw_frames=False)
+
+    def _annotate_frame(self, img, tracking_units, positions, roi):
         pass
 
 
@@ -163,17 +175,17 @@ class DefaultDrawer(BaseDrawer):
         if img is None:
             return
 
-        roi_colour = (0, 255,0)
         for track_u in tracking_units:
 
-            x,y = track_u.roi.offset
+            x, y = track_u.roi.offset
             y += track_u.roi.rectangle[3]/2
-            black_colour = (0, 0,0)
+
 
             if roi:
-                cv2.putText(img, str(track_u.roi.idx), (int(x),int(y)), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255,255,0))
-                cv2.drawContours(img,[track_u.roi.polygon],-1, black_colour, 3, LINE_AA)
-                cv2.drawContours(img,[track_u.roi.polygon],-1, roi_colour, 1, LINE_AA)
+                text_pos = (int(x), int(y))
+                cv2.putText(img, str(track_u.roi.idx), text_pos, self._font, 1, (255, 255, 0))
+                cv2.drawContours(img, [track_u.roi.polygon], -1, self._black_colour, 3, LINE_AA)
+                cv2.drawContours(img, [track_u.roi.polygon], -1, self._roi_colour, 1, LINE_AA)
 
             if positions is not None:
                 try:
@@ -181,74 +193,76 @@ class DefaultDrawer(BaseDrawer):
                 except KeyError:
                     continue
 
+                colour = self._standard_colour
+
                 for pos in pos_list:
-                    colour = (0 ,0, 255)
                     try:
                         if pos["has_interacted"]:
-                            colour = (255, 0,0)
+                            colour = self._interaction_colour
                     except KeyError:
                         pass
 
-                    cv2.ellipse(img,((pos["x"],pos["y"]), (pos["w"],pos["h"]), pos["phi"]),black_colour,3, LINE_AA)
-                    cv2.ellipse(img,((pos["x"],pos["y"]), (pos["w"],pos["h"]), pos["phi"]),colour,1, LINE_AA)
+                    cv2.ellipse(img, ((pos["x"], pos["y"]), (pos["w"], pos["h"]), pos["phi"]), self._black_colour, 3, LINE_AA)
+                    cv2.ellipse(img, ((pos["x"], pos["y"]), (pos["w"], pos["h"]), pos["phi"]), colour, 1, LINE_AA)
 
         return img
 
-class AnnotationDrawer(BaseDrawer):
-    def __init__(self, video_out= None, draw_frames=False):
-        """
-        The annotation drawer. It draws dots and arrows on the detected objects and polygons around ROIs,
-        instead of an ellipse, so the user can see the contours of the fly while knowing where the tracker
-        thinks the fly is
+# TODO Finish this when you have time
+# class AnnotationDrawer(BaseDrawer):
+#     def __init__(self, video_out= None, draw_frames=False):
+#         """
+#         The annotation drawer. It draws dots and arrows on the detected objects and polygons around ROIs,
+#         instead of an ellipse, so the user can see the contours of the fly while knowing where the tracker
+#         thinks the fly is
 
-        :param video_out: The path to the output file (.avi)
-        :type video_out: str
-        :param draw_frames: Whether frames should be displayed on the screen (a new window will be created).
-        :type draw_frames: bool
-        """
-        super(AnnotationDrawer, self).__init__(video_out=video_out, draw_frames=draw_frames)
+#         :param video_out: The path to the output file (.avi)
+#         :type video_out: str
+#         :param draw_frames: Whether frames should be displayed on the screen (a new window will be created).
+#         :type draw_frames: bool
+#         """
+#         super(AnnotationDrawer, self).__init__(video_out=video_out, draw_frames=draw_frames)
 
-    def _annotate_frame(self,img, tracking_units, positions=None, roi=True):
-        if img is None:
-            return
+#     def _annotate_frame(self,img, tracking_units, positions=None, roi=True):
+#         if img is None:
+#             return
 
-        roi_colour = (0, 255,0)
-        for track_u in tracking_units:
+#         roi_colour = (0, 255,0)
+#         for track_u in tracking_units:
 
-            x,y = track_u.roi.offset
-            y += track_u.roi.rectangle[3]/2
-            black_colour = (0, 0,0)
+#             x,y = track_u.roi.offset
+#             y += track_u.roi.rectangle[3]/2
+#             black_colour = (0, 0,0)
 
-            if roi:
-                cv2.putText(img, str(track_u.roi.idx), (int(x)*5,int(y)), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255,255,0))
-                cv2.drawContours(img,[track_u.roi.polygon],-1, black_colour, 3, LINE_AA)
-                cv2.drawContours(img,[track_u.roi.polygon],-1, roi_colour, 1, LINE_AA)
+#             if roi:
+#                 cv2.putText(img, str(track_u.roi.idx), (int(x)*5,int(y)), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255,255,0))
+#                 cv2.drawContours(img,[track_u.roi.polygon],-1, black_colour, 3, LINE_AA)
+#                 cv2.drawContours(img,[track_u.roi.polygon],-1, roi_colour, 1, LINE_AA)
 
-            if positions is not None:
-                try:
-                    pos_list = positions[track_u.roi.idx]
-                except KeyError:
-                    continue
+#             if positions is not None:
+#                 try:
+#                     pos_list = positions[track_u.roi.idx]
+#                 except KeyError:
+#                     continue
 
-                for pos in pos_list:
-                    colour = (0 ,0, 255)
-                    try:
-                        if pos["has_interacted"]:
-                            colour = (255, 0,0)
-                    except KeyError:
-                        pass
+#                 for pos in pos_list:
+#                     colour = (0 ,0, 255)
+#                     try:
+#                         if pos["has_interacted"]:
+#                             colour = (255, 0,0)
+#                     except KeyError:
+#                         pass
 
-                    # cv2.ellipse(img,((pos["x"],pos["y"]), (pos["w"],pos["h"]), pos["phi"]),black_colour,3, LINE_AA)
-                    # cv2.ellipse(img,((pos["x"],pos["y"]), (pos["w"],pos["h"]), pos["phi"]),colour,1, LINE_AA)
-                    cv2.circle(img, (pos["x"], pos["y"]), 3, black_colour, -1)
-                    cv2.arrowedLine(img, (pos))
+#                     # cv2.ellipse(img,((pos["x"],pos["y"]), (pos["w"],pos["h"]), pos["phi"]),black_colour,3, LINE_AA)
+#                     # cv2.ellipse(img,((pos["x"],pos["y"]), (pos["w"],pos["h"]), pos["phi"]),colour,1, LINE_AA)
+#                     cv2.circle(img, (pos["x"], pos["y"]), 3, black_colour, -1)
+#                     cv2.arrowedLine(img, (pos))
 
-                    distance_raw = round(10**(pos["distance"]/1000), 5)
-                    x,y = self.roi.offset
-                    # x += 0.9*self.roi.rectangle[3]
-                    y += self.roi.rectangle[3]/2
+#                     distance_raw = round(10**(pos["distance"]/1000), 5)
+#                     x,y = self.roi.offset
+#                     # x += 0.9*self.roi.rectangle[3]
+#                     y += self.roi.rectangle[3]/2
 
-                    cv2.putText(out, str(distance_raw), (int(x), int(y)), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 255, 0))
+#                     cv2.putText(out, str(distance_raw), (int(x), int(y)), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 255, 0))
 
 
-        return img
+#         return img

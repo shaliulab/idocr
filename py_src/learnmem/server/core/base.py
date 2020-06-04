@@ -10,12 +10,14 @@ learnmem.server.io.saver.SimpleSaver
 learnmem.server.trackers.trackers.SimpleTracker
 """
 
+import datetime
 import logging
 from threading import Thread, Event
-import datetime
+import traceback
 
 from learnmem.helpers import hours_minutes_seconds, iso_format, MachineDatetime
-
+from learnmem.configuration import LearnMemConfiguration
+from learnmem.server.utils.debug import IDOCException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -80,6 +82,9 @@ class Settings(Root):
         Send to depending modules the new settings sent by the user.
         """
         for submodule in self._submodules.values():
+            if submodule is None:
+                continue
+
             logger.debug("%s sending to %s", self.__class__.__name__, submodule.__class__.__name__)
             logger.debug(self._settings)
 
@@ -90,6 +95,9 @@ class Settings(Root):
         Receive from depending modules settings that the user could change
         """
         for submodule in self._submodules.values():
+            if submodule is None:
+                continue
+
             logger.debug(
                 "%s receiving from %s",
                 self.__class__.__name__, submodule.__class__.__name__
@@ -109,6 +117,7 @@ class Status(Root):
         self.ready = False
         self.stopped = False
         self._time_zero = None
+        self._start_datetime = None
         self._status = "idle"
 
         self._info = {}
@@ -116,6 +125,12 @@ class Status(Root):
             "status": self._status,
             "elapsed_time": self.elapsed_time
         })
+
+
+    def reset(self):
+        self.running = False
+        self.ready = False
+        self.stopped = False
 
     @property
     def elapsed_time(self):
@@ -144,8 +159,7 @@ class Status(Root):
         if self._time_zero is None:
             return None
 
-        time_diff = (datetime.datetime.now() - self._time_zero).microseconds / 1000000
-        logging.warning(self._time_zero)
+        time_diff = (datetime.datetime.now() - self._time_zero).total_seconds()
         return time_diff
 
     @property
@@ -155,7 +169,7 @@ class Status(Root):
     @property
     def time_zero(self):
         try:
-            return self._info['time_zero']
+            return self._time_zero
         except KeyError:
             return None
 
@@ -193,14 +207,30 @@ class Status(Root):
             return self._status
 
     def run(self):
+
+        if self.running is True:
+            logger.warning("%s is already running. Skipping", self.__class__.__name__)
+            return
+
         self.running = True
         self._time_zero = datetime.datetime.now()
+        self._set_start_datetime()
+
+
+    def _set_start_datetime(self):
         self._start_datetime = MachineDatetime.now().machineformat()
 
     def stop(self):
+        """
+        Set the stopped flagged to True.
+        All concurrently running methods should listen to this flag
+        and react accordingly, tipically interrupting execution.
+        """
+        if self.stopped is True:
+            logger.warning("%s is already stopped. Skipping", self.__class__.__name__)
+            return
+
         self.stopped = True
-
-
 
 class StatusThread(Status, Thread, Root):
     r"""
@@ -209,13 +239,14 @@ class StatusThread(Status, Thread, Root):
     """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self._start_event = Event()
         self._ready_event = Event()
         self._end_event = Event()
+        super().__init__(*args, **kwargs)
 
     def reset(self):
 
+        self.stop()
         self._start_event.clear()
         self._ready_event.clear()
         self._end_event.clear()
@@ -236,7 +267,7 @@ class StatusThread(Status, Thread, Root):
     @ready.setter
     def ready(self, value):
         if value is True:
-            self._start_event.set()
+            self._ready_event.set()
 
     @property
     def stopped(self):
@@ -267,7 +298,7 @@ class DescribedObject(Root):
     """
     _description = None
 
-    def __init__(sef, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     @property
@@ -282,4 +313,17 @@ class Base(Settings, StatusThread, Root):
     """
     def __init__(self, *args, **kwargs): # pylint: disable=useless-super-delegation
         super().__init__(*args, **kwargs)
+        self._config = LearnMemConfiguration()
+        self._validate()
 
+
+    def _validate(self):
+        """
+        Make sure the _valid_actions have a corresponding method
+        """
+
+        valid_actions = getattr(self, "_valid_actions", None)
+        if valid_actions is not None:
+            for action in valid_actions:
+                if not getattr(self, action, False):
+                    raise IDOCException("Action %s of class %s does not have a matching method" % (action, self.__class__.__name__))

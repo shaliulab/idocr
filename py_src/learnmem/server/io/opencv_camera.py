@@ -15,12 +15,15 @@ class OpenCVCamera(AdaptorCamera, Root):
 
     def __init__(self, *args, video_path=None, wrap=False, **kwargs):
 
+        self._wrap = wrap
+        self._time_s = 0
+        self._wrap_s = 0
+
         if video_path is None:
             self._video_path = 0 # capture from a webcam
         else:
             self._video_path = video_path
 
-        self._wrap = wrap
         super().__init__(*args, **kwargs)
 
     def is_last_frame(self):
@@ -30,13 +33,11 @@ class OpenCVCamera(AdaptorCamera, Root):
 
         if self._video_path == 0:
             now = time.time()
-            time_s = now - self._start_time
+            self._time_s = now - self._start_time
         else:
-            time_s = self.camera.get(cv2.CAP_PROP_POS_MSEC) / 1000
+            self._time_s = self.camera.get(cv2.CAP_PROP_POS_MSEC) / 1000
 
-        print(time_s)
-
-        return time_s
+        return self._time_s + self._wrap_s
 
     def is_opened(self):
         return self.camera.isOpened()
@@ -45,6 +46,7 @@ class OpenCVCamera(AdaptorCamera, Root):
         try:
             ret, img = self.camera.read()
             if self._wrap and not ret:
+                self._wrap_s += self._time_s
                 logger.info("Rewinding video to the start")
                 self.camera.set(cv2.CAP_PROP_POS_MSEC, 0)
                 ret, img = self.camera.read()
@@ -55,10 +57,18 @@ class OpenCVCamera(AdaptorCamera, Root):
             logger.warning(traceback.print_exc())
 
     def open(self):
-        self.camera = cv2.VideoCapture(self._video_path)
+        super().open()
+        try:
+            self.camera = cv2.VideoCapture(self._video_path)
+        except Exception as error:
+            logger.error(error)
+            logger.error(traceback.print_exc())
+            self.reset()
+        # self.camera.set(cv2.CAP_PROP_POS_MSEC, 670000)
 
     def close(self):
-        self.camera.close()
+        super().close()
+        self.camera.release()
 
     def restart(self):
         self.close()

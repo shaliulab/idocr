@@ -39,7 +39,7 @@ class BaseCamera(Base, Root):
         :rtype: (int, :class:`~numpy.ndarray`)
         """
         at_least_one_frame = False
-        while True:
+        while not self.stopped:
             if self.is_last_frame() or not self.is_opened():
                 if not at_least_one_frame:
                     raise Exception("Camera could not read the first frame")
@@ -75,10 +75,10 @@ class BaseCamera(Base, Root):
         raise NotImplementedError
 
     def open(self):
-        raise NotImplementedError
+        super().start()
 
     def close(self):
-        raise NotImplementedError
+        super().stop()
 
     def restart(self):
         """
@@ -96,20 +96,16 @@ class AdaptorCamera(BaseCamera, Root):
     framerate = 0
     exposure_time = 0
 
-    def __init__(self, framerate, exposure_time, *args, resolution=None, **kwargs):
+    def __init__(self, *args, framerate=None, exposure_time=None, resolution=None, **kwargs):
 
 
         super().__init__(*args, **kwargs)
-        self._settings.update({
-            "framerate": 0, "exposure_time": 0, "resolution": (0, 0)
-        })
-
         self.open()
         self._start_time = time.time()
         self._settings.update({
-            "framerate": framerate,
-            "exposure_time": exposure_time,
-            "resolution": resolution,
+            "framerate": framerate or self._config.content['io']['camera']['kwargs']['framerate'],
+            "exposure_time": exposure_time or self._config.content['io']['camera']['kwargs']['exposure_time'],
+            "resolution": resolution or self._config.content['io']['camera']['kwargs']['resolution'],
         })
 
 
@@ -120,6 +116,13 @@ class AdaptorCamera(BaseCamera, Root):
             str(self.framerate).zfill(4),
             str(self.exposure_time).zfill(8)
         )
+
+    def open(self):
+        super().run()
+
+    def close(self):
+        super().stop()
+
 
     @property
     def resolution(self):

@@ -152,7 +152,7 @@ class HighContrastROIBuilder(BaseROIBuilder, Settings, Root):
 
             roi = ROI(contour, idx=idx+1, side=side)
             rois.append(roi)
-            print(-roi.get_feature_dict()['x'] // 200)
+            logger.debug("x/200 for roi %d: %d", roi.idx, roi.get_feature_dict()['x'] // 200)
 
 
         rois = sorted(rois, key=lambda roi: (roi.get_feature_dict()['x'] // 200, roi.get_feature_dict()['y']))
