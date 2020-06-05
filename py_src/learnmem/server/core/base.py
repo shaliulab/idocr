@@ -302,8 +302,8 @@ class DescribedObject(Root):
     """
     _description = None
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
 
     @property
     def description(self): # pylint: disable=missing-function-docstring

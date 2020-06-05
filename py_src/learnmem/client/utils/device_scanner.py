@@ -157,6 +157,9 @@ class Device(Thread, HTTPMixin):
         print('About to start TCP server...')
         self._tcpserver.serve_until_stopped()
 
+    def stop(self):
+        self._tcpserver.abort = True
+
     def last_image(self):
         """
         Collects the last drawn image fromt the device
@@ -229,3 +232,7 @@ class DeviceScanner(Thread):
             for device in self.devices:
                 device.get_info()
 
+
+    def stop(self):
+        for device in self.devices:
+            device.stop()

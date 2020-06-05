@@ -171,8 +171,19 @@ class Programmer(Settings, Root):
 
 
         table_df = pd.read_csv(self.absolute_paradigm_path)
-        required_columns = ["start", "end", "on", "off"]
+        required_columns = ["start", "end", "on"]
         missing_index = [not e in table_df.columns for e in required_columns]
+
+        if "off" not in table_df.columns:
+
+            if "hertz" in table_df.columns:
+                off = (1000  - table_df["on"] * table_df["hertz"]) / table_df["hertz"]
+                table_df["off"] = off
+                table_df.drop(["hertz"], axis=1)
+
+            else:
+                missing_index.append(True)
+
 
         missing_columns = list(compress(required_columns, missing_index))
         synonym_available = sum([e in table_df.columns for e in ["hardware", "pin_id"]])
@@ -187,6 +198,10 @@ class Programmer(Settings, Root):
 
         if synonym_available == 2:
             table_df.drop(["pin_id"], index=1)
+
+        # convert on and off from ms to seconds
+        table_df["on"] /= 1000
+        table_df["off"] /= 1000
 
         for row_tuple in table_df.iterrows():
             row = row_tuple[1].to_dict()

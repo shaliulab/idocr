@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.error
 
 import bottle
 import netifaces
@@ -243,7 +244,14 @@ def client_actions(action):
 
 def stop(signo=None, _frame=None):
     logger.info("Received signal %s", signo)
-    sys.exit(0)
+    try:
+        ds.stop()
+        # bottle.abort()
+        os._exit(0)
+        # sys.exit(0)
+    except Exception as error:
+        logger.warning(error)
+        pass
 
 signals = ('TERM', 'HUP', 'INT')
 for sig in signals:
@@ -251,4 +259,4 @@ for sig in signals:
 
 
 SERVER = get_server(PORT)
-bottle.run(app, host='0.0.0.0', port=PORT, debug=DEBUG, server=SERVER)
+# bottle.run(app, host='0.0.0.0', port=PORT, debug=DEBUG, server=SERVER)

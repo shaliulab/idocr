@@ -322,6 +322,7 @@ class WaveBaseControllerThread(BaseControllerThread):
             self._shore.wait(self._seconds_on)
             self._turn_off()
             self._shore.wait(self._seconds_off)
+
         logger.info(
             "%s (class %s) has reached the shore",
             self.name, self.__class__.__name__
@@ -388,18 +389,18 @@ class DummyMixin():
     """
 
     def _turn_on(self):
-        if self._hardware != "ONBOARD_LED".ljust(16):
-            logger.info(
-                "%s (class %s) is setting %s to %.8f @ %.4f",
-                self.name, self.__class__.__name__, self._hardware, self.value, self.elapsed_seconds
-            )
+        # if self._hardware != "ONBOARD_LED".ljust(16):
+        logger.info(
+            "%s (class %s) is setting %s to %.8f @ %.4f",
+            self.name, self.__class__.__name__, self._hardware, self.value, self.elapsed_seconds
+        )
 
     def _turn_off(self):
-        if self._hardware != "ONBOARD_LED".ljust(16):
-            logger.info(
-                "%s (class %s) is setting %s to %.8f @ %.4f",
-                self.name, self.__class__.__name__, self._hardware, 0, self.elapsed_seconds
-            )
+        # if self._hardware != "ONBOARD_LED".ljust(16):
+        logger.info(
+            "%s (class %s) is setting %s to %.8f @ %.4f",
+            self.name, self.__class__.__name__, self._hardware, 0, self.elapsed_seconds
+        )
 
 class DefaultDummyThread(DummyMixin, BaseControllerThread):
     r"""

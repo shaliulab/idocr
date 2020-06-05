@@ -81,7 +81,7 @@ class ControlThread(Base, Root):
 
         super().__init__(*args, **kwargs)
         self._settings = {}
-        self._submodules = {}
+        self._submodules = {"recognizer": None, "controller": None, "result_writer": None}
 
         self.machine_id = machine_id
         self.version = version
@@ -144,13 +144,13 @@ class ControlThread(Base, Root):
 
     @property
     def controlling(self):
-        if self.controller is not None:
+        if self.controller is not None  and self.controller is not None:
             return self.controller.status == 'running'
         return False
 
     @property
     def recognizing(self):
-        if self.recognize is not None:
+        if self.recognize is not None and self.recognizer is not None:
             return self.recognizer.status == 'running'
         return False
 
@@ -462,7 +462,7 @@ class ControlThread(Base, Root):
         Only the stop() method can do that.
         """
 
-        if not self._endless and not force:
+        if not self._endless or force:
 
             if self.recognize:
                 self.recognizer.stop()
