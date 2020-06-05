@@ -62,6 +62,9 @@ class OpenCVCamera(AdaptorCamera, Root):
     def open(self):
         super().open()
         try:
+            logger.debug('OpenCV camera opening')
+            # print('OpenCV camera opening')
+            
             self.camera = cv2.VideoCapture(self._video_path)
         except Exception as error:
             logger.error(error)

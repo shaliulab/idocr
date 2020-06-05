@@ -43,8 +43,8 @@ def move_contour(cnt, pixel=0, axis=1):
     if pixel == 0:
         return cnt
     else:
-        x = pixel*(axis==0)
-        y = pixel*(axis==1)
+        x = pixel * (axis == 0)
+        y = pixel * (axis == 1)
         # print("x and y")
         # print(x)
         # print(y)
@@ -176,8 +176,6 @@ def pull_contour_h(cnt, point, side="left"):
     funcs = {"left": np.max, "right": np.min}
 
     distances = np.array([point[0] - corner[0] for corner in cnt])
-
-
     #print(distances)
     dist = funcs[side](distances)
     #print(dist)
@@ -190,3 +188,10 @@ def pull_contour_h(cnt, point, side="left"):
     cnt = np.array([[corner[0] + diff, corner[1]] for corner in cnt])
     #print(cnt)
     return cnt
+
+
+def find_quadrant(shape, center):
+    # todo dont hardcode this
+    left = center[0] < (shape[1] / 2)
+    top = center[1] > (shape[0] / 2)
+    return (left, top)

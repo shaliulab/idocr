@@ -181,6 +181,8 @@ def toggle():
     else:
         data_decoded = post_data
 
+    print(data_decoded)
+
     data_parsed = json.loads(data_decoded)
     hardware = data_parsed["hardware"]
     value = float(data_parsed["value"])
@@ -240,7 +242,7 @@ parser.add_argument(
     help="Shall %(prog)s track flies?"
 )
 
-parser.add_argument("-c", "--camera", type=str, help="Stream source", choices=["webcam", "pylon"])
+parser.add_argument("-c", "--camera", type=str, help="Stream source", choices=["PylonCamera", "OpenCVCamera"])
 parser.add_argument(
     "-f", "--framerate", type=int,
     help="Frames per second in the opened stream, overrides config."

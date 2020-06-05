@@ -22,12 +22,12 @@ class PylonCamera(AdaptorCamera, Root):
 
     def __init__(self, *args, timeout=5000, video_path=None, wrap=False, **kwargs):
 
-        super().__init__(*args, **kwargs)
         # TODO Put this stuff in the config
         self._max_failed_count = 10
         self._timeout = timeout
         self._video_path = video_path
         self._wrap = wrap
+        super().__init__(*args, **kwargs)
 
     def is_last_frame(self):
         return False
@@ -46,6 +46,9 @@ class PylonCamera(AdaptorCamera, Root):
         # not to be run continuosly
         # i.e. in normal conditions, it should be broken every time
         # the continously running loop is implemented BaseCamera.__iter__
+        
+        import ipdb; ipdb.set_trace()
+
         while self.camera.IsGrabbing():
             logger.warning("Pylon could not fetch next frame. Trial no %d", failed_count)
             grab = self._grab()
@@ -71,8 +74,8 @@ class PylonCamera(AdaptorCamera, Root):
             self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
             self.camera.Open()
             # self.camera.StartGrabbingMax(numberOfImagesToGrab) # if we want to limit the number of frames
+            self.camera.StartGrabbing()
             logger.info("Pylon camera loaded successfully")
-
         except Exception as error:
             logger.error(error)
             logger.error(traceback.print_exc())

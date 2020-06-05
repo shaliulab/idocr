@@ -2,9 +2,11 @@ __author__ = 'quentin'
 
 import logging
 import itertools
+import pickle
 import os
 
 
+import numpy as np
 import cv2
 try:
     CV_VERSION = int(cv2.__version__.split(".")[0])
@@ -18,14 +20,13 @@ except ImportError:
     from cv2 import CHAIN_APPROX_SIMPLE
     from cv2 import LINE_AA
 
-import numpy as np
-
 from learnmem.server.roi_builders.roi_builders import BaseROIBuilder
 from learnmem.server.core.roi import ROI
 from learnmem.server.utils.debug import IDOCException, EthoscopeException
-from learnmem.server.roi_builders.helpers import *
+from learnmem.server.roi_builders.helpers import find_quadrant
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(level=logging.INFO)
 
 
 class TargetGridROIBuilder(BaseROIBuilder):
@@ -34,7 +35,7 @@ class TargetGridROIBuilder(BaseROIBuilder):
     _expected_min_target_dist = 200 # the minimal distance between two targets, in 'target diameter'
     _n_rows = 10
     _n_cols = 2
-    _top_margin =  0
+    _top_margin = 0
     _bottom_margin = None
     _left_margin = 0
     _right_margin = None
@@ -42,6 +43,15 @@ class TargetGridROIBuilder(BaseROIBuilder):
     _vertical_fill = None
     _inside_pad = 0.0
     _outside_pad = 0.0
+    _reverse = False
+    # MAGIC NUMBERS
+    _max_non_zero = 0.7
+    _min_area_perimeter_ratio = 0.8
+    _min_target_area = 400
+    _max_target_area = 800
+    _min_area_ratio = 1
+    _max_area_ratio = 1.5
+    # END
 
     _target_coord_file = "/etc/target_coordinates.conf"
     _rois_pickle_file = "rois.pickle"
@@ -92,17 +102,10 @@ class TargetGridROIBuilder(BaseROIBuilder):
         self._right_margin = right_margin
         self._horizontal_fill = horizontal_fill
         self._vertical_fill = vertical_fill
-
         self._inside_pad = inside_pad
         self._outside_pad = outside_pad
-        # if self._vertical_fill is None:
-        #     self._vertical_fill = self._horizontal_fill
-        # if self._right_margin is None:
-        #     self._right_margin = self._left_margin
-        # if self._bottom_margin is None:
-        #     self._bottom_margin = self._top_margin
-
-        logging.debug(kwargs)
+        self._sorted_src_pts = [None, ] * 3
+        self._img = None
 
         if 'target_coordinates_file' in kwargs.keys():
             self._target_coord_file = kwargs.pop('target_coordinates_file')
@@ -113,30 +116,28 @@ class TargetGridROIBuilder(BaseROIBuilder):
         super().__init__(*args, **kwargs)
 
     def _sort_src_pts(self, src_points):
+        """
+        Sort the three dots / targets on the arena by their position
+        Maximum distance is between A and C
+        The point not having the most distance with other points is thus B
+        C is the one with the highest distance to B
+        A is the other one (with the lowest distance)
+
+        """
         a, b, c = src_points
 
-        #if debug:
-        #    for pt in src_points:
-        #        pt = tuple((int(e) for e in pt))
-        #        thresh = cv2.circle(thresh, pt, 5, 0, -1)
-
-        pairs = [(a,b), (b,c), (a,c)]
+        pairs = [(a, b), (b, c), (a, c)]
 
         dists = [self._points_distance(*p) for p in pairs]
 
         for d in dists:
-            logging.info(d)
+            logger.info(d)
             if d < self._expected_min_target_dist:
-                img = self._img if len(self._img.shape) == 2 else cv2.cvtColor(self._img, cv2.COLOR_BGR2GRAY)
-                img = place_dots(self._img, src_points)
-                output_path = os.path.join(os.environ["HOME"], "target_detection_fail_output.png")
-
-                logging.info(f"Saving failed detection to {output_path}")
-                cv2.imwrite(output_path, img)
-
-                raise EthoscopeException(f"""The detected targets are too close.
+                raise EthoscopeException("""
+                                        The detected targets are too close.
                                          If you think this is correct, please decrease the value of _expected_min_target_dist
-                                         to something that fits your setup. It is set to {self._expected_min_target_dist}""")
+                                         to something that fits your setup. It is set to %i
+                                         """, self._expected_min_target_dist)
         # that is the AC pair
         hypo_vertices = pairs[np.argmax(dists)]
 
@@ -144,7 +145,7 @@ class TargetGridROIBuilder(BaseROIBuilder):
         for sp in src_points:
             if not sp in hypo_vertices:
                 break
-        sorted_b = sp
+        sorted_b = sp # pylint: disable=undefined-loop-variable
 
         dist = 0
         for sp in src_points:
@@ -158,48 +159,64 @@ class TargetGridROIBuilder(BaseROIBuilder):
         # the remaining point is a
         sorted_a = [sp for sp in src_points if not sp is sorted_b and not sp is sorted_c][0]
         sorted_src_pts = np.array([sorted_a, sorted_b, sorted_c], dtype=np.float32)
+        if self._reverse: sorted_src_pts = sorted_src_pts[::-1]
         self._sorted_src_pts = sorted_src_pts
-        logging.warning("Sorted detection")
-        logging.warning(sorted_src_pts)
+        logger.warning("Sorted detection")
+        logger.warning(sorted_src_pts)
 
         return sorted_src_pts
 
-    def _find_blobs(self, im, scoring_fun=None):
+    def _find_blobs(self, image, scoring_fun=None):
 
         if scoring_fun is None:
             scoring_fun = self._score_targets
 
         #grey= cv2.cvtColor(im,cv2.COLOR_BGR2GRAY)
-        grey=im
-        rad = int(self._adaptive_med_rad * im.shape[1])
-        if rad % 2 == 0:
-            rad += 1
+        grey = image
+        radius = int(self._adaptive_med_rad * image.shape[1])
+        if radius % 2 == 0:
+            radius += 1
+
+        # cv2.imhow('grey', grey)
+        # cv2.waitKey(0)
 
         med = np.median(grey)
-        scale = 255/(med)
-        cv2.multiply(grey,scale,dst=grey)
-        bin = np.copy(grey)
-        score_map = np.zeros_like(bin)
-        for t in range(0, 255,5):
-            cv2.threshold(grey, t, 255,cv2.THRESH_BINARY_INV,bin)
-            if np.count_nonzero(bin) > 0.7 * im.shape[0] * im.shape[1]:
+        if med > 20:
+            scale = 255 / (med)
+            cv2.multiply(grey, scale, dst=grey)
+            binary = np.copy(grey)
+        else:
+            binary = np.copy(grey)
+
+        # cv2.imshow('bin', bin)
+        # cv2.waitKey(0)
+        score_map = np.zeros_like(binary)
+        for threshold in range(0, 255, 5):
+
+            cv2.threshold(grey, threshold, 255, cv2.THRESH_BINARY, binary)
+            # cv2.imwrite('/root/find_blobs_threshold_%d.png' % threshold, binary)
+
+            if np.count_nonzero(binary) > self._max_non_zero * image.shape[0] * image.shape[1]:
                 continue
             if CV_VERSION == 3:
-                _, contours, h = cv2.findContours(bin,cv2.RETR_EXTERNAL,CHAIN_APPROX_SIMPLE)
+                _, contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
             else:
-                contours, h = cv2.findContours(bin,cv2.RETR_EXTERNAL,CHAIN_APPROX_SIMPLE)
+                contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
 
-            bin.fill(0)
-            for c in contours:
-                score = scoring_fun(c, im)
-                if score >0:
-                    cv2.drawContours(bin,[c],0,score,-1)
-            cv2.add(bin, score_map,score_map)
+            binary.fill(0)
+            for contour in contours:
+                score = scoring_fun(contour)
+                if score > 0:
+                    cv2.drawContours(binary, [contour], 0, score, -1)
+
+            cv2.add(binary, score_map, score_map)
+            # cv2.imwrite('/root/find_blobs_score_map_%d.png' % threshold, binary)
+
         return score_map
 
-    def _find_blobs_new(self, img, scoring_fun=None):
+    def _find_blobs_new(self, image, scoring_fun=None):
 
-        grey = img
+        grey = image
         if scoring_fun is None:
             scoring_fun = self._score_circles
 
@@ -214,67 +231,66 @@ class TargetGridROIBuilder(BaseROIBuilder):
         med = np.median(grey)
         scale = 255/(med)
         cv2.multiply(grey, scale, dst=grey)
-        bin = np.copy(grey)
-        score_map = np.zeros_like(bin)
-        grey_orig = grey.copy()
+        binary = np.copy(grey)
+        score_map = np.zeros_like(binary)
+        # grey_orig = grey.copy()
 
         for threshold in range(0, 255, 5):
-            cv2.threshold(grey, threshold, 255, cv2.THRESH_BINARY_INV, bin)
-            non_zero_pixels = np.count_nonzero(bin)
+            cv2.threshold(grey, threshold, 255, cv2.THRESH_BINARY_INV, binary)
+
+            # cv2.imwrite('/root/find_blobs_new_threshold_%d.png' % threshold, binary)
+
+            non_zero_pixels = np.count_nonzero(binary)
+
             # if this threshold operation leaves
             # more than 70% white pixels, continue
             # until loop is over
-            if non_zero_pixels > 0.7 * grey.shape[0] * grey.shape[1]:
+            if non_zero_pixels > self._max_non_zero * grey.shape[0] * grey.shape[1]:
                 continue
 
             if CV_VERSION == 3:
-                _, contours, h = cv2.findContours(bin, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
+                _, contours, _ = cv2.findContours(bin, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
             else:
-                contours, h = cv2.findContours(bin, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
+                contours, _ = cv2.findContours(bin, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
 
             foreground_model = cv2.drawContours(grey.copy(), contours, -1, 255, -1)
             _, foreground_model = cv2.threshold(foreground_model, 254, 255, cv2.THRESH_BINARY)
-            foreground_model = cv2.morphologyEx(foreground_model, cv2.MORPH_CLOSE, kernel = np.ones((3,3)), iterations=1)
-            # cv2.imshow("foreground_model", foreground_model)
-            # cv2.waitKey(0)
+            foreground_model = cv2.morphologyEx(foreground_model, cv2.MORPH_CLOSE, kernel=np.ones((3, 3)), iterations=1)
 
             if CV_VERSION == 3:
-                _, contours, h = cv2.findContours(foreground_model, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
+                _, contours, _ = cv2.findContours(foreground_model, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
             else:
-                contours, h = cv2.findContours(foreground_model, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
+                contours, _ = cv2.findContours(foreground_model, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
 
+            binary.fill(0)
 
-            bin.fill(0)
-
-            for c in contours:
-                score = scoring_fun(c)
+            for contour in contours:
+                score = scoring_fun(contour)
                 if score > 0:
-                    cv2.drawContours(bin, [c], 0, score, -1)
+                    cv2.drawContours(binary, [contour], 0, score, -1)
 
-            score_map = cv2.add(bin, score_map)
+            score_map = cv2.add(binary, score_map, score_map)
+            # cv2.imwrite('/root/find_blobs_new_score_map_%d.png' % threshold, score_map)
 
-            # if self._debug or debug:
-            #     cv2.imshow("bin_th", cv2.threshold(score_map, 1, 255, cv2.THRESH_BINARY)[1])
-            #     cv2.imshow("closing", foreground_model)
-            #     cv2.imshow("foreground_model", foreground_model)
-
-            #     cv2.waitKey(0)
 
         return score_map
 
-    def _make_grid(self, n_col, n_row,
-              top_margin=0.0, bottom_margin=0.0,
-              left_margin=0.0, right_margin=0.0,
-              horizontal_fill=1.0, vertical_fill=1.0,
-              inside_pad=0.0, outside_pad=0.0):
+    @staticmethod
+    def _make_grid(
+            n_col, n_row,
+            top_margin=0.0, bottom_margin=0.0,
+            left_margin=0.0, right_margin=0.0,
+            horizontal_fill=1.0, vertical_fill=1.0,
+            inside_pad=0.0, outside_pad=0.0
+        ):
 
-        y_positions = (np.arange(n_row) * 2.0 + 1) * (1-top_margin-bottom_margin)/(2*n_row) + top_margin
-        x_positions = (np.arange(n_col) * 2.0 + 1) * (1-left_margin-right_margin)/(2*n_col) + left_margin
-        all_centres = [np.array([x,y]) for x,y in itertools.product(x_positions, y_positions)]
+        y_positions = (np.arange(n_row) * 2.0 + 1) * (1 - top_margin - bottom_margin) / (2 * n_row) + top_margin
+        x_positions = (np.arange(n_col) * 2.0 + 1) * (1 - left_margin - right_margin) / (2 * n_col) + left_margin
+        all_centres = [np.array([x, y]) for x, y in itertools.product(x_positions, y_positions)]
 
         padded_centres = []
         for center in all_centres:
-            left, top = find_quadrant((1,1), center)
+            left, top = find_quadrant((1, 1), center)
             if left:
                 center[0] -= inside_pad
                 center[0] += outside_pad
@@ -297,97 +313,119 @@ class TargetGridROIBuilder(BaseROIBuilder):
         return rectangles
 
 
-    def _points_distance(self, pt1, pt2):
+    @staticmethod
+    def _points_distance(pt1, pt2):
         x1 , y1  = pt1
         x2 , y2  = pt2
         return np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
-    def _score_targets(self,contour, im):
+    def _score_targets(self, contour):
 
         area = cv2.contourArea(contour)
-        perim = cv2.arcLength(contour,True)
+        perimeter = cv2.arcLength(contour, True)
 
-        if perim == 0:
+        if perimeter == 0:
             return 0
-        circul =  4 * np.pi * area / perim ** 2
+        circle = 4 * np.pi * area / perimeter ** 2
 
-        if circul < .8: # fixme magic number
+        if circle < self._min_area_perimeter_ratio:
             return 0
+
         return 1
 
-    def _score_circles(self, contour):
+    @staticmethod
+    def _score_circles(contour):
+        """
+        Score the target quality by checking
+        * its area is within limits
+        * the ratio of the area of the minimal enclosing circle and its area is within limits
+        """
 
         area = cv2.contourArea(contour)
 
-        if area < 400 or area > 800:
+        if not self._min_target_area > area > self._max_target_area:
             return 0
 
         ((x, y), radius) = cv2.minEnclosingCircle(contour)
         # if area was zero the functionw would have already returned
-        ratio = np.pi*radius**2 / area
+        ratio = np.pi * radius ** 2 / area
         # print(ratio)
 
-        if ratio > 1 and ratio < 1.5:
+        if self._min_area_ratio < ratio < self._max_area_ratio:
             return 1
-        else:
-            return 0
 
+        return 0
 
-    def _find_target_coordinates(self, img, blob_function):
-        map = blob_function(img)
+    def _find_target_coordinates(self, image, blob_function):
 
-        _, map_bin = cv2.threshold(map, 1, 255, cv2.THRESH_BINARY)
+        score_map = blob_function(image)
 
-        bin = np.zeros_like(map)
+        # cv2.imshow('blob_score_map', score_map)
+        # cv2.waitKey(0)
+
+        binary = np.zeros_like(score_map)
 
         # as soon as we have three objects, we stop
         contours = []
-        for t in range(0, 255,1):
-            cv2.threshold(map, t, 255,cv2.THRESH_BINARY, bin)
+        for threshold in range(0, 255, 1):
+
+            cv2.threshold(score_map, threshold, 255, cv2.THRESH_BINARY, binary)
+
+            # cv2.imshow('threshold', binary)
+            # cv2.waitKey(0)
+
             if CV_VERSION == 3:
-                _, contours, h = cv2.findContours(bin,cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
+                _, contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
             else:
-                contours, h = cv2.findContours(bin, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
+                contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
 
-
-            if len(contours) <3:
-                raise EthoscopeException("There should be three targets. Only %i objects have been found" % (len(contours)), img)
+            if len(contours) < 3:
+                raise EthoscopeException("There should be three targets. Only %i objects have been found" % (len(contours)), image)
             if len(contours) == 3:
                 break
 
-        target_diams = [cv2.boundingRect(c)[2] for c in contours]
+        target_diams = [cv2.boundingRect(contour)[2] for contour in contours]
 
         mean_diam = np.mean(target_diams)
         mean_sd = np.std(target_diams)
 
-        if mean_sd/mean_diam > 0.10:
-            raise EthoscopeException("Too much variation in the diameter of the targets. Something must be wrong since all target should have the same size", img)
+        if mean_sd / mean_diam > 0.10:
+            raise EthoscopeException(
+                """
+                Too much variation in the diameter of the targets.
+                Something must be wrong since all target should have the same size
+                """,
+                image
+            )
 
         src_points = []
-        for c in contours:
-            moms = cv2.moments(c)
-            x , y = moms["m10"]/moms["m00"],  moms["m01"]/moms["m00"]
-            src_points.append((x,y))
+        for contour in contours:
+            moms = cv2.moments(contour)
+            x, y = moms["m10"] / moms["m00"], moms["m01"] / moms["m00"]
+            src_points.append((x, y))
 
-        # map_bin_dots1 = place_dots(map_bin.copy(), src_points, color = 0)
         sorted_src_pts = self._sort_src_pts(src_points)
-        map_bin_dots = place_dots(map_bin.copy(), sorted_src_pts, color = 0)
-        # cv2.imwrite(os.path.join(os.environ["HOME"], "target_detection_segmented_dots2.png" ), map_bin_dots)
+
+        from learnmem.server.roi_builders.helpers import place_dots
+        image_dots = place_dots(image.copy(), sorted_src_pts, color=0)
+        cv2.imwrite("/root/image_dots.png", image_dots)
+
         return sorted_src_pts
 
-    def _rois_from_img(self, input):
+    def _rois_from_img(self, image):
 
-        self._img = input
+        self._img = image
+        # cv2.imshow('input', input)
+        # cv2.waitKey(0)
         if os.path.exists(self._rois_pickle_file):
-            with open(self._rois_pickle_file, "rb") as fh:
-                import pickle
-                rois = pickle.load(fh)
+            with open(self._rois_pickle_file, "rb") as filehandle:
+                rois = pickle.load(filehandle)
             return rois
 
         else:
             if os.path.exists(self._target_coord_file):
-                with open(self._target_coord_file, "r") as fh:
-                    data = fh.read()
+                with open(self._target_coord_file, "r") as filehandle:
+                    data = filehandle.read()
 
                 # each dot is in a newline
                 data = data.split("\n")[:3]
@@ -397,27 +435,29 @@ class TargetGridROIBuilder(BaseROIBuilder):
 
             else:
                 try:
-                    sorted_src_pts = self._find_target_coordinates(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), self._find_blobs)
+                    sorted_src_pts = self._find_target_coordinates(cv2.cvtColor(self._img, cv2.COLOR_BGR2GRAY), self._find_blobs)
                 except EthoscopeException as e:
                     # raise e
-                    logging.warning("Fall back to find_blobs_new")
-                    sorted_src_pts = self._find_target_coordinates(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), self._find_blobs_new)
-                # sorted_src_pts = self._find_target_coordinates(img)
+                    logger.warning("Fall back to find_blobs_new")
+                    sorted_src_pts = self._find_target_coordinates(cv2.cvtColor(self._img, cv2.COLOR_BGR2GRAY), self._find_blobs_new)
                 except Exception as e:
                     raise e
 
-            dst_points = np.array([(0, -1),
-                                   (0, 0),
-                                   (-1, 0)], dtype=np.float32)
+            dst_points = np.array([
+                (0, -1),
+                (0, 0),
+                (-1, 0)
+            ], dtype=np.float32)
             wrap_mat = cv2.getAffineTransform(dst_points, sorted_src_pts)
+            rectangles = self._make_grid(
+                self._n_cols, self._n_rows,
+                self._top_margin, self._bottom_margin,
+                self._left_margin, self._right_margin,
+                self._horizontal_fill, self._vertical_fill,
+                self._inside_pad, self._outside_pad
+            )
 
-            rectangles = self._make_grid(self._n_cols, self._n_rows,
-                                         self._top_margin, self._bottom_margin,
-                                         self._left_margin,self._right_margin,
-                                         self._horizontal_fill, self._vertical_fill,
-                                         self._inside_pad, self._outside_pad)
-
-            shift = np.dot(wrap_mat, [1,1,0]) - sorted_src_pts[1] # point 1 is the ref, at 0,0
+            shift = np.dot(wrap_mat, [1, 1, 0]) - sorted_src_pts[1] # point 1 is the ref, at 0,0
             rois = []
             side = "left"
             point = self._sorted_src_pts[2]
@@ -427,14 +467,11 @@ class TargetGridROIBuilder(BaseROIBuilder):
                     side = "right"
                     point = self._sorted_src_pts[1]
 
-                r = np.append(r, np.zeros((4,1)), axis=1)
+                r = np.append(r, np.zeros((4, 1)), axis=1)
                 mapped_rectangle = np.dot(wrap_mat, r.T).T
                 mapped_rectangle -= shift
                 ct = mapped_rectangle.astype(np.int32)
-                # logging.warning(i)
-                ct, _, _, _ = refine_contour(ct, img, rotate=False)
-                ct = pull_contour_h(ct, point, side)
-                cv2.drawContours(img, [ct.reshape((1, 4, 2))], -1, (255, 0, 0), 1, LINE_AA)
+                cv2.drawContours(self._img, [ct.reshape((1, 4, 2))], -1, (255, 0, 0), 1, LINE_AA)
                 rois.append(ROI(ct, idx=i+1))
 
         return rois
@@ -479,8 +516,47 @@ class TargetGridROIBuilder(BaseROIBuilder):
         return all_centres_sorted
 
 
+class FSLSleepMonitorWithTargetROIBuilder(TargetGridROIBuilder):
+
+    _description = {"overview": "The default sleep monitor arena with ten rows of two tubes.",
+                    "arguments": []}
+
+    def __init__(self, *args, **kwargs):
+        r"""
+        Class to build ROIs for a two-columns, ten-rows for the sleep monitor
+        (`see here <https://github.com/gilestrolab/ethoscope_hardware/tree/master/arenas/arena_10x2_shortTubes>`_).
+        """
+        #`sleep monitor tube holder arena <todo>`_
+
+        super().__init__(
+            *args,
+            n_rows=10,
+            n_cols=2,
+            top_margin=6.99 / 111.00,
+            bottom_margin=6.99 / 111.00,
+            left_margin=-.033,
+            right_margin=-.033,
+            horizontal_fill=.8,
+            vertical_fill=.5,
+            inside_pad=0.07,
+            outside_pad=0.0,
+            **kwargs
+        )
+
 
 
 class IDOCROIBuilder(TargetGridROIBuilder):
-    # TODO
-    pass
+
+    _reverse = True
+
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(
+            *args,
+            n_rows=10, n_cols=2,
+            top_margin=1.2 / 111.00, bottom_margin=1.8 / 111.00,
+            left_margin=0.033, right_margin=0.033,
+            horizontal_fill=.5, vertical_fill=.40,
+            inside_pad=.05, outside_pad=.0,
+            **kwargs
+        )

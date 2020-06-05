@@ -108,12 +108,9 @@ class Recognizer(Base, Root):
             self._submodules["camera"].close()
 
 
-
-        print(camera_kwargs)
-
         self._submodules["camera"] = self._camera_class(
             *camera_args,
-            video_path=self._video_path or self._config.content['io']['camera']['kwargs']['video_path']
+            video_path=self._video_path,
             **camera_kwargs
         )
 

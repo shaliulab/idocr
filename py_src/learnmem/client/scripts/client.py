@@ -259,4 +259,4 @@ for sig in signals:
 
 
 SERVER = get_server(PORT)
-# bottle.run(app, host='0.0.0.0', port=PORT, debug=DEBUG, server=SERVER)
+bottle.run(app, host='0.0.0.0', port=PORT, debug=DEBUG, server=SERVER)

@@ -3,6 +3,7 @@ import datetime
 import logging
 import os
 import random
+import warnings
 
 # Third party imports
 import bottle
@@ -79,7 +80,6 @@ def get_server(port):
                     )
 
                 try:
-                    import warnings
                     warnings.filterwarnings(
                         action="ignore", message="unclosed",
                         category=ResourceWarning
@@ -87,9 +87,6 @@ def get_server(port):
                     self._server.start()
                 finally:
                     self._server.stop()
-
-            def stop(self):
-                self._server.stop()
 
         bottle.server_names["cherrypy"] = CherootServer(host='0.0.0.0', port=port)
         logger.info("Cherrypy version is bigger than 9, we have to change to cheroot server")

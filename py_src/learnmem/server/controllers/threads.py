@@ -25,10 +25,10 @@ class BaseControllerThread(Base, Root):
     pin_state = None
 
     def __init__(
-            self, i, hardware, board, pin_state, pin_number, start, end, *args,
+            self, i, hardware, board, pin_state, pin_number, mode, start, end, *args,
             value=1, sampling_rate=10.0, result_writer=None, **kwargs
         ):
-        r"""
+        """
 
         :param i: A unique identifier for each instance
         :type i: int
@@ -54,6 +54,11 @@ class BaseControllerThread(Base, Root):
         Select a pin from a microcontroller board i.e. Arduino.
         :type pin_number: ``int``
 
+        :param mode:
+        A valid mode for the get_pin function.
+        Eiher i (input), o (output) or p (pwm).
+        :type pin_number: ``str``
+
         :param start:
         Time in seconds when the thread should turn on a pin.
         :type start: ``float``
@@ -69,7 +74,7 @@ class BaseControllerThread(Base, Root):
         it is not coerced and the pin is opened in pwm mode with that intensity
         (max intensity is 1).
 
-        :type value ``float``
+        :type value: ``float``
 
         :param sampling_rate:
         Frequency in Hertz (s-1) with which the thread will check
@@ -91,8 +96,8 @@ class BaseControllerThread(Base, Root):
         self._board = board
         self.pin_state = pin_state
         self._barriers = {}
-        self._pin = None
         self._result_writer = result_writer
+        self._mode = mode
 
         logger.debug(
             "Address from class %s of pin_state in memory %s",
@@ -104,22 +109,15 @@ class BaseControllerThread(Base, Root):
         self.end_seconds = end
         self._value = value
         self.sampling_rate = sampling_rate
+        self._pin = self._board.get_pin('d:%d:%s' % (self.pin_number, self.mode))
+
+    @property
+    def hardware(self):
+        return self._hardware
 
     @property
     def pin(self):
         return self._pin
-
-    @pin.getter
-    def pin(self):
-        r"""
-        get_pin needs a string with three parts
-        a/o for analog or digital pin
-        pin number
-        i,o,p for mode in input, output, pwm
-        They will be fetched from the class' attributes
-        """
-        return self._board.get_pin('d:%d:%s' % (self.pin_number, self.mode))
-
 
     @property
     def name(self):
@@ -139,30 +137,19 @@ class BaseControllerThread(Base, Root):
 
     @property
     def value(self):
-        r"""
-        Value the thread writes to the pin
-        everytime it _turns_on().
-        If < 1, it requires PWM support
-        """
-        if self._value in [0.0, 1.0]:
-            return int(self._value)
+        return self._value
+
+    @value.setter
+    def value(self, value):
+
+        if 0 <= value <= 1:
+            self._value = value
         else:
-            return self._value
+            logger.warning('Passed value not valid: %s', str(value))
 
     @property
     def mode(self):
-        r"""
-        Based on self.value, if integer (0 or 1)
-        the pin is selected in output mode
-        otherwise in pwm mode.
-        """
-        #TODO Support input mode too
-
-        if self.value is int:
-            return self._modes["output"]
-        else:
-            return self._modes["pwm"]
-
+        return self._mode
 
     def add_barrier(self, barrier, name):
         r"""
@@ -190,8 +177,8 @@ class BaseControllerThread(Base, Root):
         # even if the pin is controlled with a wave
         # Shall I change this so the monitor displays the wave?
 
-        logger.debug("Turning %s on (%s)", self._hardware, self._value)
-        self._notify(self._value)
+        logger.debug("Turning %s on (%s)", self._hardware, self.value)
+        self._notify(self.value)
         return self._turn_on()
 
     def turn_off(self):
@@ -332,7 +319,7 @@ class WaveBaseControllerThread(BaseControllerThread):
         as long as the _shore event is not set
         """
 
-        self._notify(self._value)
+        self._notify(self.value)
         while not self._shore.is_set():
             self._turn_on()
             self._shore.wait(self._seconds_on)

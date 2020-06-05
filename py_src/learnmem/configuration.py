@@ -54,9 +54,11 @@ class LearnMemConfiguration(object):
                 'class': "OpenCVCamera",
                 'args': (),
                 'kwargs': {
-                    'framerate': 10, 'exposure_time': 5000,
+                    'framerate': 10, 'exposure_time': 50000,
                     'resolution': (960, 720),
-                    'drop_each': 1, 'max_duration': np.inf, 'wrap': True
+                    'drop_each': 1, 'max_duration': np.inf,
+                    #'video_path': None,
+                    'wrap': True
                 }
             }
         },
@@ -66,7 +68,12 @@ class LearnMemConfiguration(object):
             'mapping_path': '/1TB/Cloud/Lab/Gitlab/learnmem/py_src/mappings/mega.csv',
             'paradigm_path': 'unittest_long.csv',
             'adaptation_time': 600,
-            'arduino_port': "/dev/ttyACM0"
+            'arduino_port': "/dev/ttyACM0",
+            'pwm': {
+                'ONBOARD_LED': 0.99999,
+                'MAIN_VALVE' : 0.99999,
+                'VACUUM': 0.99999
+            },
         },
 
         'drawer': {
@@ -80,11 +87,7 @@ class LearnMemConfiguration(object):
             'last_annot_path': "/tmp/last_img_annot.png",
         },
 
-        'pwm': {
-            'ONBOARD_LED': 0.99999,
-            'MAIN_VALVE' : 0.99999,
-            'VACUUM': 0.99999
-        },
+
 
         # TODO Sort this stuff
         'experiment': {

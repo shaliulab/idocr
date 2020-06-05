@@ -21,7 +21,6 @@ from learnmem.configuration import LearnMemConfiguration
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-config = LearnMemConfiguration()
 
 
 THREADS = {
@@ -43,7 +42,7 @@ class Programmer(Settings, Root):
         super().__init__(*args, **kwargs)
 
         self._result_writer = result_writer
-        self._paradigms_dir = config.content["folders"]["paradigms"]["path"]
+        self._paradigms_dir = self._config.content["folders"]["paradigms"]["path"]
         self._board = board
         self._sampling_rate = sampling_rate
         self._mapping = mapping
@@ -171,7 +170,8 @@ class Programmer(Settings, Root):
 
 
         table_df = pd.read_csv(self.absolute_paradigm_path)
-        required_columns = ["start", "end", "on"]
+
+        required_columns = ["start", "end", "on", "mode"]
         missing_index = [not e in table_df.columns for e in required_columns]
 
         if "off" not in table_df.columns:
@@ -257,8 +257,24 @@ class Programmer(Settings, Root):
         # value is 1 by default.
         # If the user wishes to run a pwm cycle on a pin, it must be explicitly declared
         # in the config file, together with a fraction between 0 and 1
-        if hardware in config.content["pwm"].keys():
-            value = config.content["pwm"][hardware]
+
+        if "mode" in row:
+            mode = row["mode"]
+        else:
+            mode = "o"
+
+        if "value" in row:
+            value = row["value"]
+
+        elif hardware in self._config.content["controller"]['pwm']:
+            if mode == "p":
+                value = self._config.content["controller"]['pwm']
+            else:
+                logger.warning(
+                    'User requested %s in %s mode and configuration saved is pwm mode',
+                    hardware, row["mode"]
+                )
+                value = 1
         else:
             value = 1
 
@@ -267,6 +283,7 @@ class Programmer(Settings, Root):
             "hardware": hardware,
             "pin_number": pin_number,
             "value": value,
+            "mode": mode
         })
 
         # check if on AND off times are NOT defined (is.nan)
@@ -345,7 +362,9 @@ class Programmer(Settings, Root):
         for i, row in enumerate(self.table):
 
             kwargs = {"i": str(i).zfill(3)}
-            kwargs.update(self._parse(row, i))
+            # import ipdb; ipdb.set_trace()
+            extra_kwargs = self._parse(row, i)
+            kwargs.update(extra_kwargs)
             kwargs["result_writer"] = self._result_writer
             logger.debug(kwargs)
 

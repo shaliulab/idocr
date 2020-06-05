@@ -90,15 +90,33 @@ class Controller(DefaultInterface, Base, Root):
     #     return self._board
 
     def toggle(self, hardware, value):
-        mode = "o"
-        if 0 < value < 1:
-            mode = "p"
+        try:
+            for thread in self.programmer.paradigm:
+                if thread.hardware == hardware:
+                    break
+        except Exception as error:
+            logger.warning(error)
+            return
 
-        print(self.mapping)
+        if value == 0:
+            thread.turn_off()
+        else:
+            old_value = thread.value
+            # if type()
+            thread.value = value
+            thread.turn_on()
+            thread.value = old_value
 
-        pin_number = self.mapping[hardware]
-        pin = self._board.get_pin('d:%d:%s' % (pin_number, mode))
-        pin.write(value)
+
+        # mode = "o"
+        # if 0 < value < 1:
+        #     mode = "p"
+
+        # print(self.mapping)
+
+        # pin_number = self.mapping[hardware]
+        # pin = self._board.get_pin('d:%d:%s' % (pin_number, mode))
+        # pin.write(value)
 
     @property
     def programmer(self):

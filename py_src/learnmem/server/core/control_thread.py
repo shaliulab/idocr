@@ -17,6 +17,7 @@ from learnmem.server.io.pylon_camera import PylonCamera
 from learnmem.server.io.opencv_camera import OpenCVCamera
 from learnmem.server.roi_builders.roi_builders import DefaultROIBuilder
 from learnmem.server.roi_builders.high_contrast_roi_builder import HighContrastROIBuilder
+from learnmem.server.roi_builders.target_roi_builder import IDOCROIBuilder
 from learnmem.server.drawers.drawers import DefaultDrawer
 from learnmem.server.utils.debug import IDOCException
 
@@ -32,9 +33,10 @@ class ControlThread(Base, Root):
 
         'roi_builder': {
             'possible_classes': [
-                HighContrastROIBuilder, DefaultROIBuilder
+                IDOCROIBuilder, HighContrastROIBuilder, DefaultROIBuilder
             ],
-            'default_class': HighContrastROIBuilder
+            # 'default_class': HighContrastROIBuilder
+            'default_class': IDOCROIBuilder
         },
 
         'tracker': {

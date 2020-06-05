@@ -27,6 +27,7 @@ class Root:
     Most abstract class, designed to implement defensive programming
     as instructed in https://rhettinger.wordpress.com/2011/05/26/super-considered-super/
     """
+    _config = LearnMemConfiguration()
 
     def __init__(self):
         pass
@@ -317,7 +318,6 @@ class Base(Settings, StatusThread, Root):
     """
     def __init__(self, *args, **kwargs): # pylint: disable=useless-super-delegation
         super().__init__(*args, **kwargs)
-        self._config = LearnMemConfiguration()
         self._validate()
 
 

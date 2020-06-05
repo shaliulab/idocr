@@ -117,7 +117,7 @@ class ObjectModel(Root):
     def compute_features(self, img, contour):
         x, y, w, h = cv2.boundingRect(contour)
 
-        if self._roi_img_buff is None or np.any(self._roi_img_buff.shape < img.shape[0:2]) :
+        if self._roi_img_buff is None or np.any(self._roi_img_buff.shape < img.shape[0:2]):
             # dynamically reallocate buffer if needed
             self._img_buff_shape[1] = max(self._img_buff_shape[1],w)
             self._img_buff_shape[0] = max(self._img_buff_shape[0], h)
