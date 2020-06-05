@@ -459,13 +459,13 @@ class TargetGridROIBuilder(BaseROIBuilder):
 
             shift = np.dot(wrap_mat, [1, 1, 0]) - sorted_src_pts[1] # point 1 is the ref, at 0,0
             rois = []
-            side = "left"
-            point = self._sorted_src_pts[2]
+            # side = "left"
+            # point = self._sorted_src_pts[2]
 
             for i, r in enumerate(rectangles):
-                if i > 9:
-                    side = "right"
-                    point = self._sorted_src_pts[1]
+                # if i > 9:
+                    # side = "right"
+                    # point = self._sorted_src_pts[1]
 
                 r = np.append(r, np.zeros((4, 1)), axis=1)
                 mapped_rectangle = np.dot(wrap_mat, r.T).T
