@@ -35,7 +35,7 @@ class BaseROIBuilder(DescribedObject):
             accum = np.copy(input)
         else:
             for idx, (_, frame) in enumerate(input):
-                print(frame.shape)
+                logger.debug(frame.shape)
                 accum.append(frame)
                 if idx == 5:
                     break

@@ -102,11 +102,12 @@ class ControlThread(Base, Root):
         self._video_path = experiment_data["video_path"]
         self._video_out = None
         self.mapping_path = experiment_data["mapping_path"] or self._config.content['controller']['mapping_path']  # pylint: disable=line-too-long
-        self.paradigm_path = experiment_data["paradigm_path"]
+        self.paradigm_path = experiment_data["paradigm_path"] or self._config.content['controller']['paradigm_path']
         self.output_path = experiment_data["output_path"]
         self.arduino_port = experiment_data["arduino_port"]
         self.board_name = experiment_data["board_name"] or self._config.content['controller']['board_name'] # pylint: disable=line-too-long
         self.experimenter = experiment_data["experimenter"]
+        self._endless = experiment_data["endless"]
         self._status = {}
 
         logger.info("Start time: %s", datetime.datetime.now().isoformat())
@@ -119,19 +120,14 @@ class ControlThread(Base, Root):
     @info.getter
     def info(self):
 
-        # logger.debug('Control thread is updating the info')
-        status = 'offline'
 
         if self.recognize:
             self._info["recognizer"] = self.recognizer.info
-            status = 'running'
         else:
             self._info["recognizer"] = {"status": "offline"}
 
         if self.control:
             self._info["controller"] = self.controller.info
-            status = 'running'
-
         else:
             self._info["controller"] = {"status": "offline"}
 
@@ -139,10 +135,11 @@ class ControlThread(Base, Root):
             "id": get_machine_id(),
             "location": self._config.content["experiment"]["location"],
             "name": get_machine_name(),
-            "status": status
+            "status": self.status["control_thread"],
+            "submodules": {k: self.status[k] for k in self._submodules}
 
         })
-        # logger.debug('ControlThread.info OK')
+
         return self._info
 
     @property
@@ -167,6 +164,7 @@ class ControlThread(Base, Root):
         self._status.update({
             "recognizer": self.recognizing,
             "controller": self.controlling,
+            "result_writer": self.result_writer.status,
         })
 
 
@@ -200,8 +198,7 @@ class ControlThread(Base, Root):
 
     @property
     def video_out(self):
-
-        filename = self.start_datetime + '_idoc_' + get_machine_id() + ".csv"
+        filename = self.start_datetime + '_idoc_' + get_machine_id() + ".avi"
         self._video_out = os.path.join(
             self.result_writer.result_dir,
             filename
@@ -301,7 +298,7 @@ class ControlThread(Base, Root):
         self.controller = Controller(
             mapping_path=self.mapping_path,
             paradigm_path=self.paradigm_path,
-            result_writer=result_writer,
+            result_writer=self.result_writer,
             board_name=self.board_name,
             arduino_port=self.arduino_port
         )
@@ -331,6 +328,12 @@ class ControlThread(Base, Root):
         drawer_class = self._option_dict['drawer']['default_class']
         drawer_args = self._config.content['drawer']['args']
         drawer_kwargs = self._config.content['drawer']['kwargs']
+        camera_framerate = self._config.content['io']['camera']['kwargs']['framerate']
+
+        video_out_fps = drawer_kwargs["video_out_fps"] or camera_framerate
+        drawer_kwargs["video_out_fps"] = video_out_fps
+
+
         drawer = drawer_class(
             *drawer_args,
             video_out=self.video_out,
@@ -385,9 +388,10 @@ class ControlThread(Base, Root):
             # # start recognizer upon user input
             # self.recognizer.start()
             self._end_event.wait(1/self.sampling_rate)
-            if self.controller.progress > 100:
-                self.stop_experiment()
-                break
+            if self.control:
+                if self.controller.progress > 100:
+                    self.stop_experiment()
+                    break
 
         return
 
@@ -397,8 +401,7 @@ class ControlThread(Base, Root):
         Stop everything!
         """
         super().stop()
-        self.stop_experiment()
-
+        self.stop_experiment(force=True)
 
     def start_experiment(self):
         r"""
@@ -447,7 +450,7 @@ class ControlThread(Base, Root):
             # start the paradigm loaded in the controller
             self.controller.start()
 
-    def stop_experiment(self):
+    def stop_experiment(self, force=False):
         """
         Convenience combination of commands targeted to stop an experiment.
 
@@ -459,10 +462,12 @@ class ControlThread(Base, Root):
         Only the stop() method can do that.
         """
 
-        if self.recognize:
-            self.recognizer.stop()
+        if not self._endless and not force:
 
-        if self.control:
-            self.controller.stop()
+            if self.recognize:
+                self.recognizer.stop()
 
-        self.result_writer.clear()
+            if self.control:
+                self.controller.stop()
+
+            self.result_writer.clear()

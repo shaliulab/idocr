@@ -102,16 +102,15 @@ class Device(Thread, HTTPMixin):
         self._settings = self._get_json(url)
         return self._settings
 
-
     @property
     def info(self):
         return self._info
 
     def get_info(self):
-        logging.info('Getting self._info')
+        logging.debug('Getting self._info')
         url = "http://%s:%d/info/%s" % (self._ip, self._port, self.id)
         self._info = self._get_json(url)
-        logging.info('_get_json self._info')
+        logging.debug('_get_json self._info')
         return self._info
 
     def get_logs(self):

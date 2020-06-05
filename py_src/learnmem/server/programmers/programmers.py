@@ -85,22 +85,6 @@ class Programmer(Settings, Root):
         else:
             return os.path.join(self._paradigms_dir, self._settings["paradigm_path"])
 
-    @property
-    def duration(self):
-        r"""
-        Return maximum value of end stored in the table
-        used to generate the paradigm
-        This is considered as the duration of the paradigm
-        The value is returned in seconds, assumming the user input was in seconds
-        """
-        ends = [row["end"] for row in self.table]
-        try:
-            duration = max(ends)
-            return duration
-
-        except ValueError:
-            return None
-
     @paradigm_path.setter
     def paradigm_path(self, paradigm_path):
         r"""
@@ -136,6 +120,23 @@ class Programmer(Settings, Root):
             logger.debug(error)
             logger.debug(traceback.print_exc())
             return
+
+
+    @property
+    def duration(self):
+        r"""
+        Return maximum value of end stored in the table
+        used to generate the paradigm
+        This is considered as the duration of the paradigm
+        The value is returned in seconds, assumming the user input was in seconds
+        """
+        ends = [row["end"] for row in self.table]
+        try:
+            duration = max(ends)
+            return duration
+
+        except ValueError:
+            return None
 
     @property
     def absolute_paradigm_path(self):
@@ -189,8 +190,6 @@ class Programmer(Settings, Root):
 
         for row_tuple in table_df.iterrows():
             row = row_tuple[1].to_dict()
-            row["start"]
-            row["end"]
             self.table.append(row)
 
         logger.debug(self.table)

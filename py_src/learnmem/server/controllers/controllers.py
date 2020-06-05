@@ -66,7 +66,6 @@ class Controller(DefaultInterface, Base, Root):
         self._board_name = board_name
         self._arduino_port = arduino_port
         self._board = BOARDS[self._board_name](self._arduino_port)
-
         self._result_writer = result_writer
 
         # Programmer instance that processes user input
@@ -79,6 +78,7 @@ class Controller(DefaultInterface, Base, Root):
             self._mapping, paradigm_path=paradigm_path
         )
         self._settings.update(self._submodules['programmer'].settings)
+        self._progress = 0
 
     # @property
     # def settings(self):
@@ -97,12 +97,22 @@ class Controller(DefaultInterface, Base, Root):
         """
 
         if self._time_zero is None:
-            return 0
+            self._progress = 0
+            return self._progress
+
+        elif self.stopped:
+            return self._progress
+
         else:
             diff = (datetime.datetime.now() - self._time_zero).total_seconds()
 
-        progress = diff / self._submodules['programmer'].duration
-        return progress * 100
+        try:
+            progress = diff / self.programmer.duration
+        except TypeError: #programmer.duration is not defined
+            progress = 0
+
+        self._progress = progress * 100
+        return self._progress
 
     @property
     def adaptation_time(self):
@@ -232,8 +242,6 @@ class Controller(DefaultInterface, Base, Root):
             logger.warning("Please load a program before recording")
             logger.info(self._submodules['programmer'].list())
             return
-
-        print(self._submodules["programmer"].paradigm)
 
         for thread in self._submodules['programmer'].paradigm:
             try:

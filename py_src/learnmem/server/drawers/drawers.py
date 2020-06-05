@@ -50,7 +50,6 @@ class BaseDrawer(Base, Root):
             cv2.namedWindow(self._window_name, cv2.WINDOW_AUTOSIZE)
         self._last_drawn_frame = None
         self.arena = None
-        print(self._video_out)
 
     def _annotate_frame(self, img, tracking_units, positions, roi):
         """
@@ -99,6 +98,8 @@ class BaseDrawer(Base, Root):
         """
 
         self._last_drawn_frame = img.copy()
+        self._last_raw_frame = img.copy()
+
         img = self._annotate_frame(self._last_drawn_frame, tracking_units, positions, roi)
         self._last_annot_frame = img
 
@@ -141,7 +142,7 @@ class BaseDrawer(Base, Root):
             }
 
 
-        self._video_writers["raw"].write(self._last_drawn_frame)
+        self._video_writers["raw"].write(self._last_raw_frame)
         self._video_writers["annot"].write(self._last_annot_frame)
 
         return img

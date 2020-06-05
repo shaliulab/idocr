@@ -13,9 +13,12 @@ logger.setLevel(logging.INFO)
 
 class OpenCVCamera(AdaptorCamera, Root):
 
-    def __init__(self, *args, video_path=None, wrap=False, **kwargs):
+    def __init__(self, *args, video_path=None, wrap=True, **kwargs):
 
         self._wrap = wrap
+        print("self._wrap")
+        print(self._wrap)
+
         self._time_s = 0
         self._wrap_s = 0
 

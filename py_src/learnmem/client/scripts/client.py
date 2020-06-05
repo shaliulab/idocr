@@ -110,7 +110,7 @@ def get_device_last_img(id):
 
 @app.get('/device/<id>/info')
 def info(id):
-    return ds.get_device_by_id(id).info
+    return ds.get_device_by_id(id).get_info()
 
 @app.get('/device/<id>/controls/<submodule>/<action>')
 def device_actions(id, submodule, action):

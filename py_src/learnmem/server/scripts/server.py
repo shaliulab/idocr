@@ -256,6 +256,7 @@ parser.add_argument(
 parser.add_argument("-p", "--port", type=int)
 
 parser.add_argument("-D", "--debug", action='store_true', dest="debug")
+parser.add_argument("--endless", action='store_true', dest="endless")
 
 
 
