@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import logging.handlers
+import os
 import signal
 from threading import Thread
 
@@ -168,6 +169,23 @@ def control(submodule, action):
 
     return control.command(submodule, action)
 
+
+@app.post("/controls/toggle/<id>")
+@warning_decorator
+@wrong_id
+def toggle():
+
+    post_data = bottle.request.body.read() # pylint: disable=no-member
+    if isinstance(post_data, bytes):
+        data_decoded = post_data.decode()
+    else:
+        data_decoded = post_data
+
+    data_parsed = json.loads(data_decoded)
+    hardware = data_parsed["hardware"]
+    value = float(data_parsed["value"])
+    return control.toggle(hardware, value)
+
 @app.get('/logs/<id>')
 @warning_decorator
 @wrong_id
@@ -305,10 +323,13 @@ def stop(signo=None, _frame=None):
     A function to bind the arrival of specific signals to an action.
     """
     logger.info("Received signal %s", signo)
-    control.stop()
-    # if 'cherrypy' in bottle.server_names:
-    logger.info("Executing cherrypy server stop")
-    bottle.server_names['cherrypy'].stop() # pylint: disable=no-member
+    try:
+        control.stop()
+        os._exit(0)
+        # sys.exit(0)
+    except Exception as error:
+        logger.warning(error)
+        pass
     return
 
 

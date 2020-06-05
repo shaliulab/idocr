@@ -12,6 +12,15 @@ from pyfirmata import Arduino, ArduinoMega
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+class PIN():
+
+    def __init__(self, type, number, mode):
+        self._type = type
+        self._number = number
+        self._mode = mode
+
+    def write(self, value):
+        print(value)
 
 class ArduinoDummy:
     r"""
@@ -23,6 +32,18 @@ class ArduinoDummy:
     def __init__(self, devport):
         self._devport = devport
         logger.info("Initialized dummy Arduino on port %s", self._devport)
+
+
+    def get_pin(self, string):
+
+        type = string.split(":")[0]
+        number = int(string.split(":")[1])
+        mode = string.split(":")[2]
+
+        pin = PIN(type, number, mode)
+        return pin
+
+
 
 
 class ArduinoBoard(Arduino):

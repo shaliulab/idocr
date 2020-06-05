@@ -84,6 +84,22 @@ class Controller(DefaultInterface, Base, Root):
     # def settings(self):
     #     return super()._settings
 
+
+    # @property
+    # def board(self):
+    #     return self._board
+
+    def toggle(self, hardware, value):
+        mode = "o"
+        if 0 < value < 1:
+            mode = "p"
+
+        print(self.mapping)
+
+        pin_number = self.mapping[hardware]
+        pin = self._board.get_pin('d:%d:%s' % (pin_number, mode))
+        pin.write(value)
+
     @property
     def programmer(self):
         return self._submodules["programmer"]
@@ -201,7 +217,7 @@ class Controller(DefaultInterface, Base, Root):
         mapping_formatted = {}
         for k in mapping:
             k_american = k.replace("ODOUR", "ODOR")
-            k_american = k_american.ljust(16)
+            # k_american = k_american.ljust(16)
             mapping_formatted[k_american] = mapping[k]
 
         logger.debug("list of keys in mapping_formatted")

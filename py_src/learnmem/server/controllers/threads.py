@@ -106,6 +106,22 @@ class BaseControllerThread(Base, Root):
         self.sampling_rate = sampling_rate
 
     @property
+    def pin(self):
+        return self._pin
+
+    @pin.getter
+    def pin(self):
+        r"""
+        get_pin needs a string with three parts
+        a/o for analog or digital pin
+        pin number
+        i,o,p for mode in input, output, pwm
+        They will be fetched from the class' attributes
+        """
+        return self._board.get_pin('d:%d:%s' % (self.pin_number, self.mode))
+
+
+    @property
     def name(self):
         r"""
         Unique thread identifier
@@ -196,7 +212,7 @@ class BaseControllerThread(Base, Root):
     def _notify(self, value):
         self.pin_state[self._hardware] = value
         self._result_writer.process_row(
-            data={"t": time.time() - self.time_zero.timestamp(), **self.pin_state},
+            data={"t": self.elapsed_seconds, **self.pin_state},
             table_name="CONTROLLER_EVENTS"
         )
 
@@ -359,21 +375,6 @@ class ArduinoMixin():
     _value = 1
     mode = None
 
-    @property
-    def pin(self):
-        return self._pin
-
-    @pin.getter
-    def pin(self):
-        r"""
-        get_pin needs a string with three parts
-        a/o for analog or digital pin
-        pin number
-        i,o,p for mode in input, output, pwm
-        They will be fetched from the class' attributes
-        """
-        return self._board.get_pin('d:{self.pin_number}:{self.mode}')
-
     def _turn_on(self):
         self.pin.write(self.value)
 
@@ -394,6 +395,7 @@ class DummyMixin():
             "%s (class %s) is setting %s to %.8f @ %.4f",
             self.name, self.__class__.__name__, self._hardware, self.value, self.elapsed_seconds
         )
+        self.pin.write(self.value)
 
     def _turn_off(self):
         # if self._hardware != "ONBOARD_LED".ljust(16):
@@ -401,6 +403,7 @@ class DummyMixin():
             "%s (class %s) is setting %s to %.8f @ %.4f",
             self.name, self.__class__.__name__, self._hardware, 0, self.elapsed_seconds
         )
+        self.pin.write(0)
 
 class DefaultDummyThread(DummyMixin, BaseControllerThread):
     r"""

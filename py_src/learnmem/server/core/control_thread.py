@@ -195,6 +195,18 @@ class ControlThread(Base, Root):
         logger.info("Running controller.list()")
         return self.controller.list()
 
+    def toggle(self, hardware, value):
+
+        result = {"status": None}
+
+        if self.controller is not None:
+            try:
+                self.controller.toggle(hardware, value)
+                return {"status": "success"}
+            except Exception as error:
+                logger.warning(error)
+                logger.warning(traceback.print_exc())
+        return result
 
     @property
     def video_out(self):

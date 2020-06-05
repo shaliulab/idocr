@@ -245,7 +245,7 @@ class Programmer(Settings, Root):
             logger.debug(hardware)
         finally:
             # handle US-UK spelling
-            hardware = hardware.replace("ODOUR", "ODOR").ljust(16)
+            hardware = hardware.replace("ODOUR", "ODOR")
 
         # get the pin number from the mapping using the hardware name
         try:
