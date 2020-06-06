@@ -14,12 +14,15 @@ logger.setLevel(logging.INFO)
 
 class PIN():
 
-    def __init__(self, type, number, mode):
-        self._type = type
+    def __init__(self, signal, number, mode):
+        r"""
+        """
+        self._signal = signal
         self._number = number
         self._mode = mode
 
-    def write(self, value):
+    @staticmethod
+    def write(value):
         print(value)
 
 class ArduinoDummy:
@@ -36,14 +39,12 @@ class ArduinoDummy:
 
     def get_pin(self, string):
 
-        type = string.split(":")[0]
+        signal = string.split(":")[0]
         number = int(string.split(":")[1])
         mode = string.split(":")[2]
 
-        pin = PIN(type, number, mode)
+        pin = PIN(signal, number, mode)
         return pin
-
-
 
 
 class ArduinoBoard(Arduino):
@@ -60,5 +61,3 @@ class ArduinoMegaBoard(ArduinoMega):
     to select the right ControllerThreads
     """
     board_compatible = "ArduinoX"
-
-BOARDS = {'ArduinoUno': ArduinoBoard, 'ArduinoMega': ArduinoMegaBoard, 'ArduinoDummy': ArduinoDummy}

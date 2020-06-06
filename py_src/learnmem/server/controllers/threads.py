@@ -104,12 +104,15 @@ class BaseControllerThread(Base, Root):
             self.__class__.__name__, id(self.pin_state)
         )
 
-        self.pin_number = pin_number
+        self._pin_number = pin_number
         self.start_seconds = start
         self.end_seconds = end
         self._value = value
         self.sampling_rate = sampling_rate
-        self._pin = self._board.get_pin('d:%d:%s' % (self.pin_number, self.mode))
+
+        string = 'd:%d:%s' % (self._pin_number, self._mode)
+        logger.warning(string)
+        self._pin = self._board.get_pin(string)
 
     @property
     def hardware(self):
@@ -125,7 +128,7 @@ class BaseControllerThread(Base, Root):
         Unique thread identifier
         with format HARDWARE@PIN_NUMBER-i
         """
-        return f"{self._hardware}@{str(self.pin_number).zfill(3)}-{self.index}"
+        return "%s@%s-%s" % (self._hardware, str(self._pin_number).zfill(3), self.index)
 
     @property
     def duration(self):

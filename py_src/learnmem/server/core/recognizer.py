@@ -66,8 +66,6 @@ class Recognizer(Base, Root):
         self._unit_trackers = []
         self._rois = rois
         self._video_path = video_path
-
-
         self._frame_buffer = None
         self._last_t = 0
 
@@ -91,6 +89,7 @@ class Recognizer(Base, Root):
             "status": self.status,
             "last_drawn_path": self.drawer.last_drawn_path,
             "last_annot_path": self.drawer.last_annot_path,
+            "camera": self.camera.__class__.__name__
         }
         return self._info
 
@@ -98,7 +97,10 @@ class Recognizer(Base, Root):
         r"""
         Instantiate a camera object
         which can be used to sample frames
-        and recognize flies
+        and recognize flies.
+        This way the camera is actually not initialized
+        until this method is called in the recognizer.prepare method
+        i.e. not at Recognizer.__init__.
         """
         camera_args = self._config.content['io']['camera']['args']
         camera_kwargs = self._config.content['io']['camera']['kwargs']
@@ -329,32 +331,35 @@ if __name__ == "__main__":
 
     import argparse
 
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("-c", "--camera", type=str, choices=["PylonCamera", "OpenCVCamera"], default="OpenCVCamera")
-
-    ARGS = vars(parser.parse_args())
-    camera_class_mame = ARGS["camera"]
-
-    from learnmem.server.trackers.adaptive_bg_tracker import AdaptiveBGModel as tracker_class
+    from learnmem.server.trackers.adaptive_bg_tracker import AdaptiveBGModel
     from learnmem.server.io.pylon_camera import PylonCamera
     from learnmem.server.io.opencv_camera import OpenCVCamera
     from learnmem.server.io.result_writer import CSVResultWriter
     from learnmem.server.roi_builders.target_roi_builder import IDOCROIBuilder
     from learnmem.server.drawers.drawers import DefaultDrawer
 
-    for camera_class in [PylonCamera, OpenCVCamera]:
-        if camera_class_mame == camera_class.__name__:
-            break
+    def main():
 
-    roi_builder = IDOCROIBuilder()
-    result_writer = CSVResultWriter(start_datetime="2000-01-01_00-00-00")
-    drawer = DefaultDrawer(draw_frames=False)
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-c", "--camera", type=str, choices=["PylonCamera", "OpenCVCamera"], default="OpenCVCamera")
+        ARGS = vars(parser.parse_args())
 
-    recognizer = Recognizer(
-            tracker_class, camera_class,
+        camera_class_mame = ARGS["camera"]
+
+        for camera_class in [PylonCamera, OpenCVCamera]:
+            if camera_class_mame == camera_class.__name__:
+                break
+
+        roi_builder = IDOCROIBuilder()
+        result_writer = CSVResultWriter(start_datetime="2000-01-01_00-00-00")
+        drawer = DefaultDrawer(draw_frames=False)
+
+        recognizer = Recognizer(
+            AdaptiveBGModel, camera_class,
             roi_builder, result_writer, drawer,
             start_saving=True, video_path=None
-    )
+        )
 
-    recognizer.prepare()
+        recognizer.prepare()
+
+    main()

@@ -5,6 +5,7 @@ import time
 import traceback
 
 from pypylon import pylon
+import cv2
 
 from learnmem.server.core.base import Root
 from learnmem.server.io.cameras import AdaptorCamera
@@ -55,16 +56,18 @@ class PylonCamera(AdaptorCamera, Root):
                 logger.debug("Pylon could not fetch next frame. Trial no %d", failed_count)
                 failed_count += 1
             else:
-                grab.Release()
                 break
 
             if failed_count == self._max_failed_count:
                 template = "Tried reading next frame %d times and none worked. Exiting."
                 message = template % self._max_failed_count
-                raise Exception(message)
+                logger.warning(message)
+                self.close()
 
         # Access the image data.
         img = grab.Array
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        self._validate(img)
         return img
 
     def open(self):
@@ -79,8 +82,11 @@ class PylonCamera(AdaptorCamera, Root):
             self.camera.MaxNumBuffer = 5
             self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
             grab_result = self.camera.RetrieveResult(self._timeout, pylon.TimeoutHandling_ThrowException)
-            print(grab_result.Array.shape)
+            image = grab_result.Array
+            # import ipdb; ipdb.set_trace()
             logger.info("Pylon camera loaded successfully")
+            logger.info("Resolution of incoming frames: %dx%d", image.shape[1], image.shape[0])
+
         except Exception as error:
             logger.error(error)
             logger.error(traceback.print_exc())

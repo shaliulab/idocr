@@ -12,7 +12,6 @@ from threading import Thread
 
 import bottle
 import coloredlogs
-import urllib.parse
 
 from learnmem.decorators import warning_decorator, error_decorator, wrong_id
 from learnmem.server.core.control_thread import ControlThread
@@ -123,13 +122,13 @@ def load_paradigm():
 @app.get('/list_paradigms/<id>')
 @warning_decorator
 @wrong_id
-def list_paradigm():
+def list_paradigms():
     r"""
     Get a list of the available paradigms that the user
     can select via POSTing to /load_paradigm.
     This is also available in info["controller"]["paradigms"].
     """
-    return control.list_paradigm()
+    return control.list_paradigms()
 
 @app.get('/mapping/<id>')
 @warning_decorator
@@ -188,33 +187,79 @@ def toggle():
     value = float(data_parsed["value"])
     return control.toggle(hardware, value)
 
-@app.get('/logs/<id>')
+# @app.get('/logs/<id>')
+# @warning_decorator
+# @wrong_id
+# def get_logs():
+#     r"""
+#     Return the last 10 logs generated in the control thread.
+#     """
+#     # return the last 10 logs
+#     logs = control.logs()
+#     logs["logs"] = logs["logs"][::-1][:10][::-1]
+#     return json.dumps(logs).encode()
+
+
+def list_options(category):
+    """
+    Return a list of str with the names of the classes that can be passed
+    for a given category.
+    """
+    return [cls.__name__ for cls in ControlThread._option_dict[category]['possible_classes']]
+
+
+@app.get('/choices/<category>/<id>')
 @warning_decorator
 @wrong_id
-def get_logs():
-    r"""
-    Return the last 10 logs generated in the control thread.
-    """
-    # return the last 10 logs
-    logs = control.logs()
-    logs["logs"] = logs["logs"][::-1][:10][::-1]
-    return json.dumps(logs).encode()
-
+def list_choices(category):
+    return list_options(category)
 
 
 # Arguments to follow the command, adding video, etc options
 parser = argparse.ArgumentParser(
     prog="IDOC - The Individual Drosophila Optogenetic Conditioner",
-    description="A modular package to monitor flies\
-        while running a preset paradigm of hardware events controlled by an Arduino board."
+    description=(
+        """
+        A modular package to monitor and store the position of flies in separate chambers
+        while running a preset paradigm of hardware events controlled by an Arduino board.
+        A GUI is available by running the client.py script in the same computer.
+        """
+    ),
+    epilog="Developed at the Liu Lab @ VIB-KU Leuven Center for Brain and Disease Research.",
+    fromfile_prefix_chars='@', allow_abbrev=False
 )
 
-# Control module
+# General settings
+parser.add_argument("-D", "--debug", action='store_true', dest="debug")
+
+
+# Boolean flags
+## Controller module
 parser.add_argument(
     "--control", action='store_true', dest='control',
-    help="Shall %(prog)s run Arduino?"
+    help="Turn on controller module"
 )
-parser.add_argument("--no-control", action='store_false', dest='control')
+parser.add_argument(
+    "--no-control", action='store_false', dest='control',
+    help="Turn off controller module"
+)
+
+## Recognizer module
+parser.add_argument(
+    "--recognize", action='store_true', dest='recognize',
+    help="Turn on recognizer module"
+)
+
+parser.add_argument(
+    "--no-recognize", action='store_false', dest='recognize',
+    help="Turn off recognizer module"
+)
+parser.add_argument(
+    "--endless", action='store_true', dest="endless",
+    help="If pasased a video, play it in a loop. Useful for debugging"
+)
+
+# Module settings
 parser.add_argument(
     "-m", "--mapping_path", type=str,
     help="Absolute path to csv providing pin number-pin name mapping"
@@ -223,95 +268,72 @@ parser.add_argument(
     "--paradigm_path", type=str,
     help="Absolute path to csv providing the Arduino top level paradigm"
 )
-parser.add_argument(
-    "-b", "--board_name", type=str,
-    help="Name of Arduino board in use", choices=["ArduinoUno", "ArduinoMega", "ArduinoDummy"]
-)
+
 parser.add_argument(
     "--arduino_port", type=str,
     help="Absolute path to the Arduino port. Usually '/dev/ttyACM0' in Linux and COM in Windows"
 )
 
-# Track module
-parser.add_argument(
-    "--recognize", action='store_true', dest='recognize',
-    help="Shall %(prog)s track flies?"
-)
-parser.add_argument(
-    "--no-recognize", action='store_false', dest='recognize',
-    help="Shall %(prog)s track flies?"
-)
-
-parser.add_argument("-c", "--camera", type=str, help="Stream source", choices=["PylonCamera", "OpenCVCamera"])
-parser.add_argument(
-    "-f", "--framerate", type=int,
-    help="Frames per second in the opened stream, overrides config."
-)
+# parser.add_argument(
+#     "-f", "--framerate", type=int,
+#     help="Frames per second in the opened stream, overrides config."
+# )
 parser.add_argument(
     "-v", "--video-path", type=str, dest='video_path',
-    help="location of the input video file"
+    help=
+    """
+    If offline tracking is desired, location of the input video file.
+    Only possible if OpenCVCamera class is passed in --camera.
+    """
 )
 
-# Save module
-parser.add_argument(
-    "--save", action='store_true', dest='save',
-    help="Shall %(prog)s save the results? You can decide not to save later"
-)
-parser.add_argument(
-    "--no-save", action='store_false', dest='save',
-    help="Shall %(prog)s save the results? You can decide not to save later"
-)
-parser.add_argument(
-    "-o", "--output_path", type=str,
-    help="Absolute path to directory where output files will be stored"
-    )
+
+# User input for classes
+parser.add_argument("--board", type=str, choices=list_options("board"))
+parser.add_argument("--camera", type=str, help="Stream source", choices=list_options("camera"))
+parser.add_argument("--drawer", type=str, choices=list_options("drawer"))
+parser.add_argument("--roi-builder", type=str, dest="roi_builder", choices=list_options("roi_builder"))
+parser.add_argument("--result-writer", type=str, dest="result_writer", choices=list_options("result_writer"))
+parser.add_argument("--tracker", type=str, choices=list_options("tracker"))
+
 
 # General application module
 parser.add_argument("-e", "--experimenter", type=str, help="Add name of the experimenter/operator")
-parser.add_argument(
-    "-l", "--log_dir", type=str,
-    help="Absolute path to directory where log files will be stored"
-)
 
+# Bottle settings
 parser.add_argument("-p", "--port", type=int)
-
-parser.add_argument("-D", "--debug", action='store_true', dest="debug")
-parser.add_argument("--endless", action='store_true', dest="endless")
-
 
 
 parser.set_defaults(
-    # TODO Change output_path
-    control=False, recognize=False, output_path="lemdt_results", save=True,
-    log_dir='.', port=9000, arduino_port="/dev/ttyACM0", camera='pylon',
+    control=False, recognize=False,
+    port=9000,
+    arduino_port="/dev/ttyACM0",
     experimenter="Sayed"
 )
 
 config = LearnMemConfiguration()
-data = vars(parser.parse_args())
+ARGS = vars(parser.parse_args())
 
 machine_id = get_machine_id()
 version = get_git_version()
 RESULT_DIR = config.content["folders"]["results"]["path"]
-PORT = data.pop("port") or config.content["network"]["port"]
-
-DEBUG = data.pop("debug") or config.content["network"]["port"]
+PORT = ARGS.pop("port") or config.content["network"]["port"]
+DEBUG = ARGS.pop("debug") or config.content["network"]["port"]
 
 if DEBUG:
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
 
-
+logger.info("You have passed arguments:")
+logger.info(ARGS)
 
 control = ControlThread(
     machine_id=machine_id,
     version=version,
     result_dir=RESULT_DIR,
-    experiment_data=data,
+    user_data=ARGS,
 )
-
-
 
 def run(port):
     server = get_server(port)
@@ -327,11 +349,11 @@ def stop(signo=None, _frame=None):
     logger.info("Received signal %s", signo)
     try:
         control.stop()
-        os._exit(0)
+        os._exit(0) # pylint: disable=protected-access
         # sys.exit(0)
     except Exception as error:
         logger.warning(error)
-        pass
+
     return
 
 

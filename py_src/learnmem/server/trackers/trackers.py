@@ -5,6 +5,7 @@ from collections import deque
 from learnmem.server.core.base import DescribedObject
 from learnmem.server.core.variables import IsInferredVariable
 from learnmem.server.core.base import Root
+from learnmem.server.utils.debug import IDOCException
 
 class NoPositionError(Exception):
     """
@@ -48,11 +49,14 @@ class BaseTracker(DescribedObject, Root):
 
         :param t: time in ms
         :type t: int
-        :param img: the whole frame.
+        :param img: the whole frame with 3 channels
         :type img: :class:`~numpy.ndarray`
         :return: The position of the animal at time ``t``
         :rtype: :class:`~ethoscope.core.data_point.DataPoint`
         """
+
+        if len(img.shape) != 3:
+            raise IDOCException("tracker.track: input image is not 3D")
 
         sub_img, mask = self._roi.apply(img)
         self._last_time_point = t

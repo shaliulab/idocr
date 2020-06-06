@@ -6,6 +6,7 @@ import cv2
 
 from learnmem.server.core.base import Root
 from learnmem.server.io.cameras import AdaptorCamera
+# from learnmem.server.utils.debug import IDOCException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -46,25 +47,22 @@ class OpenCVCamera(AdaptorCamera, Root):
         return self.camera.isOpened()
 
     def _next_image(self):
-        try:
+        ret, img = self.camera.read()
+        if self._wrap and not ret:
+            self._wrap_s += self._time_s
+            logger.info("Rewinding video to the start")
+            self.camera.set(cv2.CAP_PROP_POS_MSEC, 0)
             ret, img = self.camera.read()
-            if self._wrap and not ret:
-                self._wrap_s += self._time_s
-                logger.info("Rewinding video to the start")
-                self.camera.set(cv2.CAP_PROP_POS_MSEC, 0)
-                ret, img = self.camera.read()
 
-            return img
-        except Exception as error:
-            logger.warning(error)
-            logger.warning(traceback.print_exc())
+        self._validate(img)
+        return img
 
     def open(self):
         super().open()
         try:
             logger.debug('OpenCV camera opening')
             # print('OpenCV camera opening')
-            
+
             self.camera = cv2.VideoCapture(self._video_path)
         except Exception as error:
             logger.error(error)

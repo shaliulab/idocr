@@ -23,14 +23,11 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 class Root:
-    r"""
+    """
     Most abstract class, designed to implement defensive programming
     as instructed in https://rhettinger.wordpress.com/2011/05/26/super-considered-super/
     """
     _config = LearnMemConfiguration()
-
-    def __init__(self):
-        pass
 
 
 class Settings(Root):

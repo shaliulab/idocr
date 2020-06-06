@@ -4,6 +4,7 @@ import logging
 import time
 
 from learnmem.server.core.base import Settings, Status, Root
+from learnmem.server.utils.debug import IDOCException
 
 # Tell pylint everything here is abstract classes
 # pylint: disable=W0223
@@ -27,7 +28,8 @@ class BaseCamera(Settings, Status, Root):
         self._frame_idx = 0
         self._shape = (None, None)
 
-    def __exit__(self):
+    # TODO Why are 3 params beyond self needed here?
+    def __exit__(self): # pylint: disable=unexpected-special-method-signature
         logging.info("Closing camera")
         self.close()
 
@@ -75,7 +77,8 @@ class BaseCamera(Settings, Status, Root):
         raise NotImplementedError
 
     def open(self):
-        super().start()
+        # super().start()
+        raise NotImplementedError
 
     def close(self):
         super().stop()
@@ -122,6 +125,11 @@ class AdaptorCamera(BaseCamera, Root):
 
     def close(self):
         super().stop()
+
+    @staticmethod
+    def _validate(img):
+        if len(img.shape) != 3:
+            raise IDOCException("camera output is not 3D")
 
 
     @property

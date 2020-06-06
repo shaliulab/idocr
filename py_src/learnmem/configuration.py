@@ -4,6 +4,7 @@ import os
 import logging
 
 import numpy as np
+import yaml
 
 logging.basicConfig(level=logging.INFO)
 
@@ -14,6 +15,16 @@ class LearnMemConfiguration(object):
     '''
 
     _settings = {
+
+        'default_class': {
+            'board': "ArduinoDummy",
+            'camera': "OpenCVCamera",
+            'drawer': "DefaultDrawer",
+            'result_writer': "CSVResultWriter",
+            'roi_builder': "IDOCROIBuilder",
+            'tracker': "AdaptiveBGModel"
+        },
+
         'core' : {
             'debug': True
         },
@@ -51,7 +62,6 @@ class LearnMemConfiguration(object):
             },
 
             'camera': {
-                'class': "OpenCVCamera",
                 'args': (),
                 'kwargs': {
                     'framerate': 10, 'exposure_time': 50000,
@@ -64,15 +74,11 @@ class LearnMemConfiguration(object):
         },
 
         'controller': {
-            'board_name': 'ArduinoDummy',
             'mapping_path': '/1TB/Cloud/Lab/Gitlab/learnmem/py_src/mappings/mega.csv',
             'paradigm_path': 'unittest_long.csv',
             'adaptation_time': 600,
             'arduino_port': "/dev/ttyACM0",
             'pwm': {
-                'ONBOARD_LED': 0.99999,
-                'MAIN_VALVE' : 0.99999,
-                'VACUUM': 0.99999
             },
         },
 
@@ -87,20 +93,11 @@ class LearnMemConfiguration(object):
             'last_annot_path': "/tmp/last_img_annot.png",
         },
 
-
-
         # TODO Sort this stuff
         'experiment': {
-            "fraction_area":  1,
-            "answer":  "Yes",
-            "odor_A":  'A',
-            "odor_B":  'B',
-            "save_results_answer":  'Yes',
-            "record_start":  0,
             "decision_zone_mm": 10,
             "min_exits_required": 5,
             "max_time_minutes": 60,
-            "sampling_rate": 50,
             "location": None
         }
     }
@@ -108,6 +105,7 @@ class LearnMemConfiguration(object):
 
     def __init__(self, config_file="/etc/learnmem.conf"):
         self._config_file = config_file
+        self._config_file_yaml = config_file.replace("conf", "yaml")
         self.load()
 
     @property
@@ -127,6 +125,9 @@ class LearnMemConfiguration(object):
         try:
             with open(self._config_file, 'w') as json_data_file:
                 json.dump(self._settings, json_data_file)
+
+            with open(self._config_file_yaml, 'w') as yaml_data_file:
+                yaml.dump(self._settings, yaml_data_file)
 
             logging.info('Saved idoc configuration file to %s', self._config_file)
 

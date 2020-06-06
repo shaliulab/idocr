@@ -356,6 +356,13 @@ class TargetGridROIBuilder(BaseROIBuilder):
         return 0
 
     def _find_target_coordinates(self, image, blob_function):
+        """
+        :param image: A single channel image (2D)
+        :type image: np.array
+        """
+
+        if len(image.shape) != 2:
+            raise IDOCException("find_target_coordinates: image is not 2D")
 
         score_map = blob_function(image)
 
@@ -412,16 +419,25 @@ class TargetGridROIBuilder(BaseROIBuilder):
         return sorted_src_pts
 
     def _rois_from_img(self, image):
+        """
+        :param image: A 3 channel image. It can be gray, but 3 channels are needed
+        :type image: np.array
+        """
+
 
         self._img = image
-        # cv2.imshow('input', input)
-        # cv2.waitKey(0)
+
+        # Part 0: if a pickle file storing the position of the rois is provided
+        # just load it and return the rois contained in it, terminating the routine
         if os.path.exists(self._rois_pickle_file):
             with open(self._rois_pickle_file, "rb") as filehandle:
                 rois = pickle.load(filehandle)
             return rois
 
         else:
+            # Part 1.A if there is no pickle file but a target_coord_file is available
+            # load the sorted_src_pts from it and continue to part 2
+
             if os.path.exists(self._target_coord_file):
                 with open(self._target_coord_file, "r") as filehandle:
                     data = filehandle.read()
@@ -432,6 +448,8 @@ class TargetGridROIBuilder(BaseROIBuilder):
                 src_points = [tuple([int(f) for f in e.split(",")]) for e in data]
                 sorted_src_pts = self._sort_src_pts(src_points)
 
+            # Part 1.B no pickle file nor target_coord_file is present. Try finding where the targets are
+            # calling find_target_coordinates
             else:
                 try:
                     sorted_src_pts = self._find_target_coordinates(cv2.cvtColor(self._img, cv2.COLOR_BGR2GRAY), self._find_blobs)
@@ -442,12 +460,18 @@ class TargetGridROIBuilder(BaseROIBuilder):
                 except Exception as e:
                     raise e
 
+            # Part 2 Fit a grid to the frame using the three detected targets
+            # Use the grid to position the ROIs in the right place
+            # and return them as a list of objects of class ROI.
+
             dst_points = np.array([
                 (0, -1),
                 (0, 0),
                 (-1, 0)
             ], dtype=np.float32)
+
             wrap_mat = cv2.getAffineTransform(dst_points, sorted_src_pts)
+
             rectangles = self._make_grid(
                 self._n_cols, self._n_rows,
                 self._top_margin, self._bottom_margin,
@@ -458,13 +482,8 @@ class TargetGridROIBuilder(BaseROIBuilder):
 
             shift = np.dot(wrap_mat, [1, 1, 0]) - sorted_src_pts[1] # point 1 is the ref, at 0,0
             rois = []
-            # side = "left"
-            # point = self._sorted_src_pts[2]
 
             for i, r in enumerate(rectangles):
-                # if i > 9:
-                    # side = "right"
-                    # point = self._sorted_src_pts[1]
 
                 r = np.append(r, np.zeros((4, 1)), axis=1)
                 mapped_rectangle = np.dot(wrap_mat, r.T).T
@@ -474,45 +493,6 @@ class TargetGridROIBuilder(BaseROIBuilder):
                 rois.append(ROI(ct, idx=i+1))
 
         return rois
-
-    @staticmethod
-    def _adjust(centres, n_col, n_row, pad, offset, direction=1, axis=0):
-
-        if len(centres) != (n_col * n_row):
-            raise ValueError("Number of centres should be equal to n_col * n_row")
-
-
-        # sort the centers based on the value in the axis position
-        # i.e. if axis is 0, sort by the 0th value, which corresponds to the x dimension
-        # this results on a list with all centers in the first column, then the second, and so on
-        # i.e. if axis is 1, sort by the 1st value, which corresponds to the y dimension
-        # this results on a list with all centers in the first row, then the second, and so on
-        all_centres_sorted = sorted(centres, key=lambda x: x[axis])
-        index = -1
-        sign = -1
-        shape = [n_row, n_col]
-
-        for i, centre in enumerate(all_centres_sorted):
-
-            if i % shape[axis] == 0:
-                index += 1
-
-            if index == shape[1-axis] // 2 and shape[1-axis] % 2 != 0:
-                continue
-
-            if index >= shape[1-axis] // 2:
-                sign = 1
-
-            offset_multiplier = -index + shape[1-axis] if direction == -1 else index
-
-            shift = np.array([sign * pad + direction* offset_multiplier * offset,] * 2)
-            #shift = np.array([sign * pad + index * offset,] * 2)
-
-            shift[1-axis] = 0
-
-            all_centres_sorted[i] = all_centres_sorted[i] + shift
-
-        return all_centres_sorted
 
 
 class FSLSleepMonitorWithTargetROIBuilder(TargetGridROIBuilder):

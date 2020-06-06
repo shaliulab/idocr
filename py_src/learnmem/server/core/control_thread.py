@@ -17,6 +17,7 @@ from learnmem.server.io.pylon_camera import PylonCamera
 from learnmem.server.io.opencv_camera import OpenCVCamera
 from learnmem.server.roi_builders.roi_builders import DefaultROIBuilder
 from learnmem.server.roi_builders.high_contrast_roi_builder import HighContrastROIBuilder
+from learnmem.server.controllers.boards import ArduinoDummy, ArduinoMegaBoard, ArduinoBoard
 from learnmem.server.roi_builders.target_roi_builder import IDOCROIBuilder
 from learnmem.server.drawers.drawers import DefaultDrawer
 from learnmem.server.utils.debug import IDOCException
@@ -31,55 +32,50 @@ class ControlThread(Base, Root):
 
     _option_dict = {
 
-        'roi_builder': {
+        'board': {
             'possible_classes': [
-                IDOCROIBuilder, HighContrastROIBuilder, DefaultROIBuilder
-            ],
-            # 'default_class': HighContrastROIBuilder
-            'default_class': IDOCROIBuilder
-        },
-
-        'tracker': {
-            'possible_classes': [
-                #DefaultTracker,
-                AdaptiveBGModel
-                #AdaptiveBGModel
-            ],
-            'default_class': AdaptiveBGModel
-        },
-
-        'drawer': {
-            'possible_classes': [
-                DefaultDrawer
-            ],
-            'default_class': DefaultDrawer
-
+                ArduinoBoard, ArduinoMegaBoard, ArduinoDummy
+            ]
         },
 
         'camera': {
             'possible_classes': [
                 PylonCamera, OpenCVCamera
-            ],
-            'default_class': PylonCamera
+            ]
+        },
+
+        'drawer': {
+            'possible_classes': [
+                DefaultDrawer
+            ]
         },
 
         'result_writer': {
             'possible_classes': [
                 CSVResultWriter
-            ],
-            'default_class': CSVResultWriter
-        }
+            ]
+        },
+
+        'roi_builder': {
+            'possible_classes': [
+                IDOCROIBuilder, HighContrastROIBuilder, DefaultROIBuilder
+            ]
+        },
+
+        'tracker': {
+            'possible_classes': [
+                AdaptiveBGModel
+            ]
+        },
+
     }
 
-    # TODO Clean this
-    _odor_a = "A" #overriden by conf and user
-    _odor_b = "B" #overriden by conf and user
     sampling_rate = 50 # overriden by conf
 
 
     valid_actions = ["start", "stop", "start_experiment", "stop_experiment"]
 
-    def __init__(self, machine_id, version, result_dir, experiment_data, *args, **kwargs):
+    def __init__(self, machine_id, version, result_dir, user_data, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
         self._settings = {}
@@ -95,25 +91,22 @@ class ControlThread(Base, Root):
             setattr(self, k, self._config.content['experiment'][k])
 
         ## Assignment of attributes
-        self.control = experiment_data['control']
-        self.recognize = experiment_data['recognize']
-        self.save = experiment_data['save']
+        self.control = user_data['control']
+        self.recognize = user_data['recognize']
 
-        # self.reporting = experiment_data["reporting"]
-        self.camera_name = experiment_data["camera"]
-        self._video_path = experiment_data["video_path"]
+        # self.reporting = user_data["reporting"]
+        self._user_classes = {
+            "camera": user_data.pop("camera"),
+            "board": user_data.pop("board"),
+            "drawer": user_data.pop("drawer"),
+            "result_writer": user_data.pop("result_writer"),
+            "roi_builder": user_data.pop("roi_builder"),
+            "tracker": user_data.pop("tracker")
+        }
         self._video_out = None
-        self.mapping_path = experiment_data["mapping_path"] or self._config.content['controller']['mapping_path']  # pylint: disable=line-too-long
-        self.paradigm_path = experiment_data["paradigm_path"] or self._config.content['controller']['paradigm_path']
-        self.output_path = experiment_data["output_path"]
-        self.arduino_port = experiment_data["arduino_port"]
-        self.board_name = experiment_data["board_name"] or self._config.content['controller']['board_name'] # pylint: disable=line-too-long
-        self.experimenter = experiment_data["experimenter"]
-        self._endless = experiment_data["endless"]
+        self._user_data = user_data
         self._status = {}
-
-        logger.info("Start time: %s", datetime.datetime.now().isoformat())
-
+        logger.info("Control thread initialized")
 
     @property
     def info(self):
@@ -279,7 +272,7 @@ class ControlThread(Base, Root):
                 )
 
             if action == "start" and instance.running:
-                logger.warning("%s is already running" % instance.__class__.__name__)
+                logger.warning("%s is already running", instance.__class__.__name__)
                 return self.status
 
             else:
@@ -293,10 +286,24 @@ class ControlThread(Base, Root):
 
         return self.status
 
+    def _pick_class(self, category):
+        """
+        Select a class for a given category
+        among those listed in the _option_dict default_class key
+        for that category.
+        """
+
+        class_name = self._user_classes[category] or self._config.content['default_class'][category]
+
+        for cls in self._option_dict[category]['possible_classes']:
+            if class_name == cls.__name__:
+                return cls
+
+        raise IDOCException("Class %s is not a possible class for category %s" % (class_name, category))
 
     def start_result_writer(self):
         logger.info('Starting result writer')
-        result_writer_class = self._option_dict['result_writer']['default_class']
+        result_writer_class = self._pick_class("result_writer")
         result_writer_args = self._config.content['io']['result_writer']['args']
         result_writer_kwargs = self._config.content['io']['result_writer']['kwargs']
 
@@ -310,11 +317,11 @@ class ControlThread(Base, Root):
     def start_controller(self):
         logger.debug('Starting controller')
         self.controller = Controller(
-            mapping_path=self.mapping_path,
-            paradigm_path=self.paradigm_path,
+            mapping_path=self._user_data["mapping_path"],
+            paradigm_path=self._user_data["paradigm_path"],
             result_writer=self.result_writer,
-            board_name=self.board_name,
-            arduino_port=self.arduino_port
+            board_class=self._pick_class("board"),
+            arduino_port=self._user_data["arduino_port"]
         )
         self._settings.update(self.controller.settings)
 
@@ -323,14 +330,10 @@ class ControlThread(Base, Root):
         logger.debug('Starting recognizer function')
 
         # Initialize camera (use the class declared in the config)
-        camera_class_name = self._config.content['io']['camera']['class']
-        for cls in self._option_dict['camera']['possible_classes']:
-            if camera_class_name == cls.__name__:
-                camera_class = cls
-
+        camera_class = self._pick_class("camera")
 
         # Initialize roi_builder
-        roi_builder_class = self._option_dict["roi_builder"]['default_class']
+        roi_builder_class = self._pick_class("roi_builder")
         roi_builder_args = self._config.content['roi_builder']['args']
         roi_builder_kwargs = self._config.content['roi_builder']['kwargs']
         roi_builder = roi_builder_class(
@@ -339,7 +342,7 @@ class ControlThread(Base, Root):
         )
 
         # Initialize drawer
-        drawer_class = self._option_dict['drawer']['default_class']
+        drawer_class = self._pick_class("drawer")
         drawer_args = self._config.content['drawer']['args']
         drawer_kwargs = self._config.content['drawer']['kwargs']
         camera_framerate = self._config.content['io']['camera']['kwargs']['framerate']
@@ -355,10 +358,10 @@ class ControlThread(Base, Root):
         )
 
         # Pick tracker class and initialize recognizer
-        tracker_class = self._option_dict['tracker']['default_class']
+        tracker_class = self._pick_class("tracker")
         self.recognizer = Recognizer(
             tracker_class, camera_class, roi_builder, self.result_writer, drawer,
-            start_saving=True, video_path=self._video_path
+            start_saving=True, video_path=self._user_data["video_path"]
         )
         self._settings.update(self.recognizer.settings)
 
@@ -393,9 +396,8 @@ class ControlThread(Base, Root):
         self.start_submodules()
 
         while not self.stopped:
-            # TODO
 
-            # # TODO check next frame has come!
+            # TODO check next frame has come!
             # self.recognizer.load_camera()
             # # prepare recognizer upon user input
             # self.recognizer.prepare()
@@ -476,7 +478,7 @@ class ControlThread(Base, Root):
         Only the stop() method can do that.
         """
 
-        if not self._endless or force:
+        if not self._user_data["endless"] or force:
 
             if self.recognize:
                 self.recognizer.stop()

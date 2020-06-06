@@ -13,6 +13,7 @@ from learnmem.server.trackers.trackers import BaseTracker, NoPositionError
 from learnmem.server.core.variables import XPosVariable, YPosVariable, \
     XYDistance, WidthVariable, HeightVariable, PhiVariable
 from learnmem.server.core.data_point import DataPoint
+from learnmem.server.utils.debug import IDOCException
 
 try:
     CV_VERSION = int(cv2.__version__.split(".")[0])
@@ -288,6 +289,20 @@ class AdaptiveBGModel(BaseTracker, Root):
 
 
     def _pre_process_input_minimal(self, img, mask, t, darker_fg=True):
+        """
+
+        Return a standardised input frame so the tracking functionality
+        has an easier job to be done
+
+        :param t: time in ms
+        :type t: int
+        :param img: the whole frame with 3 channels
+        :type img: :class:`~numpy.ndarray`
+        :return: A standardised gray 2D array image
+        :rtype: np.array
+        """
+
+
         blur_rad = int(self._object_expected_size * np.max(img.shape) / 2.0)
 
         if blur_rad % 2 == 0:
@@ -299,7 +314,7 @@ class AdaptiveBGModel(BaseTracker, Root):
                 mask = np.ones_like(self._buff_grey) * 255
 
         cv2.cvtColor(img, cv2.COLOR_BGR2GRAY, self._buff_grey)
-        # cv2.imshow("dbg",self._buff_grey)
+
         cv2.GaussianBlur(self._buff_grey, (blur_rad, blur_rad), 1.2, self._buff_grey)
         if darker_fg:
             cv2.subtract(255, self._buff_grey, self._buff_grey)
@@ -315,60 +330,90 @@ class AdaptiveBGModel(BaseTracker, Root):
             cv2.bitwise_and(self._buff_grey, mask, self._buff_grey)
             return self._buff_grey
 
-    def _pre_process_input(self, img, mask, t):
+    # def _pre_process_input(self, img, mask, t):
+    #     """
+    #     Locate the animal in a image, at a given time.
 
-        blur_rad = int(self._object_expected_size * np.max(img.shape) * 2.0)
-        if blur_rad % 2 == 0:
-            blur_rad += 1
+    #     :param t: time in ms
+    #     :type t: int
+    #     :param img: the whole frame with 3 channels
+    #     :type img: :class:`~numpy.ndarray`
+    #     :return: The position of the animal at time ``t``
+    #     :rtype: :class:`~ethoscope.core.data_point.DataPoint`
+    #     """
 
+    #     if len(img.shape) != 3:
+    #         raise IDOCException("tracker.track: input image is not 3D")
 
-        if self._buff_grey is None:
-            self._buff_grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            self._buff_grey_blurred = np.empty_like(self._buff_grey)
-            # self._buff_grey_blurred = np.empty_like(self._buff_grey)
-            if mask is None:
-                mask = np.ones_like(self._buff_grey) * 255
-
-            mask_conv = cv2.blur(mask, (blur_rad, blur_rad))
-
-            self._buff_convolved_mask = (1/255.0 *  mask_conv.astype(np.float32))
-
-        cv2.cvtColor(img, cv2.COLOR_BGR2GRAY, self._buff_grey)
-
-        hist = cv2.calcHist([self._buff_grey], [0], None, [256], [0, 255]).ravel()
-        hist = np.convolve(hist, [1] * 3)
-        mode = np.argmax(hist)
-
-        self._smooth_mode.append(mode)
-        self._smooth_mode_tstamp.append(t)
-
-        if len(self._smooth_mode_tstamp) > 2 and self._smooth_mode_tstamp[-1] - self._smooth_mode_tstamp[0] > self._smooth_mode_window_dt:
-            self._smooth_mode.popleft()
-            self._smooth_mode_tstamp.popleft()
+    #     blur_rad = int(self._object_expected_size * np.max(img.shape) * 2.0)
+    #     if blur_rad % 2 == 0:
+    #         blur_rad += 1
 
 
-        mode = np.mean(list(self._smooth_mode))
-        scale = 128. / mode
+    #     if self._buff_grey is None:
+    #         self._buff_grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    #         self._buff_grey_blurred = np.empty_like(self._buff_grey)
+    #         # self._buff_grey_blurred = np.empty_like(self._buff_grey)
+    #         if mask is None:
+    #             mask = np.ones_like(self._buff_grey) * 255
 
-        # cv2.GaussianBlur(self._buff_grey,(5,5), 1.5,self._buff_grey)
+    #         mask_conv = cv2.blur(mask, (blur_rad, blur_rad))
 
-        cv2.multiply(self._buff_grey, scale, dst=self._buff_grey)
+    #         self._buff_convolved_mask = (1/255.0 *  mask_conv.astype(np.float32))
 
-        cv2.bitwise_and(self._buff_grey, mask, self._buff_grey)
+    #     cv2.cvtColor(img, cv2.COLOR_BGR2GRAY, self._buff_grey)
 
-        cv2.blur(self._buff_grey, (blur_rad, blur_rad), self._buff_grey_blurred)
-        # FIXME could be optimised
-        self._buff_grey_blurred = (self._buff_grey_blurred / self._buff_convolved_mask).astype(np.uint8)
+    #     hist = cv2.calcHist([self._buff_grey], [0], None, [256], [0, 255]).ravel()
+    #     hist = np.convolve(hist, [1] * 3)
+    #     mode = np.argmax(hist)
+
+    #     self._smooth_mode.append(mode)
+    #     self._smooth_mode_tstamp.append(t)
+
+    #     if len(self._smooth_mode_tstamp) > 2 and self._smooth_mode_tstamp[-1] - self._smooth_mode_tstamp[0] > self._smooth_mode_window_dt:
+    #         self._smooth_mode.popleft()
+    #         self._smooth_mode_tstamp.popleft()
 
 
-        cv2.absdiff(self._buff_grey, self._buff_grey_blurred, self._buff_grey)
+    #     mode = np.mean(list(self._smooth_mode))
+    #     scale = 128. / mode
 
-        if mask is not None:
-            cv2.bitwise_and(self._buff_grey, mask, self._buff_grey)
-            return self._buff_grey
+    #     # cv2.GaussianBlur(self._buff_grey,(5,5), 1.5,self._buff_grey)
+
+    #     cv2.multiply(self._buff_grey, scale, dst=self._buff_grey)
+
+    #     cv2.bitwise_and(self._buff_grey, mask, self._buff_grey)
+
+    #     cv2.blur(self._buff_grey, (blur_rad, blur_rad), self._buff_grey_blurred)
+    #     # FIXME could be optimised
+    #     self._buff_grey_blurred = (self._buff_grey_blurred / self._buff_convolved_mask).astype(np.uint8)
+
+
+    #     cv2.absdiff(self._buff_grey, self._buff_grey_blurred, self._buff_grey)
+
+    #     if mask is not None:
+    #         cv2.bitwise_and(self._buff_grey, mask, self._buff_grey)
+    #         return self._buff_grey
 
 
     def _find_position(self, img, mask, t):
+        """
+        Locate the animal in a image, at a given time
+
+        1 - Preprocess the input frame to have standard properties
+        2 - Actually find the position of the animal
+
+        :param t: time in ms
+        :type t: int
+        :param img: the whole frame with 3 channels
+        :type img: :class:`~numpy.ndarray`
+        :return: The position of the animal at time ``t``
+        :rtype: :class:`~ethoscope.core.data_point.DataPoint`
+        """
+
+        if len(img.shape) != 3:
+            raise IDOCException("tracker.track: input image is not 3D")
+
 
         grey = self._pre_process_input_minimal(img, mask, t)
         # grey = self._pre_process_input(img, mask, t)
@@ -380,6 +425,21 @@ class AdaptiveBGModel(BaseTracker, Root):
 
 
     def _track(self, img, grey, mask, t):
+        """
+        :param img: The 3D image output from roi.apply
+        i.e. the original frame produced by the camera and then cropped
+        to encompass the ROI only.
+        :type img: np.array
+
+        :param img: A 2D copy of img with standard properties
+        as produced by the preprocessing functionality.
+        :type img: np.array
+        """
+
+        if len(img.shape) != 3:
+            raise IDOCException("tracker._track: Input img is not 3D")
+        if len(grey.shape) != 2:
+            raise IDOCException("tracker._track: Input grey is not 2D")
 
         if self._bg_model.bg_img is None:
             self._buff_fg = np.empty_like(grey)
@@ -453,7 +513,7 @@ class AdaptiveBGModel(BaseTracker, Root):
 
         if w < h:
             angle -= 90
-            w, h = h,w
+            w, h = h, w
         angle = angle % 180
 
         h_im = min(grey.shape)

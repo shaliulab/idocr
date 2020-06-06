@@ -18,6 +18,7 @@ from learnmem.server.core.base import Root, Settings
 from learnmem.server.controllers.threads import DefaultArduinoThread, WaveArduinoThread
 from learnmem.server.controllers.threads import DefaultDummyThread, WaveDummyThread
 from learnmem.configuration import LearnMemConfiguration
+from learnmem.server.utils.debug import IDOCException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -171,7 +172,7 @@ class Programmer(Settings, Root):
 
         table_df = pd.read_csv(self.absolute_paradigm_path)
 
-        required_columns = ["start", "end", "on", "mode"]
+        required_columns = ["start", "end", "on"]
         missing_index = [not e in table_df.columns for e in required_columns]
 
         if "off" not in table_df.columns:
@@ -253,30 +254,54 @@ class Programmer(Settings, Root):
         except KeyError:
             raise Exception("%s is not available in the mapping" % hardware)
 
-        # get what value is needed (check for pwm configuration)
-        # value is 1 by default.
-        # If the user wishes to run a pwm cycle on a pin, it must be explicitly declared
-        # in the config file, together with a fraction between 0 and 1
 
+
+        # Deduce a mode and a value from user input and the config file
+        value = None
+        mode = None
+
+        # if a mode is provided in the user input, use that
+        # otherwise set mode to undefined
         if "mode" in row:
             mode = row["mode"]
-        else:
-            mode = "o"
 
-        if "value" in row:
-            value = row["value"]
 
-        elif hardware in self._config.content["controller"]['pwm']:
-            if mode == "p":
+        # if the hardware is listed in the config as using pwm
+        # and mode is p or undefined (i.e. not provided)
+        # assume pwm and use the value from the config
+        if hardware in self._config.content["controller"]['pwm']:
+            if mode == "p" or mode is None:
+                mode = "p"
                 value = self._config.content["controller"]['pwm']
+            # if it is listed but the user provided a defined mode
+            # and is not pwm, then use it and set the value to 1
+            else:
+                value = 1
+
+        # otherwise, if the hardware is not listed in the config as pwm
+        # but the user provided a value and the mode is p
+        # just take that value
+        elif mode == "p":
+            if "value" in row:
+                value = row["value"]
             else:
                 logger.warning(
-                    'User requested %s in %s mode and configuration saved is pwm mode',
-                    hardware, row["mode"]
+                    'User requested %s in p mode but a pwm value is not available in the config or the input',
+                    hardware
                 )
-                value = 1
+                mode = "o"
         else:
+            mode = "o"
             value = 1
+
+        try:
+            assert mode is not None and value is not None
+        except AssertionError:
+            template = "%s has invalid configuration: mode %s and value %s"
+            message = template % (hardware, mode, value)
+            logger.warning(message)
+            raise IDOCException
+
 
         # push these 3 values to kwargs
         kwargs.update({

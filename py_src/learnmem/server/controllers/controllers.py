@@ -6,10 +6,11 @@ import traceback
 import pandas as pd
 
 from learnmem.server.hardware.interfaces.interfaces import DefaultInterface
-from learnmem.server.controllers.boards import BOARDS
 from learnmem.server.programmers.programmers import Programmer
 from learnmem.server.core.base import Base, Root
 
+# Tell pylint everything here is abstract classes
+# pylint: disable=undefined-loop-variable
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -24,7 +25,7 @@ class Controller(DefaultInterface, Base, Root):
     _programmerClass = Programmer
     valid_actions = ["start", "stop", "reset"]
 
-    def __init__(self, mapping_path, paradigm_path, result_writer, *args, board_name='ArduinoDumy', arduino_port='/dev/ttyACM0', sampling_rate=10.0, **kwargs): # pylint: disable=line-too-long
+    def __init__(self, mapping_path, paradigm_path, result_writer, board_class, *args, arduino_port='/dev/ttyACM0', sampling_rate=10.0, **kwargs): # pylint: disable=line-too-long
 
         r"""
         :param mapping_path: Path to a .csv showing which hardware is phisically wired to which pin.
@@ -36,8 +37,7 @@ class Controller(DefaultInterface, Base, Root):
 
         :param args: Extra positional arguments for the threading.Thread constructor.
 
-        :param board: Codename of the board selected by the user.
-        It must match one of the keys in BOARDS.
+        :param board_class: # TODO
         :type board: str
 
         :param arduino_port: Path to device file representing the board in the OS.
@@ -57,15 +57,18 @@ class Controller(DefaultInterface, Base, Root):
             "adaptation_time": self._config.content["controller"]["adaptation_time"]
         })
 
+        self._mapping_path = mapping_path or self._config.content["controller"]["mapping_path"]
+        self._paradigm_path = paradigm_path or self._config.content["controller"]["paradigm_path"]
+
         # Build a dictionary mapping hardware to pin number
-        self._mapping = self._load_mapping(mapping_path)
+        self._mapping = self._load_mapping(self._mapping_path)
         #Store the state of each pin of the controller
         self._pin_state = {hardware: 0 for hardware in self._mapping}
 
         # Board instance compatible with the threads classes
-        self._board_name = board_name
+        self._board_class = board_class
         self._arduino_port = arduino_port
-        self._board = BOARDS[self._board_name](self._arduino_port)
+        self._board = self._board_class(self._arduino_port)
         self._result_writer = result_writer
 
         # Programmer instance that processes user input
@@ -75,25 +78,19 @@ class Controller(DefaultInterface, Base, Root):
         self._submodules['programmer'] = self._programmerClass(
             result_writer,
             self._board, self._pin_state, sampling_rate,
-            self._mapping, paradigm_path=paradigm_path
+            self._mapping, paradigm_path=self._paradigm_path
         )
         self._settings.update(self._submodules['programmer'].settings)
         self._progress = 0
-
-    # @property
-    # def settings(self):
-    #     return super()._settings
-
-
-    # @property
-    # def board(self):
-    #     return self._board
 
     def toggle(self, hardware, value):
         try:
             for thread in self.programmer.paradigm:
                 if thread.hardware == hardware:
                     break
+
+            return None
+
         except Exception as error:
             logger.warning(error)
             return
@@ -181,6 +178,7 @@ class Controller(DefaultInterface, Base, Root):
             "pin_state": self.pin_state,
             "mapping": self.mapping,
             "progress": self.progress,
+            "board": self._board.__class__.__name__,
             "duration": self._submodules['programmer'].duration
         })
         # logging.debug('Controller.info OK')
@@ -260,7 +258,7 @@ class Controller(DefaultInterface, Base, Root):
         return self._submodules["programmer"].paradigm_path is not None
 
     @ready.setter
-    def ready(self, value):
+    def ready(self, value): # pylint: disable=unused-argument
         return None
 
     def run(self):
@@ -313,16 +311,14 @@ if __name__ == "__main__":
 
     config = LearnMemConfiguration()
 
-    result_writer = CSVResultWriter(
-        start_datetime="2000-01-01_00-00-00",
-        max_n_rows_to_insert=2
-    )
-
     controller = Controller(
         mapping_path=config.content["controller"]["mapping_path"],
         paradigm_path=config.content["controller"]["paradigm_path"],
-        result_writer=result_writer,
-        board_name=config.content["controller"]["board_name"],
+        result_writer=CSVResultWriter(
+            start_datetime="2000-01-01_00-00-00",
+            max_n_rows_to_insert=2
+        ),
+        board_class=config.content['default_class']["board"],
         arduino_port=config.content["controller"]["arduino_port"]
     )
 
