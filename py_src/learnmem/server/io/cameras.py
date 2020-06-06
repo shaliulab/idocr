@@ -3,13 +3,13 @@ __author__ = 'antonio'
 import logging
 import time
 
-from learnmem.server.core.base import Base, Root
+from learnmem.server.core.base import Settings, Status, Root
 
 # Tell pylint everything here is abstract classes
 # pylint: disable=W0223
 
 
-class BaseCamera(Base, Root):
+class BaseCamera(Settings, Status, Root):
 
     def __init__(self, *args, drop_each=1, max_duration=None, **kwargs):
         """

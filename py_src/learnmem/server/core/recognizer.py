@@ -324,3 +324,37 @@ class Recognizer(Base, Root):
         #     self._submodules['roi_builder'], self._submodules['result_writer'], self._submodules['drawer'], *self._args,
         #     rois=self._rois, stimulators=self._stimulators, start_saving=True, video_path=self._video_path, **self._kwargs
         # )
+
+if __name__ == "__main__":
+
+    import argparse
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-c", "--camera", type=str, choices=["PylonCamera", "OpenCVCamera"], default="OpenCVCamera")
+
+    ARGS = vars(parser.parse_args())
+    camera_class_mame = ARGS["camera"]
+
+    from learnmem.server.trackers.adaptive_bg_tracker import AdaptiveBGModel as tracker_class
+    from learnmem.server.io.pylon_camera import PylonCamera
+    from learnmem.server.io.opencv_camera import OpenCVCamera
+    from learnmem.server.io.result_writer import CSVResultWriter
+    from learnmem.server.roi_builders.target_roi_builder import IDOCROIBuilder
+    from learnmem.server.drawers.drawers import DefaultDrawer
+
+    for camera_class in [PylonCamera, OpenCVCamera]:
+        if camera_class_mame == camera_class.__name__:
+            break
+
+    roi_builder = IDOCROIBuilder()
+    result_writer = CSVResultWriter(start_datetime="2000-01-01_00-00-00")
+    drawer = DefaultDrawer(draw_frames=False)
+
+    recognizer = Recognizer(
+            tracker_class, camera_class,
+            roi_builder, result_writer, drawer,
+            start_saving=True, video_path=None
+    )
+
+    recognizer.prepare()

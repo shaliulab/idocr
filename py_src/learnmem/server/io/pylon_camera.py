@@ -46,13 +46,13 @@ class PylonCamera(AdaptorCamera, Root):
         # not to be run continuosly
         # i.e. in normal conditions, it should be broken every time
         # the continously running loop is implemented BaseCamera.__iter__
-        
-        import ipdb; ipdb.set_trace()
+
+        # import ipdb; ipdb.set_trace()
 
         while self.camera.IsGrabbing():
-            logger.warning("Pylon could not fetch next frame. Trial no %d", failed_count)
             grab = self._grab()
             if not grab.GrabSucceeded():
+                logger.debug("Pylon could not fetch next frame. Trial no %d", failed_count)
                 failed_count += 1
             else:
                 grab.Release()
@@ -73,8 +73,13 @@ class PylonCamera(AdaptorCamera, Root):
             super().open()
             self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
             self.camera.Open()
-            # self.camera.StartGrabbingMax(numberOfImagesToGrab) # if we want to limit the number of frames
-            self.camera.StartGrabbing()
+            # Print the model name of the camera.
+            logger.info("Using device %s", self.camera.GetDeviceInfo().GetModelName())
+            # self.camera.StartGrabbingMax(100) # if we want to limit the number of frames
+            self.camera.MaxNumBuffer = 5
+            self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
+            grab_result = self.camera.RetrieveResult(self._timeout, pylon.TimeoutHandling_ThrowException)
+            print(grab_result.Array.shape)
             logger.info("Pylon camera loaded successfully")
         except Exception as error:
             logger.error(error)
@@ -97,10 +102,13 @@ class PylonCamera(AdaptorCamera, Root):
 
     def _grab(self):
         try:
-            return self.camera.RetrieveResult(self._timeout, pylon.TimeoutHandling_ThrowException)
+            #import ipdb; ipdb.set_trace()
+            grab_result = self.camera.RetrieveResult(self._timeout, pylon.TimeoutHandling_ThrowException)
+            return grab_result
 
         # TODO Use right exception
         except Exception as error:  # pylint: disable=broad-except
+            logger.warning("Error in _grab method")
             logger.warning(traceback.print_exc())
             logger.warning(error)
             return

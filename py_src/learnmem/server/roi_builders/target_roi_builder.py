@@ -249,9 +249,9 @@ class TargetGridROIBuilder(BaseROIBuilder):
                 continue
 
             if CV_VERSION == 3:
-                _, contours, _ = cv2.findContours(bin, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
+                _, contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
             else:
-                contours, _ = cv2.findContours(bin, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
+                contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
 
             foreground_model = cv2.drawContours(grey.copy(), contours, -1, 255, -1)
             _, foreground_model = cv2.threshold(foreground_model, 254, 255, cv2.THRESH_BINARY)
@@ -333,8 +333,7 @@ class TargetGridROIBuilder(BaseROIBuilder):
 
         return 1
 
-    @staticmethod
-    def _score_circles(contour):
+    def _score_circles(self, contour):
         """
         Score the target quality by checking
         * its area is within limits
