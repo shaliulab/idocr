@@ -128,8 +128,9 @@ class AdaptorCamera(BaseCamera, Root):
 
     @staticmethod
     def _validate(img):
-        if len(img.shape) != 3:
-            raise IDOCException("camera output is not 3D")
+        if img is not None:
+            if len(img.shape) != 3:
+                raise IDOCException("camera output is not 3D")
 
 
     @property

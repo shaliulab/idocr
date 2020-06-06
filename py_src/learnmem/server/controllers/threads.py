@@ -7,6 +7,7 @@ taking the user input and the information from a Controller instance
 # Standard library imports
 import logging
 from threading import Thread, Event, BrokenBarrierError
+from learnmem.server.utils.debug import IDOCException
 import time
 
 from learnmem.server.core.base import Base, Root
@@ -25,8 +26,8 @@ class BaseControllerThread(Base, Root):
     pin_state = None
 
     def __init__(
-            self, i, hardware, board, pin_state, pin_number, mode, start, end, *args,
-            value=1, sampling_rate=10.0, result_writer=None, **kwargs
+            self, i: int, hardware: str, board, pin_state: dict, pin_number: int, mode: str, start, end, value: float, *args,
+            sampling_rate=10.0, result_writer=None, **kwargs
         ):
         """
 
@@ -111,7 +112,7 @@ class BaseControllerThread(Base, Root):
         self.sampling_rate = sampling_rate
 
         string = 'd:%d:%s' % (self._pin_number, self._mode)
-        logger.warning(string)
+        logger.debug(string)
         self._pin = self._board.get_pin(string)
 
     @property
@@ -145,10 +146,12 @@ class BaseControllerThread(Base, Root):
     @value.setter
     def value(self, value):
 
-        if 0 <= value <= 1:
-            self._value = value
-        else:
-            logger.warning('Passed value not valid: %s', str(value))
+        try:
+            assert 0 <= value <= 1
+        except AssertionError:
+            raise IDOCException('Passed value not valid: %s' % str(value))
+
+        self._value = value
 
     @property
     def mode(self):
@@ -381,19 +384,22 @@ class DummyMixin():
 
     def _turn_on(self):
         # if self._hardware != "ONBOARD_LED".ljust(16):
-        logger.info(
-            "%s (class %s) is setting %s to %.8f @ %.4f",
-            self.name, self.__class__.__name__, self._hardware, self.value, self.elapsed_seconds
-        )
-        self.pin.write(self.value)
+        if not self.stopped:
+            self.pin.write(self.value)
+            logger.info(
+                "%s (class %s) is setting %s to %.8f @ %.4f",
+                self.name, self.__class__.__name__, self._hardware, self._value, self.elapsed_seconds
+            )
+
 
     def _turn_off(self):
-        # if self._hardware != "ONBOARD_LED".ljust(16):
-        logger.info(
-            "%s (class %s) is setting %s to %.8f @ %.4f",
-            self.name, self.__class__.__name__, self._hardware, 0, self.elapsed_seconds
-        )
         self.pin.write(0)
+
+        if not self.stopped:
+            logger.info(
+                "%s (class %s) is setting %s to %.8f @ %.4f",
+                self.name, self.__class__.__name__, self._hardware, 0, self.elapsed_seconds
+            )
 
 class DefaultDummyThread(DummyMixin, BaseControllerThread):
     r"""

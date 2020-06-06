@@ -272,7 +272,7 @@ class Programmer(Settings, Root):
         if hardware in self._config.content["controller"]['pwm']:
             if mode == "p" or mode is None:
                 mode = "p"
-                value = self._config.content["controller"]['pwm']
+                value = self._config.content["controller"]['pwm'][hardware]
             # if it is listed but the user provided a defined mode
             # and is not pwm, then use it and set the value to 1
             else:
@@ -307,7 +307,7 @@ class Programmer(Settings, Root):
         kwargs.update({
             "hardware": hardware,
             "pin_number": pin_number,
-            "value": value,
+            "value": float(value),
             "mode": mode
         })
 
