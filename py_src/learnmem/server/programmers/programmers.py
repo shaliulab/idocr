@@ -78,6 +78,11 @@ class Programmer(Settings, Root):
     def ready(self):
         return self._paradigm is not None
 
+
+    @property
+    def paradigm_name(self):
+        return self._settings["paradigm_path"]
+
     @property
     def paradigm_path(self):
         if self._settings['paradigm_path'] is None:

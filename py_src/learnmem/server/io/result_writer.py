@@ -52,30 +52,46 @@ class CSVResultWriter(Settings, Status, Root):
 
         self._prefix = start_datetime + '_idoc_' + get_machine_id()
         self._output_csv = os.path.join(self._result_dir, self._prefix + ".csv")
-        self._metadata = None
         self._var_map_initialised = False
+        self._metadata_initialised = False
+        self._roi_map_initialised = False
 
     @property
     def result_dir(self):
         return self._result_dir
 
-    def save_metadata(self, metadata):
-        self._metadata = metadata
-        path2file = os.path.join(self._result_dir, "metadata.csv")
-        metadata.to_csv(path2file)
+    def initialise_metadata(self, metadata):
+
+        if not self._metadata_initialised:
+            metadata.to_csv(
+                os.path.join(
+                    self._result_dir,
+                    self._prefix + "_METADATA.csv"
+                )
+            )
+
+            self._metadata_initialised = True
+
+    def initialise_roi_map(self, rois):
+
+        if not self._roi_map_initialised:
+
+            roi_map = []
+
+            for roi in rois:
+                roi_map.append(roi.get_feature_dict())
+
+            roi_map_df = pd.DataFrame(roi_map)
+            roi_map_df.to_csv(
+                os.path.join(
+                    self._result_dir,
+                    self._prefix + "_ROI_MAP.csv"
+                )
+            )
+            self._roi_map_initialised = True
 
 
-    def write(self, t_ms, roi, data_rows):
-        """
-        An adaptor for the DataPoint instances to be compatible
-        with process_row
-        """
-        t_ms = int(round(t_ms))
-        table_name = "ROI_%d" % roi.idx
 
-        for row in data_rows:
-            data_points = {**{"id": 0, "t_ms": t_ms}, **{v.header_name: v for v in row.values()}}
-            self.process_row(data_points, table_name)
 
     def initialise_var_map(self, data_rows):
         """
@@ -85,13 +101,18 @@ class CSVResultWriter(Settings, Status, Root):
         var_map = []
 
         for data in data_rows.values():
-            var_map.append({
-                "var_name": data.header_name,
-                "sql_type": data.sql_data_type,
-                "functional_type": data.functional_type
-            })
+            try:
+                var_map.append({
+                    "var_name": data.header_name,
+                    "sql_type": data.sql_data_type,
+                    "functional_type": data.functional_type
+                })
+            except AttributeError as error:
+                logger.warning(error)
+                logger.warning(data)
 
-        var_map_df = pd.DataDrame(var_map)
+
+        var_map_df = pd.DataFrame(var_map)
         var_map_df.to_csv(
             os.path.join(
                 self._result_dir,
@@ -101,7 +122,20 @@ class CSVResultWriter(Settings, Status, Root):
 
         self._var_map_initialised = True
 
+    def write(self, t_ms, roi, data_rows):
+        """
+        An adaptor for the DataPoint instances to be compatible
+        with process_row
+        """
+        t_ms = int(round(t_ms))
+        table_name = "ROI_%d" % roi.idx
 
+        if not self._var_map_initialised:
+            self.initialise_var_map(data_rows[0])
+
+        for row in data_rows:
+            data_points = {**{"id": 0, "t_ms": t_ms}, **{v.header_name: v for v in row.values()}}
+            self.process_row(data_points, table_name)
 
     def process_row(self, data, table_name):
         """
@@ -113,10 +147,6 @@ class CSVResultWriter(Settings, Status, Root):
             if len(self._cache[table_name]) >= self._max_n_rows_to_insert:
                 self.store_and_clear(table_name)
             self._cache[table_name].append(data)
-
-        if not self._var_map_initialised:
-            self.initialise_var_map(data)
-
 
     def get_table_path(self, table_name):
         filename = "%s_%s.csv" % (self._prefix, table_name.upper())

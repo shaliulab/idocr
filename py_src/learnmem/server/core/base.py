@@ -128,6 +128,7 @@ class Status(Root):
         self.stopped = False
         self._time_zero = None
         self._start_datetime = None
+
         self._status = "idle"
 
         self._info = {}
@@ -177,7 +178,7 @@ class Status(Root):
 
     @property
     def start_datetime(self):
-         return self._start_datetime
+        return self._start_datetime
 
     @property
     def time_zero(self):
@@ -238,7 +239,6 @@ class Status(Root):
             return
 
         self.running = True
-        self._time_zero = datetime.datetime.now()
         self._set_start_datetime()
 
 
@@ -247,8 +247,10 @@ class Status(Root):
         Store a timestamp of the moment when running was set to True
         in type str with format YYYY-MM-DD_HH:MM:SS
         """
+        start_date_time = MachineDatetime.now()
+        self._start_datetime = start_date_time.machineformat()
+        self._time_zero = start_date_time
 
-        self._start_datetime = MachineDatetime.now().machineformat()
 
     def stop(self):
         """

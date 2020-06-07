@@ -4,6 +4,8 @@ import logging
 import os.path
 import traceback
 
+import pandas as pd
+
 # Local application imports
 from learnmem.server.controllers.controllers import Controller
 from learnmem.server.core.base import Base, Root
@@ -82,6 +84,8 @@ class ControlThread(Base, Root):
         self._submodules = {"recognizer": None, "controller": None, "result_writer": None}
 
         self.machine_id = machine_id
+        self.machine_name = get_machine_name()
+
         self.version = version
         self._result_dir = result_dir
 
@@ -109,12 +113,37 @@ class ControlThread(Base, Root):
         logger.info("Control thread initialized")
 
     @property
+    def selected_options(self):
+        return {
+            "camera": self._pick_class("camera"),
+            "board": self._pick_class("board"),
+            "drawer": self._pick_class("drawer"),
+            "result_writer": self._pick_class("result_writer"),
+            "roi_builder": self._pick_class("roi_builder"),
+            "tracker": self._pick_class("tracker"),
+            "controller": self.controlling,
+            "recognizing": self.recognizing
+        }
+
+    @property
+    def metadata(self):
+        metadata = pd.DataFrame([
+            {"field": "machine_id", "value": self.machine_id},
+            {"field": "machine_name", "value": self.machine_name},
+            {"field": "version", "value": self.version},
+            {"field": "date_time", "value": self.start_datetime},
+            {"field": "selected_options", "value": self.selected_options},
+            {"field": "settings", "value": self.settings}
+        ])
+
+        return metadata
+
+    @property
     def info(self):
         return self._info
 
     @info.getter
     def info(self):
-
 
         if self.recognize:
             self._info["recognizer"] = self.recognizer.info
@@ -127,9 +156,9 @@ class ControlThread(Base, Root):
             self._info["controller"] = {"status": "offline"}
 
         self._info.update({
-            "id": get_machine_id(),
+            "id": self.machine_id,
             "location": self._config.content["experiment"]["location"],
-            "name": get_machine_name(),
+            "name": self.machine_name,
             "status": self.status["control_thread"],
             "submodules": {k: self.status[k] for k in self._submodules}
 
@@ -304,7 +333,7 @@ class ControlThread(Base, Root):
 
         raise IDOCException("Class %s is not a possible class for category %s" % (class_name, category))
 
-    def start_result_writer(self):
+    def initialise_result_writer(self):
         logger.info('Starting result writer')
         result_writer_class = self._pick_class("result_writer")
         result_writer_args = self._config.content['io']['result_writer']['args']
@@ -317,7 +346,7 @@ class ControlThread(Base, Root):
         )
 
 
-    def start_controller(self):
+    def initialise_controller(self):
         logger.debug('Starting controller')
         self.controller = Controller(
             mapping_path=self._user_data["mapping_path"],
@@ -329,7 +358,7 @@ class ControlThread(Base, Root):
         self._settings.update(self.controller.settings)
 
 
-    def start_recognizer(self):
+    def initialise_recognizer(self):
         logger.debug('Starting recognizer function')
 
         # Initialize camera (use the class declared in the config)
@@ -368,18 +397,18 @@ class ControlThread(Base, Root):
         )
         self._settings.update(self.recognizer.settings)
 
-    def start_submodules(self):
+    def initialise_submodules(self):
 
         logger.debug("Starting submodules")
         logger.debug(self._submodules)
 
-        self.start_result_writer()
+        self.initialise_result_writer()
 
         if self.control:
-            self.start_controller()
+            self.initialise_controller()
 
         if self.recognize:
-            self.start_recognizer()
+            self.initialise_recognizer()
 
         logger.debug(self._submodules)
 
@@ -396,7 +425,7 @@ class ControlThread(Base, Root):
         Start all the submodules.
         """
         super().run()
-        self.start_submodules()
+        self.initialise_submodules()
 
         while not self.stopped:
 
@@ -413,7 +442,6 @@ class ControlThread(Base, Root):
                     break
 
         return
-
 
     def stop(self):
         """
@@ -468,6 +496,13 @@ class ControlThread(Base, Root):
         if self.control:
             # start the paradigm loaded in the controller
             self.controller.start()
+
+
+        print(self.settings)
+        self.result_writer.initialise_metadata(self.metadata)
+        self.result_writer.initialise_roi_map(self.recognizer.rois)
+
+
 
     def stop_experiment(self, force=False):
         """

@@ -69,6 +69,7 @@ class Recognizer(Base, Root):
         self._video_path = video_path
         self._frame_buffer = None
         self._last_t = 0
+        self.rois = []
 
         self._submodules["drawer"] = drawer
         self._submodules["result_writer"] = result_writer
@@ -163,8 +164,8 @@ class Recognizer(Base, Root):
         Open the camera, build the ROIs and bind them to the trackers
         """
         self.load_camera()
-        rois = self._build()
-        self._load(*args, rois=rois, **kwargs)
+        self.rois = self._build()
+        self._load(*args, rois=self.rois, **kwargs)
         self.ready = True
 
     @property
