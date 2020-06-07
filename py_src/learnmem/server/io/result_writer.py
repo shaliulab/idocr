@@ -53,6 +53,7 @@ class CSVResultWriter(Settings, Status, Root):
         self._prefix = start_datetime + '_idoc_' + get_machine_id()
         self._output_csv = os.path.join(self._result_dir, self._prefix + ".csv")
         self._metadata = None
+        self._var_map_initialised = False
 
     @property
     def result_dir(self):
@@ -76,6 +77,31 @@ class CSVResultWriter(Settings, Status, Root):
             data_points = {**{"id": 0, "t_ms": t_ms}, **{v.header_name: v for v in row.values()}}
             self.process_row(data_points, table_name)
 
+    def initialise_var_map(self, data_rows):
+        """
+        Store the name of the columns and their functional type in a separate table
+        """
+
+        var_map = []
+
+        for data in data_rows.values():
+            var_map.append({
+                "var_name": data.header_name,
+                "sql_type": data.sql_data_type,
+                "functional_type": data.functional_type
+            })
+
+        var_map_df = pd.DataDrame(var_map)
+        var_map_df.to_csv(
+            os.path.join(
+                self._result_dir,
+                self._prefix  + "_VAR_MAP.csv"
+            )
+        )
+
+        self._var_map_initialised = True
+
+
 
     def process_row(self, data, table_name):
         """
@@ -87,6 +113,10 @@ class CSVResultWriter(Settings, Status, Root):
             if len(self._cache[table_name]) >= self._max_n_rows_to_insert:
                 self.store_and_clear(table_name)
             self._cache[table_name].append(data)
+
+        if not self._var_map_initialised:
+            self.initialise_var_map(data)
+
 
     def get_table_path(self, table_name):
         filename = "%s_%s.csv" % (self._prefix, table_name.upper())
