@@ -180,7 +180,7 @@ def toggle():
     else:
         data_decoded = post_data
 
-    print(data_decoded)
+    logger.debug(data_decoded)
 
     data_parsed = json.loads(data_decoded)
     hardware = data_parsed["hardware"]

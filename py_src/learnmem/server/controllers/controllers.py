@@ -84,36 +84,26 @@ class Controller(DefaultInterface, Base, Root):
         self._progress = 0
 
     def toggle(self, hardware, value):
+
         try:
             for thread in self.programmer.paradigm:
                 if thread.hardware == hardware:
-                    break
 
+                    if value == 0:
+                        logging.info("Toggling %s --> off", hardware)
+                        thread.turn_off()
+                    else:
+                        logging.info("Toggling %s --> %s", hardware, str(value))
+                        thread.turn_on(value)
+
+                    return {"status": "success"}
+
+            logger.warning("Hardware %s not found in loaded thread paradigm.")
             return None
 
         except Exception as error:
             logger.warning(error)
             return
-
-        if value == 0:
-            thread.turn_off()
-        else:
-            old_value = thread.value
-            # if type()
-            thread.value = value
-            thread.turn_on()
-            thread.value = old_value
-
-
-        # mode = "o"
-        # if 0 < value < 1:
-        #     mode = "p"
-
-        # print(self.mapping)
-
-        # pin_number = self.mapping[hardware]
-        # pin = self._board.get_pin('d:%d:%s' % (pin_number, mode))
-        # pin.write(value)
 
     @property
     def programmer(self):

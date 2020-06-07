@@ -6,11 +6,11 @@ taking the user input and the information from a Controller instance
 """
 # Standard library imports
 import logging
-from threading import Thread, Event, BrokenBarrierError
+from threading import Event, BrokenBarrierError
 from learnmem.server.utils.debug import IDOCException
 import time
 
-from learnmem.server.core.base import Base, Root
+from learnmem.server.core.base import Base, Root, StatusThread
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 #pylint: disable=W0223
@@ -177,15 +177,16 @@ class BaseControllerThread(Base, Root):
         value = self.__class__.__name__[:4] == "Wave"
         return value
 
-    def turn_on(self):
+    def turn_on(self, value=None):
         # TODO This will set the value of the pin in the convenience monitor
         # 'pin_state' to self.value for the whole period from start to end
         # even if the pin is controlled with a wave
         # Shall I change this so the monitor displays the wave?
 
-        logger.debug("Turning %s on (%s)", self._hardware, self.value)
-        self._notify(self.value)
-        return self._turn_on()
+        logger.info("Turning %s on (%s)", self._hardware, value or self.value)
+        self._notify(value or self.value)
+
+        return self._turn_on(value or self.value)
 
     def turn_off(self):
 
@@ -193,11 +194,11 @@ class BaseControllerThread(Base, Root):
         self._notify(0)
         return self._turn_off()
 
-    def _turn_on(self):
+    def _turn_on(self, value=None):
         # implemented in a subclass
         raise NotImplementedError
 
-    def _turn_off(self):
+    def _turn_off(self, value=None):
         # implemented in a subclass
         raise NotImplementedError
 
@@ -301,7 +302,7 @@ class WaveBaseControllerThread(BaseControllerThread):
         self._seconds_on = seconds_on
         self._seconds_off = seconds_off
         self._shore = Event()
-        self._on_thread = Thread(target=self.wave)
+        self._thread_wave = StatusThread(target=self.wave)
         super().__init__(*args, **kwargs)
 
 
@@ -319,15 +320,29 @@ class WaveBaseControllerThread(BaseControllerThread):
         self.shore = True
         super().stop()
 
-    def wave(self):
-        r"""
+    def reset(self):
+        super().reset()
+        self._shore.clear()
+
+
+    def get_thread_wave(self, value=None):
+        if self._thread_wave.stopped:
+            self.reset()
+            self._thread_wave = StatusThread(target=self.wave, kwargs={"value": value})
+
+        return self._thread_wave
+
+
+    def wave(self, value=None):
+        """
         Turn on the pin, wait on seconds, turn off the pin, wait off seconds and start over
         as long as the _shore event is not set
         """
+        print("The wave has started")
 
-        self._notify(self.value)
+        self._notify(value or self.value)
         while not self._shore.is_set():
-            self._turn_on()
+            self._turn_on(value or self.value)
             self._shore.wait(self._seconds_on)
             self._turn_off()
             self._shore.wait(self._seconds_off)
@@ -339,15 +354,23 @@ class WaveBaseControllerThread(BaseControllerThread):
         self._notify(0)
 
 
-    def turn_on(self):
-        self._on_thread.start()
+    def turn_on(self, value=None):
+
+        if value is not None:
+            self.value = value
+            self.get_thread_wave(value or self.value)
+
+
+            if not self._thread_wave.running:
+                print("Starting thread")
+                self._thread_wave.start()
 
     def turn_off(self):
         logger.info(
             "%s (class %s) is setting the shore",
             self.name, self.__class__.__name__
         )
-
+        self._thread_wave.stop()
         self._shore.set()
 
 
@@ -368,8 +391,8 @@ class ArduinoMixin():
     _value = 1
     mode = None
 
-    def _turn_on(self):
-        self.pin.write(self.value)
+    def _turn_on(self, value=None):
+        self.pin.write(value or self.value)
 
     def _turn_off(self):
         self.pin.write(0)
@@ -382,13 +405,12 @@ class DummyMixin():
     for dev/debugging purposes
     """
 
-    def _turn_on(self):
-        # if self._hardware != "ONBOARD_LED".ljust(16):
+    def _turn_on(self, value=None):
         if not self.stopped:
-            self.pin.write(self.value)
+            self.pin.write(value or self.value)
             logger.info(
                 "%s (class %s) is setting %s to %.8f @ %.4f",
-                self.name, self.__class__.__name__, self._hardware, self._value, self.elapsed_seconds
+                self.name, self.__class__.__name__, self._hardware, value or self._value, self.elapsed_seconds or 0
             )
 
 
@@ -398,7 +420,7 @@ class DummyMixin():
         if not self.stopped:
             logger.info(
                 "%s (class %s) is setting %s to %.8f @ %.4f",
-                self.name, self.__class__.__name__, self._hardware, 0, self.elapsed_seconds
+                self.name, self.__class__.__name__, self._hardware, 0, self.elapsed_seconds or 0
             )
 
 class DefaultDummyThread(DummyMixin, BaseControllerThread):

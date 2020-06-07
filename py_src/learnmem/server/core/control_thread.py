@@ -278,6 +278,9 @@ class ControlThread(Base, Root):
             else:
                 getattr(instance, action)()
 
+        except RuntimeError as error:
+            logger.warning("%s is already started", submodule)
+
         except Exception as error:
             logger.warning(error)
             logger.warning(traceback.print_exc())

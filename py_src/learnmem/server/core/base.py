@@ -105,7 +105,19 @@ class Settings(Root):
 
 
 class Status(Root):
-    r"""
+    """
+    Report useful data and methods to learn and change the state of a class.
+    Three state flags are available: ready, running and stopped.
+
+    * reset()
+    * run()
+    * stop()
+    * status
+    * elapsed_time
+    * elapsed_seconds
+    * start_datetime
+    * time_zero
+
     """
 
     def __init__(self, *args, **kwargs):
@@ -126,15 +138,18 @@ class Status(Root):
 
 
     def reset(self):
+        """
+        Set all state flags to False i.e. like at __init__
+        """
         self.running = False
         self.ready = False
         self.stopped = False
 
     @property
     def elapsed_time(self):
-        r"""
-        Compute the number of seconds since the class is running
-        and return it in format HH:MM:SS.
+        """
+        Compute the number of seconds since running was set to True
+        Return it in format HH:MM:SS.
         """
 
         if self._time_zero is None:
@@ -150,9 +165,9 @@ class Status(Root):
 
     @property
     def elapsed_seconds(self):
-        r"""
-        Compute the number of seconds since the class is running
-        and return it in format HH:MM:SS.
+        """
+        Compute the number of seconds since running was set to True
+        Return it in format HH:MM:SS.
         """
         if self._time_zero is None:
             return None
@@ -162,10 +177,15 @@ class Status(Root):
 
     @property
     def start_datetime(self):
-        return self._start_datetime
+         return self._start_datetime
 
     @property
     def time_zero(self):
+        """
+        Return a datetime.datetime object storing the timestamp
+        when running was set to True.
+        """
+
         try:
             return self._time_zero
         except KeyError:
@@ -181,7 +201,7 @@ class Status(Root):
 
     @status.getter
     def status(self):
-        r"""
+        """
         Return
         - idle if the the thread has not started yet
         - running if the thread has started and has not been stopped
@@ -203,13 +223,16 @@ class Status(Root):
             self._status = "stopped"
             return self._status
 
-        else:
-            logger.debug('%s status undefined', self.__class__.__name__)
-            self._status = 'undefined'
-            return self._status
+        logger.debug('%s status undefined', self.__class__.__name__)
+        self._status = 'undefined'
+        return self._status
 
     def run(self):
-
+        """
+        Set running to True
+        Populate _time_zero (datetime.datetime) and _start_datetime (str)
+        Should be called from a subclass run method.
+        """
         if self.running is True:
             logger.warning("%s is already running. Skipping", self.__class__.__name__)
             return
@@ -220,6 +243,11 @@ class Status(Root):
 
 
     def _set_start_datetime(self):
+        """
+        Store a timestamp of the moment when running was set to True
+        in type str with format YYYY-MM-DD_HH:MM:SS
+        """
+
         self._start_datetime = MachineDatetime.now().machineformat()
 
     def stop(self):
@@ -227,6 +255,7 @@ class Status(Root):
         Set the stopped flagged to True.
         All concurrently running methods should listen to this flag
         and react accordingly, tipically interrupting execution.
+        Should be called from a subclass run method.
         """
         if self.stopped is True:
             logger.warning("%s is already stopped. Skipping", self.__class__.__name__)
@@ -252,6 +281,12 @@ class StatusThread(Status, Thread, Root):
         self._start_event.clear()
         self._ready_event.clear()
         self._end_event.clear()
+
+
+    def run(self):
+        super().run()
+        Thread.run(self)
+
 
     @property
     def running(self):

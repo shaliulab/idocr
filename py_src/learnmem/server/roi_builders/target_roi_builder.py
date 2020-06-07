@@ -8,8 +8,15 @@ import os
 
 import numpy as np
 import cv2
+
+
+from learnmem.server.roi_builders.roi_builders import BaseROIBuilder
+from learnmem.server.core.roi import ROI
+from learnmem.server.utils.debug import IDOCException, EthoscopeException
+from learnmem.server.roi_builders.helpers import find_quadrant
+
 try:
-    CV_VERSION = int(cv2.__version__.split(".")[0])
+    CV_VERSION = int(cv2.__version__.split(".")[0]) # pylint: disable=no-member
 except:
     CV_VERSION = 2
 
@@ -19,11 +26,6 @@ try:
 except ImportError:
     from cv2 import CHAIN_APPROX_SIMPLE
     from cv2 import LINE_AA
-
-from learnmem.server.roi_builders.roi_builders import BaseROIBuilder
-from learnmem.server.core.roi import ROI
-from learnmem.server.utils.debug import IDOCException, EthoscopeException
-from learnmem.server.roi_builders.helpers import find_quadrant
 
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
@@ -59,18 +61,18 @@ class TargetGridROIBuilder(BaseROIBuilder):
     _description = {"overview": "A flexible ROI builder that allows users to select parameters for the ROI layout."
                                "Lengths are relative to the distance between the two bottom targets (width)",
                     "arguments": [
-                                    {"type": "number", "min": 1, "max": 16, "step":1, "name": "n_cols", "description": "The number of columns","default":1},
-                                    {"type": "number", "min": 1, "max": 16, "step":1, "name": "n_rows", "description": "The number of rows","default":1},
-                                    {"type": "number", "min": 0.0, "max": 1.0, "step":.001, "name": "top_margin", "description": "The vertical distance between the middle of the top ROIs and the middle of the top target.","default":0.0},
-                                    {"type": "number", "min": 0.0, "max": 1.0, "step":.001, "name": "bottom_margin", "description": "Same as top_margin, but for the bottom.","default":0.0},
-                                    {"type": "number", "min": 0.0, "max": 1.0, "step":.001, "name": "right_margin", "description": "Same as top_margin, but for the right.","default":0.0},
-                                    {"type": "number", "min": 0.0, "max": 1.0, "step":.001, "name": "left_margin", "description": "Same as top_margin, but for the left.","default":0.0},
-                                    {"type": "number", "min": 0.0, "max": 1.0, "step":.001, "name": "horizontal_fill", "description": "The proportion of the grid space used by the roi, horizontally.","default":0.90},
-                                    {"type": "number", "min": 0.0, "max": 1.0, "step":.001, "name": "vertical_fill", "description": "Same as horizontal_margin, but vertically.","default":0.90}
-                                   ]}
+                        {"type": "number", "min": 1, "max": 16, "step":1, "name": "n_cols", "description": "The number of columns", "default":1},
+                        {"type": "number", "min": 1, "max": 16, "step":1, "name": "n_rows", "description": "The number of rows", "default":1},
+                        {"type": "number", "min": 0.0, "max": 1.0, "step":.001, "name": "top_margin", "description": "The vertical distance between the middle of the top ROIs and the middle of the top target.", "default":0.0},
+                        {"type": "number", "min": 0.0, "max": 1.0, "step":.001, "name": "bottom_margin", "description": "Same as top_margin, but for the bottom.", "default":0.0},
+                        {"type": "number", "min": 0.0, "max": 1.0, "step":.001, "name": "right_margin", "description": "Same as top_margin, but for the right.", "default":0.0},
+                        {"type": "number", "min": 0.0, "max": 1.0, "step":.001, "name": "left_margin", "description": "Same as top_margin, but for the left.", "default":0.0},
+                        {"type": "number", "min": 0.0, "max": 1.0, "step":.001, "name": "horizontal_fill", "description": "The proportion of the grid space used by the roi, horizontally.", "default":0.90},
+                        {"type": "number", "min": 0.0, "max": 1.0, "step":.001, "name": "vertical_fill", "description": "Same as horizontal_margin, but vertically.", "default":0.90}
+                    ]}
 
-    def __init__(self, n_rows=1, n_cols=1, top_margin=0, bottom_margin=0,
-                 left_margin=0, right_margin=0, horizontal_fill=.9, vertical_fill=.9, inside_pad=.0, outside_pad=.0, *args, **kwargs):
+    def __init__(self, *args, n_rows=1, n_cols=1, top_margin=0, bottom_margin=0,
+                 left_margin=0, right_margin=0, horizontal_fill=.9, vertical_fill=.9, inside_pad=.0, outside_pad=.0, **kwargs):
         """
         This roi builder uses three black circles drawn on the arena (targets) to align a grid layout:
 
@@ -133,11 +135,13 @@ class TargetGridROIBuilder(BaseROIBuilder):
         for d in dists:
             logger.info(d)
             if d < self._expected_min_target_dist:
-                raise EthoscopeException("""
-                                        The detected targets are too close.
-                                         If you think this is correct, please decrease the value of _expected_min_target_dist
-                                         to something that fits your setup. It is set to %i
-                                         """, self._expected_min_target_dist)
+                raise EthoscopeException(
+                                    """
+                                    The detected targets are too close.
+                                    If you think this is correct, please decrease the value of _expected_min_target_dist
+                                    to something that fits your setup. It is set to %i
+                                    """ % self._expected_min_target_dist
+                                    )
         # that is the AC pair
         hypo_vertices = pairs[np.argmax(dists)]
 
@@ -159,10 +163,11 @@ class TargetGridROIBuilder(BaseROIBuilder):
         # the remaining point is a
         sorted_a = [sp for sp in src_points if not sp is sorted_b and not sp is sorted_c][0]
         sorted_src_pts = np.array([sorted_a, sorted_b, sorted_c], dtype=np.float32)
-        if self._reverse: sorted_src_pts = sorted_src_pts[::-1]
+        if self._reverse:
+            sorted_src_pts = sorted_src_pts[::-1]
+
         self._sorted_src_pts = sorted_src_pts
-        logger.warning("Sorted detection")
-        logger.warning(sorted_src_pts)
+        logger.debug(sorted_src_pts)
 
         return sorted_src_pts
 

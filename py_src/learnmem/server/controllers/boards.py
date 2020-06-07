@@ -11,6 +11,7 @@ from pyfirmata import Arduino, ArduinoMega
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+# pylint: disable=too-few-public-methods
 
 class PIN():
 
@@ -23,10 +24,10 @@ class PIN():
 
     @staticmethod
     def write(value):
-        print(value)
+        logger.debug(value)
 
 class ArduinoDummy:
-    r"""
+    """
     A dummy class to be passed to a Controller class for debugging purposes
     """
 

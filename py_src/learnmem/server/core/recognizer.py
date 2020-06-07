@@ -1,6 +1,7 @@
-r"""
+"""
 Track flies, record their position and draw the incoming frames
 """
+import datetime
 import logging
 import time
 import traceback
@@ -216,7 +217,7 @@ class Recognizer(Base, Root):
         self._start_saving = True
 
         if start_offset is None:
-            self._start_offset = time.time() - self._time_zero
+            self._start_offset = (datetime.datetime.now() - self._time_zero).total_seconds()
         else:
             self._start_offset = start_offset
 
