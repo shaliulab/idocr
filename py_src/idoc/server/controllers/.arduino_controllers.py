@@ -14,7 +14,7 @@ import pandas as pd
 from pyfirmata import ArduinoMega, Arduino
 import serial
 import yaml
-from pylearn.configuration import LearnMemConfiguration
+from pylearn.configuration import IDOCConfiguration
 # Local application imports
 from pylearn.controllers.controllers import Default
 from .arduino_threading import ArduinoThread
@@ -22,7 +22,7 @@ from .arduino_threading import ArduinoThread
 logger = logging.getLogger(__name__)
 logger.basicConfig(level=logging.INFO)
 
-CFG = LearnMemConfiguration()
+CFG = IDOCConfiguration()
 BOARDS = {"ArduinoUno": Arduino, "ArduinoMega": ArduinoMega, "Default": Default}
 
 class ArduinoController():

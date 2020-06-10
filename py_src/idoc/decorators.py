@@ -3,7 +3,7 @@ import logging
 import time
 import traceback
 
-from learnmem.helpers import get_machine_id
+from idoc.helpers import get_machine_id
 
 
 logger = logging.getLogger(__name__)

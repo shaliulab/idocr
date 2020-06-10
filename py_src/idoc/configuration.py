@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 
 class IDOCConfiguration(object):
     '''
-    Handles the learnmem configuration parameters
+    Handles the idoc configuration parameters
     Data are stored in and retrieved from a JSON configuration file
     '''
 
@@ -34,9 +34,9 @@ class IDOCConfiguration(object):
         },
 
         'folders' : {
-                        'results' : {'path' : '/learnmem_data/results', 'description' : 'Where data will be saved by the saver class.'},
+                        'results' : {'path' : '/1TB/Cloud/Data/idoc_data/results', 'description' : 'Where data will be saved by the saver class.'},
                         'temporary' : {'path' : '/ethoscope_data/results', 'description' : 'A temporary location for downloading data.'},
-                        'paradigms': {'path': '/1TB/Cloud/Lab/Gitlab/learnmem/py_src/paradigms', 'description' : 'Where csv files containing hardware programs are stored.'}
+                        'paradigms': {'path': '/1TB/Cloud/Lab/Gitlab/idoc/py_src/paradigms', 'description' : 'Where csv files containing hardware programs are stored.'}
         },
 
         'users' : {
@@ -73,7 +73,7 @@ class IDOCConfiguration(object):
         },
 
         'controller': {
-            'mapping_path': '/1TB/Cloud/Lab/Gitlab/learnmem/py_src/mappings/mega.csv',
+            'mapping_path': '/1TB/Cloud/Lab/Gitlab/idoc/py_src/mappings/mega.csv',
             'paradigm_path': 'unittest_long.csv',
             'arduino_port': "/dev/ttyACM0",
             'pwm': {
@@ -99,7 +99,7 @@ class IDOCConfiguration(object):
     }
 
 
-    def __init__(self, config_file="/etc/learnmem.conf"):
+    def __init__(self, config_file="/etc/idoc.conf"):
         self._config_file = config_file
         self._config_file_yaml = config_file.replace("conf", "yaml")
         self.load()

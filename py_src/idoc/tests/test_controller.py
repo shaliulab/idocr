@@ -1,11 +1,11 @@
 import unittest
-from learnmem.server.controllers.controllers import Controller
+from idoc.server.controllers.controllers import Controller
 
 
 
 class TestController(unittest.TestCase):
 
-    _mapping_path = "/1TB/Cloud/Lab/Gitlab/learnmem/py_src/mappings/mega.csv"
+    _mapping_path = "/1TB/Cloud/Lab/Gitlab/idoc/py_src/mappings/mega.csv"
 
     def setUp(self):
 
