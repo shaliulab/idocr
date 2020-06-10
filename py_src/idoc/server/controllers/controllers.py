@@ -5,10 +5,10 @@ import traceback
 
 import pandas as pd
 
-from learnmem.server.hardware.interfaces.interfaces import DefaultInterface
-from learnmem.server.programmers.programmers import Programmer
-from learnmem.server.core.base import Base, Root
-from learnmem.helpers import hours_minutes_seconds, iso_format, MachineDatetime
+from idoc.server.hardware.interfaces.interfaces import DefaultInterface
+from idoc.server.programmers.programmers import Programmer
+from idoc.server.core.base import Base, Root
+from idoc.helpers import hours_minutes_seconds, iso_format, MachineDatetime
 
 # Tell pylint everything here is abstract classes
 # pylint: disable=undefined-loop-variable
@@ -314,10 +314,10 @@ class Controller(DefaultInterface, Base, Root):
 
 if __name__ == "__main__":
 
-    from learnmem.configuration import LearnMemConfiguration
-    from learnmem.server.io.result_writer import CSVResultWriter
+    from idoc.configuration import IDOCConfiguration
+    from idoc.server.io.result_writer import CSVResultWriter
 
-    config = LearnMemConfiguration()
+    config = IDOCConfiguration()
 
     controller = Controller(
         mapping_path=config.content["controller"]["mapping_path"],

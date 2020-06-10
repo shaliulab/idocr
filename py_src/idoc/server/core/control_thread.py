@@ -7,23 +7,23 @@ import traceback
 import pandas as pd
 
 # Local application imports
-from learnmem.server.controllers.controllers import Controller
-from learnmem.server.core.base import Base, Root
-from learnmem.server.core.recognizer import Recognizer
-# from learnmem.server.trackers.simple_tracker import SimpleTracker
-from learnmem.server.trackers.adaptive_bg_tracker import AdaptiveBGModel
-from learnmem.server.io.result_writer import CSVResultWriter
-from learnmem.configuration import LearnMemConfiguration
-from learnmem.helpers import get_machine_id, get_machine_name
-from learnmem.server.io.pylon_camera import PylonCamera
-from learnmem.server.io.opencv_camera import OpenCVCamera
-from learnmem.server.roi_builders.roi_builders import DefaultROIBuilder
-from learnmem.server.roi_builders.high_contrast_roi_builder import HighContrastROIBuilder
-from learnmem.server.controllers.boards import ArduinoDummy, ArduinoMegaBoard, ArduinoBoard
-from learnmem.server.roi_builders.target_roi_builder import IDOCROIBuilder
-from learnmem.server.drawers.drawers import DefaultDrawer
-from learnmem.server.utils.debug import IDOCException
-from learnmem.helpers import hours_minutes_seconds, iso_format, MachineDatetime
+from idoc.server.controllers.controllers import Controller
+from idoc.server.core.base import Base, Root
+from idoc.server.core.recognizer import Recognizer
+# from idoc.server.trackers.simple_tracker import SimpleTracker
+from idoc.server.trackers.adaptive_bg_tracker import AdaptiveBGModel
+from idoc.server.io.result_writer import CSVResultWriter
+from idoc.configuration import IDOCConfiguration
+from idoc.helpers import get_machine_id, get_machine_name
+from idoc.server.io.pylon_camera import PylonCamera
+from idoc.server.io.opencv_camera import OpenCVCamera
+from idoc.server.roi_builders.roi_builders import DefaultROIBuilder
+from idoc.server.roi_builders.high_contrast_roi_builder import HighContrastROIBuilder
+from idoc.server.controllers.boards import ArduinoDummy, ArduinoMegaBoard, ArduinoBoard
+from idoc.server.roi_builders.target_roi_builder import IDOCROIBuilder
+from idoc.server.drawers.drawers import DefaultDrawer
+from idoc.server.utils.debug import IDOCException
+from idoc.helpers import hours_minutes_seconds, iso_format, MachineDatetime
 
 logger = logging.getLogger(__name__)
 

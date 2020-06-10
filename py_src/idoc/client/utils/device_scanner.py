@@ -8,9 +8,9 @@ import urllib.error, urllib.request, urllib.parse
 import requests
 
 
-from learnmem.client.utils.logging_server import LogRecordSocketReceiver
-from learnmem.client.utils.mixins import HTTPMixin
-from learnmem.server.utils.debug import IDOCException # TODO MOve debug to the common level
+from idoc.client.utils.logging_server import LogRecordSocketReceiver
+from idoc.client.utils.mixins import HTTPMixin
+from idoc.server.utils.debug import IDOCException # TODO MOve debug to the common level
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -137,7 +137,11 @@ class Device(Thread, HTTPMixin):
         r"""
         """
         old_id = self._id
-        resp = self._get_json(self._id_url)
+        try:
+            resp = self._get_json(self._id_url)
+        except ScanException:
+            return self._id
+
         self._id = resp['id']
         if self._id != old_id:
             if old_id:

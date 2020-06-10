@@ -8,20 +8,20 @@ import os.path
 import pandas as pd
 
 # Local application imports
-# from learnmem.decorators import if_record_event, if_not_record_end_event
-from learnmem.configuration import LearnMemConfiguration
-from learnmem.helpers import get_machine_id, get_machine_name
-from learnmem.server.core.base import Settings, Status, Root
+# from idoc.decorators import if_record_event, if_not_record_end_event
+from idoc.configuration import IDOCConfiguration
+from idoc.helpers import get_machine_id, get_machine_name
+from idoc.server.core.base import Settings, Status, Root
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-config = LearnMemConfiguration()
+config = IDOCConfiguration()
 
 class CSVResultWriter(Settings, Status, Root):
     r"""
     Save results to csv files styled in the format:
-    start_datetime + '_learnmem_' + self._machine_id + _TABLENAME .csv
+    start_datetime + '_idoc_' + self._machine_id + _TABLENAME .csv
     """
     def __init__(self, start_datetime, *args, nrois=20, max_n_rows_to_insert=10, **kwargs):
 

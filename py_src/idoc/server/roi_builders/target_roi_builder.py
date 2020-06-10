@@ -10,10 +10,10 @@ import numpy as np
 import cv2
 
 
-from learnmem.server.roi_builders.roi_builders import BaseROIBuilder
-from learnmem.server.core.roi import ROI
-from learnmem.server.utils.debug import IDOCException, EthoscopeException
-from learnmem.server.roi_builders.helpers import find_quadrant
+from idoc.server.roi_builders.roi_builders import BaseROIBuilder
+from idoc.server.core.roi import ROI
+from idoc.server.utils.debug import IDOCException, EthoscopeException
+from idoc.server.roi_builders.helpers import find_quadrant
 
 try:
     CV_VERSION = int(cv2.__version__.split(".")[0]) # pylint: disable=no-member
@@ -417,7 +417,7 @@ class TargetGridROIBuilder(BaseROIBuilder):
 
         sorted_src_pts = self._sort_src_pts(src_points)
 
-        from learnmem.server.roi_builders.helpers import place_dots
+        from idoc.server.roi_builders.helpers import place_dots
         image_dots = place_dots(image.copy(), sorted_src_pts, color=0)
         cv2.imwrite("/root/image_dots.png", image_dots)
 

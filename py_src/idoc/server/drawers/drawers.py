@@ -5,8 +5,8 @@ import os
 
 import cv2
 
-from learnmem.server.core.base import Base, Root
-from learnmem.configuration import LearnMemConfiguration
+from idoc.server.core.base import Base, Root
+from idoc.configuration import IDOCConfiguration
 
 
 try:

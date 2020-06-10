@@ -5,10 +5,10 @@ import logging
 import cv2
 import numpy as np
 
-from learnmem.server.core.base import Settings, Root
-from learnmem.server.roi_builders.roi_builders import BaseROIBuilder
-from learnmem.server.core.roi import ROI
-from learnmem.server.utils.debug import EthoscopeException
+from idoc.server.core.base import Settings, Root
+from idoc.server.roi_builders.roi_builders import BaseROIBuilder
+from idoc.server.core.roi import ROI
+from idoc.server.utils.debug import EthoscopeException
 
 try:
     CV_VERSION = int(cv2.__version__.split(".")[0])

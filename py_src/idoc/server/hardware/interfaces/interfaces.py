@@ -7,7 +7,7 @@ import collections
 import urllib.request, urllib.error, urllib.parse
 import json
 
-from learnmem.server.core.base import Root
+from idoc.server.core.base import Root
 
 
 class HardwareConnection(Thread):

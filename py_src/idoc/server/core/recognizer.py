@@ -6,12 +6,12 @@ import logging
 import time
 import traceback
 
-from learnmem.server.core.tracking_unit import TrackingUnit
-from learnmem.server.core.variables import FrameCountVariable
-from learnmem.server.core.base import Base, Root
-from learnmem.server.roi_builders.roi_builders import DefaultROIBuilder
-from learnmem.server.utils.debug import IDOCException, EthoscopeException
-from learnmem.helpers import iso_format, hours_minutes_seconds
+from idoc.server.core.tracking_unit import TrackingUnit
+from idoc.server.core.variables import FrameCountVariable
+from idoc.server.core.base import Base, Root
+from idoc.server.roi_builders.roi_builders import DefaultROIBuilder
+from idoc.server.utils.debug import IDOCException, EthoscopeException
+from idoc.helpers import iso_format, hours_minutes_seconds
 
 __author__ = 'quentin'
 
@@ -400,12 +400,12 @@ if __name__ == "__main__":
 
     import argparse
 
-    from learnmem.server.trackers.adaptive_bg_tracker import AdaptiveBGModel
-    from learnmem.server.io.pylon_camera import PylonCamera
-    from learnmem.server.io.opencv_camera import OpenCVCamera
-    from learnmem.server.io.result_writer import CSVResultWriter
-    from learnmem.server.roi_builders.target_roi_builder import IDOCROIBuilder
-    from learnmem.server.drawers.drawers import DefaultDrawer
+    from idoc.server.trackers.adaptive_bg_tracker import AdaptiveBGModel
+    from idoc.server.io.pylon_camera import PylonCamera
+    from idoc.server.io.opencv_camera import OpenCVCamera
+    from idoc.server.io.result_writer import CSVResultWriter
+    from idoc.server.roi_builders.target_roi_builder import IDOCROIBuilder
+    from idoc.server.drawers.drawers import DefaultDrawer
 
     def main():
 

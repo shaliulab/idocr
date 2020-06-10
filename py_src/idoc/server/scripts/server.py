@@ -13,10 +13,10 @@ from threading import Thread
 import bottle
 import coloredlogs
 
-from learnmem.decorators import warning_decorator, error_decorator, wrong_id
-from learnmem.server.core.control_thread import ControlThread
-from learnmem.helpers import get_machine_id, get_git_version, get_server
-from learnmem.configuration import LearnMemConfiguration
+from idoc.decorators import warning_decorator, error_decorator, wrong_id
+from idoc.server.core.control_thread import ControlThread
+from idoc.helpers import get_machine_id, get_git_version, get_server
+from idoc.configuration import IDOCConfiguration
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
@@ -375,7 +375,7 @@ parser.set_defaults(
     default=True
 )
 
-config = LearnMemConfiguration()
+config = IDOCConfiguration()
 ARGS = vars(parser.parse_args())
 
 machine_id = get_machine_id()

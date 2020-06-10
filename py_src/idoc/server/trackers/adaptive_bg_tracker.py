@@ -8,12 +8,12 @@ import cv2
 import numpy as np
 from scipy import ndimage
 
-from learnmem.server.core.base import Root
-from learnmem.server.trackers.trackers import BaseTracker, NoPositionError
-from learnmem.server.core.variables import XPosVariable, YPosVariable, \
+from idoc.server.core.base import Root
+from idoc.server.trackers.trackers import BaseTracker, NoPositionError
+from idoc.server.core.variables import XPosVariable, YPosVariable, \
     XYDistance, WidthVariable, HeightVariable, PhiVariable
-from learnmem.server.core.data_point import DataPoint
-from learnmem.server.utils.debug import IDOCException
+from idoc.server.core.data_point import DataPoint
+from idoc.server.utils.debug import IDOCException
 
 try:
     CV_VERSION = int(cv2.__version__.split(".")[0])

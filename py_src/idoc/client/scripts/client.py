@@ -14,10 +14,10 @@ import urllib.error
 import bottle
 import netifaces
 
-from learnmem.client.utils.device_scanner import DeviceScanner
-from learnmem.configuration import LearnMemConfiguration
-from learnmem.decorators import warning_decorator, error_decorator
-from learnmem.helpers import get_server
+from idoc.client.utils.device_scanner import DeviceScanner
+from idoc.configuration import IDOCConfiguration
+from idoc.decorators import warning_decorator, error_decorator
+from idoc.helpers import get_server
 
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
@@ -37,7 +37,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--port", type=int, default=80)
 ap.add_argument("-D", "--debug", action='store_true', dest="debug")
 ARGS = vars(ap.parse_args())
-CFG = LearnMemConfiguration()
+CFG = IDOCConfiguration()
 
 PORT = ARGS["port"]
 DEBUG = ARGS["debug"]

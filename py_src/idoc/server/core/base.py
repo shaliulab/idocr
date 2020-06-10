@@ -1,13 +1,13 @@
 r"""
 Provide abstract classes with functionality used in:
-learnmem.server.core.control_thread.ControlThread
-learnmem.server.controllers.controllers.Controller
-learnmem.server.programmers.programmers.Programmer
-learnmem.server.io.cameras.StandardStream
-learnmem.server.io.cameras.PylonStream
-learnmem.server.io.cameras.WebCamStream
-learnmem.server.io.saver.SimpleSaver
-learnmem.server.trackers.trackers.SimpleTracker
+idoc.server.core.control_thread.ControlThread
+idoc.server.controllers.controllers.Controller
+idoc.server.programmers.programmers.Programmer
+idoc.server.io.cameras.StandardStream
+idoc.server.io.cameras.PylonStream
+idoc.server.io.cameras.WebCamStream
+idoc.server.io.saver.SimpleSaver
+idoc.server.trackers.trackers.SimpleTracker
 """
 
 import datetime
@@ -15,9 +15,9 @@ import logging
 from threading import Thread, Event
 import traceback
 
-from learnmem.helpers import hours_minutes_seconds, iso_format, MachineDatetime
-from learnmem.configuration import LearnMemConfiguration
-from learnmem.server.utils.debug import IDOCException
+from idoc.helpers import hours_minutes_seconds, iso_format, MachineDatetime
+from idoc.configuration import IDOCConfiguration
+from idoc.server.utils.debug import IDOCException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -27,7 +27,7 @@ class Root:
     Most abstract class, designed to implement defensive programming
     as instructed in https://rhettinger.wordpress.com/2011/05/26/super-considered-super/
     """
-    _config = LearnMemConfiguration()
+    _config = IDOCConfiguration()
 
 
 # TODO Implement it in a way so that settings from a submodule are not mixed with those

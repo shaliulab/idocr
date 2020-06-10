@@ -8,9 +8,9 @@ import os.path
 import cv2
 import numpy as np
 
-from learnmem.server.core.base import DescribedObject
-from learnmem.server.core.roi import ROI
-from learnmem.server.utils.debug import IDOCException, EthoscopeException
+from idoc.server.core.base import DescribedObject
+from idoc.server.core.roi import ROI
+from idoc.server.utils.debug import IDOCException, EthoscopeException
 
 logger = logging.getLogger(__name__)
 

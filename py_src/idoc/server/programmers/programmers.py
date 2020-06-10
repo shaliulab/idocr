@@ -14,11 +14,11 @@ import traceback
 import numpy as np
 import pandas as pd
 
-from learnmem.server.core.base import Root, Settings
-from learnmem.server.controllers.threads import DefaultArduinoThread, WaveArduinoThread
-from learnmem.server.controllers.threads import DefaultDummyThread, WaveDummyThread
-from learnmem.configuration import LearnMemConfiguration
-from learnmem.server.utils.debug import IDOCException
+from idoc.server.core.base import Root, Settings
+from idoc.server.controllers.threads import DefaultArduinoThread, WaveArduinoThread
+from idoc.server.controllers.threads import DefaultDummyThread, WaveDummyThread
+from idoc.configuration import IDOCConfiguration
+from idoc.server.utils.debug import IDOCException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

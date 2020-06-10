@@ -3,8 +3,8 @@ __author__ = 'antonio'
 import logging
 import time
 
-from learnmem.server.core.base import Settings, Status, Root
-from learnmem.server.utils.debug import IDOCException
+from idoc.server.core.base import Settings, Status, Root
+from idoc.server.utils.debug import IDOCException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

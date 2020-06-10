@@ -2,7 +2,7 @@ import json
 import logging
 import urllib.request
 
-from learnmem.decorators import retry
+from idoc.decorators import retry
 
 
 logger = logging.getLogger(__name__)

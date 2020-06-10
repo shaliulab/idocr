@@ -1,7 +1,7 @@
 __author__ = 'quentin'
-from learnmem.server.core.variables import BaseRelativeVariable
-from learnmem.server.core.data_point import DataPoint
-from learnmem.server.stimulators.stimulators import DefaultStimulator
+from idoc.server.core.variables import BaseRelativeVariable
+from idoc.server.core.data_point import DataPoint
+from idoc.server.stimulators.stimulators import DefaultStimulator
 
 
 class TrackingUnit(object):

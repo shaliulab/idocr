@@ -8,7 +8,7 @@ import urllib.request
 import requests
 
 
-from learnmem.client.utils.mixins import HTTPMixin
+from idoc.client.utils.mixins import HTTPMixin
 
 class LogRecordStreamHandler(socketserver.StreamRequestHandler, HTTPMixin):
     """Handler for a streaming logging request.

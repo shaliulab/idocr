@@ -1,9 +1,9 @@
 __author__ = 'quentin'
 
-from learnmem.server.core.base import DescribedObject
-from learnmem.server.core.variables import BaseIntVariable
-from learnmem.server.hardware.interfaces.interfaces import DefaultInterface
-from learnmem.server.utils.scheduler import Scheduler
+from idoc.server.core.base import DescribedObject
+from idoc.server.core.variables import BaseIntVariable
+from idoc.server.hardware.interfaces.interfaces import DefaultInterface
+from idoc.server.utils.scheduler import Scheduler
 
 
 

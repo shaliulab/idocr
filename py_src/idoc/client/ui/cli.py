@@ -11,10 +11,10 @@ import urllib.request, urllib.error, urllib.parse
 # Local application imports
 import cv2
 import numpy as np
-from learnmem import PROJECT_DIR
-from learnmem.configuration import LearnMemConfiguration
-from learnmem.client.analysis.analysis import RSession
-from learnmem.client.utils.device_scanner import DeviceScanner
+from idoc import PROJECT_DIR
+from idoc.configuration import IDOCConfiguration
+from idoc.client.analysis.analysis import RSession
+from idoc.client.utils.device_scanner import DeviceScanner
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -34,7 +34,7 @@ class CLIGui():
 
     def __init__(self):
 
-        CFG = LearnMemConfiguration()
+        CFG = IDOCConfiguration()
 
         self.odor_A = CFG.content["experiment"]["odor_A"]
         self.odor_B = CFG.content["experiment"]["odor_B"]

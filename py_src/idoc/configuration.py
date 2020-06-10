@@ -7,7 +7,7 @@ import yaml
 
 logging.basicConfig(level=logging.INFO)
 
-class LearnMemConfiguration(object):
+class IDOCConfiguration(object):
     '''
     Handles the learnmem configuration parameters
     Data are stored in and retrieved from a JSON configuration file
@@ -150,5 +150,5 @@ class LearnMemConfiguration(object):
 
 
 if __name__ == "__main__":
-    config = LearnMemConfiguration()
+    config = IDOCConfiguration()
     config.save()

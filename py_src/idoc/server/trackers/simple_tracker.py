@@ -9,10 +9,10 @@ from sklearn.cluster import KMeans
 
 # Local application imports
 
-from learnmem.server.trackers.features import Arena, Fly
-from learnmem.server.io.cameras import CAMERAS
-from learnmem.configuration import LearnMemConfiguration
-from learnmem.server.core.base import Base, Root
+from idoc.server.trackers.features import Arena, Fly
+from idoc.server.io.cameras import CAMERAS
+from idoc.configuration import IDOCConfiguration
+from idoc.server.core.base import Base, Root
 
 # Set up package configurations
 
@@ -79,7 +79,7 @@ class SimpleTracker(Base, Root):
         self._framerate = 0
 
         # Config variables
-        config = LearnMemConfiguration()
+        config = IDOCConfiguration()
         self.targets = config.content["arena"]["targets"]
         self.sampled_framerate = 0
         self.block_size = config.content["arena"]["block_size"]
@@ -129,7 +129,7 @@ class SimpleTracker(Base, Root):
         Make it an instance of the classes in CAMERAS.py
         """
 
-        config = LearnMemConfiguration()
+        config = IDOCConfiguration()
         self._CameraClass = CAMERAS[self._camera_name] # pylint: disable=invalid-name
 
         self.camera = self._CameraClass(video_path=video_path)
@@ -240,7 +240,7 @@ class SimpleTracker(Base, Root):
         # ditch for an already existing Tracker class
         # that we can integrate here
 
-        config = LearnMemConfiguration()
+        config = IDOCConfiguration()
         targets = config.content["arena"]["targets"]
 
         if not self.stopped:

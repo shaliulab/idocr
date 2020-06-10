@@ -4,9 +4,9 @@ import traceback
 
 import cv2
 
-from learnmem.server.core.base import Root
-from learnmem.server.io.cameras import AdaptorCamera
-# from learnmem.server.utils.debug import IDOCException
+from idoc.server.core.base import Root
+from idoc.server.io.cameras import AdaptorCamera
+# from idoc.server.utils.debug import IDOCException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

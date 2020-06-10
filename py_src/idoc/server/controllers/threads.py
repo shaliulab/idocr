@@ -9,8 +9,8 @@ import logging
 from threading import Event, BrokenBarrierError
 import time
 
-from learnmem.server.utils.debug import IDOCException
-from learnmem.server.core.base import Base, Root, StatusThread
+from idoc.server.utils.debug import IDOCException
+from idoc.server.core.base import Base, Root, StatusThread
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
