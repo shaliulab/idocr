@@ -145,6 +145,11 @@ class ControlThread(Base, Root):
     def adaptation_time(self):
         return self._settings['adaptation_time']
 
+    @adaptation_time.setter
+    def adaptation_time(self, adaptation_time):
+        self._settings['adaptation_time'] = adaptation_time
+
+
     @property
     def adaptation_time_human(self):
         return iso_format(
@@ -297,7 +302,7 @@ class ControlThread(Base, Root):
     @recognizer.setter
     def recognizer(self, recognizer):
         self._submodules["recognizer"] = recognizer
-        self._settings.update(recognizer.settings)
+        self._settings['recognizer'] = recognizer.settings
 
 
     @property
@@ -308,7 +313,7 @@ class ControlThread(Base, Root):
     @controller.setter
     def controller(self, controller):
         self._submodules["controller"] = controller
-        self._settings.update(controller.settings)
+        self._settings['controller'] = controller.settings
 
     @property
     def result_writer(self):
@@ -394,7 +399,7 @@ class ControlThread(Base, Root):
             adaptation_offset=self.adaptation_offset
         )
         # self.controller.experiment_start = self.experiment_start
-        self._settings.update(self.controller.settings)
+        self._settings['controller'] = self.controller.settings
 
 
     def initialise_recognizer(self):
@@ -417,9 +422,9 @@ class ControlThread(Base, Root):
         drawer_args = self._config.content['drawer']['args']
         drawer_kwargs = self._config.content['drawer']['kwargs']
 
-        drawer_kwargs["video_out_fps"] = (
+        drawer_kwargs["framerate"] = (
             # if a video_out_fps is available in the drawer config, take it
-            drawer_kwargs["video_out_fps"] or
+            drawer_kwargs["framerate"] or
             # otherwise the one specified by the user
             self._user_data["framerate"] or
             # if the user specified nothing, match to the camera
@@ -434,13 +439,12 @@ class ControlThread(Base, Root):
 
         # Pick tracker class and initialize recognizer
         tracker_class = self._pick_class("tracker")
-        self.recognizer = Recognizer(
+        recognizer = Recognizer(
             tracker_class, camera_class, roi_builder, self.result_writer, drawer,
             user_data=self._user_data,
             adaptation_offset=self.adaptation_offset,
         )
-
-        self._settings.update(self.recognizer.settings)
+        self._add_submodule("recognizer", recognizer)
 
     def initialise_submodules(self):
 

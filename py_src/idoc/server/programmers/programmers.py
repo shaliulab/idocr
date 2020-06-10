@@ -359,7 +359,7 @@ class Programmer(Settings, Root):
         self._barriers = {k: Barrier(v) for k, v in switch_times["total"].items()}
 
         for switch_time in self._barriers:
-            logging.warning(
+            logger.debug(
                 "Barrier at time %d with id %s will wait for %d parties",
                 switch_time,
                 id(self._barriers[switch_time]),

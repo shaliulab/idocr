@@ -30,6 +30,11 @@ class Root:
     _config = LearnMemConfiguration()
 
 
+# TODO Implement it in a way so that settings from a submodule are not mixed with those
+# of another submodule in the parent module self._settings
+# i.e. instead of self._settings(update(submodule.settings))
+# one could do self._settings[submodule.name] = submodule.settings
+# and then update it using only the subdictionary
 class Settings(Root):
     r"""
     Communication bridge between modules in IDOC.
@@ -43,6 +48,11 @@ class Settings(Root):
         self._submodules = {}
         super().__init__(*args, **kwargs)
 
+
+    def _add_submodule(self, name, submodule):
+        self._submodules[name] = submodule
+        self._settings[name] = submodule.settings
+
     @property
     def settings(self):
         r"""
@@ -54,7 +64,6 @@ class Settings(Root):
 
     @settings.setter
     def settings(self, settings):
-    # def update_settings(self, settings):
         r"""
         Update the existing settings without extending them.
         """
@@ -65,6 +74,8 @@ class Settings(Root):
         # notify submodules
         self.send()
 
+        logger.warning("Module %s with settings %s", self.__class__.__name__, self._settings)
+
     @settings.getter
     def settings(self):
         r"""
@@ -73,26 +84,41 @@ class Settings(Root):
         """
         # ask the dependent modules
         self.receive()
+        self.update()
         return self._settings
+
+
+    def send_recursive(self, module, settings):
+
+        for submodule in module._submodules:
+            for k in self._settings:
+                print(self._settings)
+                if k in module._submodules[submodule]._submodules:
+                    print("===============")
+                    print(self._submodules)
+                    print(self.__class__.__name__)
+                    print(module._submodules[submodule].__class__.__name__)
+                    self.send_recursive(module._submodules[submodule], settings)
+                else:
+                    module._submodules[submodule]._settings = settings
 
     def send(self):
         r"""
         Send to depending modules the new settings sent by the user.
         """
-        for submodule in self._submodules.values():
+        for name, submodule in self._submodules.items():
             if submodule is None:
                 continue
 
-            logger.debug("%s sending to %s", self.__class__.__name__, submodule.__class__.__name__)
-            logger.debug(self._settings)
-
-            submodule.settings = self._settings
+            logger.warning("%s sending to %s", self.__class__.__name__, submodule.__class__.__name__)
+            logger.warning(self._settings)
+            self.send_recursive(self, self._settings)
 
     def receive(self):
         r"""
         Receive from depending modules settings that the user could change
         """
-        for submodule in self._submodules.values():
+        for name, submodule in self._submodules.items():
             if submodule is None:
                 continue
 
@@ -101,7 +127,24 @@ class Settings(Root):
                 self.__class__.__name__, submodule.__class__.__name__
             )
             logger.debug(submodule.settings)
-            self._settings.update(submodule.settings)
+            self._settings[name] = submodule.settings
+
+    def update(self):
+        """
+        Update the properties using the values in the settings
+        """
+        for k in self._settings:
+            if k in self._submodules:
+                pass
+            else:
+                logger.debug("Updating self.%s to %s", k, self._settings[k])
+                try:
+                    setattr(self, k, self._settings[k])
+                except AttributeError as error:
+                    logger.warning("Cannot update self.%s to %s in class %s", k, self._settings[k], self.__class__.__name__)
+                    logger.warning(error)
+                    logger.warning(traceback.print_exc())
+
 
 
 class Status(Root):

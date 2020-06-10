@@ -59,6 +59,7 @@ class BaseCamera(Settings, Status, Root):
             at_least_one_frame = True
 
             if (self._frame_idx % self._settings["drop_each"]) == 0:
+                logger.debug("Time: %s, Framerate: %s", t_ms, self.framerate)
                 yield t_ms, out
 
             if self._max_duration is not None and t_ms > self._max_duration * 1000:

@@ -54,8 +54,18 @@ def update():
     upong GETting to this same URL.
     """
     settings_json = bottle.request.body.read() # pylint: disable=no-member
-    settings = json.loads(settings_json)
-    control.settings = settings
+    json_data = json.loads(settings_json)
+    settings = json_data['settings']
+    submodule = json_data['submodule']
+    if submodule == "control_thread":
+        control.settings = settings
+    else:
+        target = control
+        for module in submodule:
+            target = getattr(target, module)
+
+        target.settings = settings
+
     return {"status": "success"}
 
 

@@ -86,11 +86,12 @@ class OpenCVCamera(AdaptorCamera, Root):
 
     @framerate.getter
     def framerate(self):
-        self._settings["framerate"] = self.camera.get(5)
+        # self._settings["framerate"] = self.camera.get(5)
         return self._settings["framerate"]
 
     @framerate.setter
     def framerate(self, framerate):
+        # logger.debug("Setting framerate %d" % framerate)
         self.camera.set(5, framerate)
         self._settings["framerate"] = framerate
 
@@ -103,6 +104,15 @@ class OpenCVCamera(AdaptorCamera, Root):
         # TODO Is int needed here?
         self._settings["resolution"] = (int(self.camera.get(3)), int(self.camera.get(4)))
         return self._settings["resolution"]
+
+
+    @resolution.setter
+    def resolution(self, resolution):
+        # TODO Is int needed here?
+        self._settings["resolution"] = resolution
+        pass
+        # self.camera.set(3, resolution[0])
+        # self.camera.set(4, resolution[1])
 
     @property
     def exposure_time(self):

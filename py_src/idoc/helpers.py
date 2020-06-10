@@ -34,6 +34,9 @@ class MachineDatetime(datetime.datetime):
 
 
 def hours_minutes_seconds(seconds):
+    if seconds is None:
+        return None
+
     return int(seconds // 3600), int((seconds // 60) % 60), int(seconds % 60)
 
 def iso_format(dhm):

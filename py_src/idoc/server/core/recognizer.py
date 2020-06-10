@@ -11,6 +11,7 @@ from learnmem.server.core.variables import FrameCountVariable
 from learnmem.server.core.base import Base, Root
 from learnmem.server.roi_builders.roi_builders import DefaultROIBuilder
 from learnmem.server.utils.debug import IDOCException, EthoscopeException
+from learnmem.helpers import iso_format, hours_minutes_seconds
 
 __author__ = 'quentin'
 
@@ -68,11 +69,10 @@ class Recognizer(Base, Root):
         self._unit_trackers = []
         self._rois = rois
         self._frame_buffer = None
-        self._last_t = 0
         self.rois = []
 
-        self._submodules["drawer"] = drawer
-        self._submodules["result_writer"] = result_writer
+        self._add_submodule("drawer", drawer)
+        self._add_submodule("result_writer", result_writer)
         self._submodules["camera"] = None
 
         self._tracker_class = tracker_class
@@ -80,11 +80,14 @@ class Recognizer(Base, Root):
         self._roi_builder = roi_builder
         self._stimulators = stimulators
 
+        self._last_frames = []
+        self._last_times = []
+
 
 
     @property
     def last_t(self):
-        return self._last_t
+        return self.last_time_stamp
 
     @property
     def info(self):
@@ -146,6 +149,7 @@ class Recognizer(Base, Root):
                     pass
                     # logger.debug("Not assigning ", setting, "to camera. Setting does not belong")
 
+        self._settings['camera'] = self.camera.settings
 
     def _build(self):
         r"""
@@ -153,14 +157,14 @@ class Recognizer(Base, Root):
         If it fails, emit a warning and use the whole frame as the ROI
         """
         try:
-            rois = self._roi_builder.build(self._submodules["camera"])
+            rois = self._roi_builder.build(self.camera)
 
         except (IDOCException, EthoscopeException) as error: # TODO remove ethoscopexception dependency
             logger.warning(traceback.print_exc())
             logger.warning(error)
             roi_builder_class = DefaultROIBuilder
             roi_builder = roi_builder_class()
-            rois = roi_builder.build(self._submodules["camera"])
+            rois = roi_builder.build(self.camera)
             logger.debug("Default ROI loaded")
 
         return rois
@@ -185,7 +189,6 @@ class Recognizer(Base, Root):
             self._unit_trackers = [TrackingUnit(self._tracker_class, r, inter, *args, **kwargs) for r, inter in zip(rois, self._stimulators)]
         else:
             raise ValueError("You should have one interactor per ROI")
-
 
     def prepare(self, *args, **kwargs):
         """
@@ -222,8 +225,22 @@ class Recognizer(Base, Root):
         :return: The time, in seconds, since recognizer started running. It will be 0 if the monitor is not running yet.
         :rtype: float
         """
-        time_from_start = self._last_time_stamp / 1e3
-        return time_from_start
+        self._last_time_stamp
+        return self._last_time_stamp
+
+    @last_time_stamp.setter
+    def last_time_stamp(self, last_time_stamp):
+
+        last_time_stamp_s = last_time_stamp / 1e3
+
+        # print(self._last_times)
+
+        if len(self._last_times) == 10:
+            self._last_times.pop(0)
+
+        self._last_times.append(last_time_stamp_s)
+        self._last_time_stamp = last_time_stamp_s
+
 
     @property
     def last_frame_idx(self):
@@ -233,6 +250,37 @@ class Recognizer(Base, Root):
         """
         return self._last_frame_idx
 
+    @last_frame_idx.setter
+    def last_frame_idx(self, last_frame_idx):
+        """
+        :return: The number of the last acquired frame.
+        :rtype: int
+        """
+        if len(self._last_frames) == 10:
+            self._last_frames.pop(0)
+
+        self._last_frames.append(last_frame_idx)
+        self._last_frame_idx = last_frame_idx
+
+
+    @property
+    def fps(self):
+
+        try:
+            # print(self._last_frames)
+            # print(self._last_times)
+            end_f, start_f = (self._last_frames[::-1][0], self._last_frames[0])
+            end_t, start_t = (self._last_times[::-1][0], self._last_times[0])
+            # print(end_f, start_f, end_t, start_t)
+        except IndexError:
+            return 0
+
+        try:
+            framerate = (end_f - start_f) / (end_t - start_t)
+        except ZeroDivisionError:
+            framerate = 0
+
+        return framerate
 
     def run(self):
         """
@@ -255,15 +303,13 @@ class Recognizer(Base, Root):
             for items in enumerate(self.camera):
 
                 i, (t_ms, frame) = items
-                self._last_t = (t_ms / 1000)
-                # print(self._last_t)
 
-                if self._user_data["sync"]:
-                    while t_ms > (self.elapsed_seconds * 1000):
-                        time.sleep(0.1)
+                # if self._user_data["sync"]:
+                #     while t_ms > (self.elapsed_seconds * 1000):
+                #         time.sleep(0.1)
 
                 if self.result_writer is not None:
-                    self.result_writer.last_t = self._last_t
+                    self.result_writer.last_t = self.last_t
 
                 # logger.warning('Reading  frame at %d', t_ms)
 
@@ -271,8 +317,8 @@ class Recognizer(Base, Root):
                     logger.info("Recognizer object stopped from external request")
                     break
 
-                self._last_frame_idx = i
-                self._last_time_stamp = t_ms
+                self.last_frame_idx = i
+                self.last_time_stamp = t_ms
                 self._frame_buffer = frame
 
                 # if quality_controller is not None:
@@ -300,10 +346,16 @@ class Recognizer(Base, Root):
                             data_rows
                         )
 
+                metadata = {
+                    "time": iso_format(hours_minutes_seconds(self.last_t)),
+                    "frame": self._last_frame_idx,
+                    "framerate": round(self.fps)
+                }
+
                 if self.drawer is not None:
                     # logger.debug("Drawing frame %d", i)
-                    annot = self.drawer.draw(frame, tracking_units=self._unit_trackers, positions=self._last_positions)
-                    # annot = self.drawer.draw(frame, tracking_units=self._unit_trackers, positions=self._last_positions, metadata={"t": self._last_t})
+                    # annot = self.drawer.draw(frame, tracking_units=self._unit_trackers, positions=self._last_positions)
+                    annot = self.drawer.draw(frame, tracking_units=self._unit_trackers, positions=self._last_positions, metadata=metadata)
                     tick = int(round((t_ms/1000.0)/self._period))
 
                     if tick > self._last_tick:

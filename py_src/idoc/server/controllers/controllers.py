@@ -83,7 +83,7 @@ class Controller(DefaultInterface, Base, Root):
             paradigm_path=self._paradigm_path
         )
 
-        self._settings.update(self._submodules['programmer'].settings)
+        self._settings['programmer'] = self._submodules['programmer'].settings
         self._progress = 0
         self._last_t = 0
 
@@ -270,7 +270,7 @@ class Controller(DefaultInterface, Base, Root):
         Start executing the threads in self._submodules['programmer'].paradigm.
         """
 
-        logger.warning("Controller has elapsed %3.f seconds since init", self.init_elapsed_seconds)
+        logger.debug("Controller has elapsed %3.f seconds since init", self.init_elapsed_seconds)
 
         while self.wait > 0:
             self._end_event.wait(0.1)

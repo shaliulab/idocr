@@ -29,7 +29,7 @@ class BaseDrawer(Base, Root):
     _interaction_colour = (255, 0, 0)
     _standard_colour = (0, 0, 255)
 
-    def __init__(self, *args, video_out=None, draw_frames=True, video_out_fourcc="DIVX", video_out_fps=2, **kwargs):
+    def __init__(self, *args, video_out=None, draw_frames=True, video_out_fourcc="DIVX", framerate=2, **kwargs):
         """
         A template class to annotate and save the processed frames. It can also save the annotated frames in a video
         file and/or display them in a new window. The :meth:`~ethoscope.drawers.drawers.BaseDrawer._annotate_frame`
@@ -41,25 +41,29 @@ class BaseDrawer(Base, Root):
         :type draw_frames: bool
         :param video_out_fourcc: When setting ``video_out``, this defines the codec used to save the output video (see `fourcc <http://www.fourcc.org/codecs.php>`_)
         :type video_out_fourcc: str
-        :param video_out_fps: When setting ``video_out``, this defines the output fps. typically, the same as the input fps.
-        :type video_out_fps: float
+        :param framerate: When setting ``video_out``, this defines the output fps. typically, the same as the input fps.
+        :type framerate: float
         """
-
         super().__init__(*args, **kwargs)
+        self._settings.update({"framerate": None})
 
         self._video_out = video_out
         self._draw_frames = draw_frames
         self._video_writers = {}
         self._window_name = "ethoscope_" + str(os.getpid())
         self._video_out_fourcc = video_out_fourcc
-        self._video_out_fps = video_out_fps
+        self._settings['framerate'] = framerate
         if draw_frames:
             cv2.namedWindow(self._window_name, cv2.WINDOW_AUTOSIZE)
         self._last_drawn_frame = None
         self.arena = None
         self._frame_count = 0
 
-    def _annotate_frame(self, img, tracking_units, positions, roi):
+    def framerate(self):
+        return round(self._settings['framerate'])
+
+
+    def _annotate_frame(self, img, tracking_units, positions, roi, metadata=None):
         """
         Abstract method defining how frames should be annotated.
         The `img` array, which is passed by reference, is meant to be modified by this method.
@@ -92,7 +96,7 @@ class BaseDrawer(Base, Root):
         cv2.imwrite(self.last_annot_path, annot, [int(self._quality), 50])
 
 
-    def draw(self, img, tracking_units, positions, roi=True):
+    def draw(self, img, tracking_units, positions, roi=True, metadata=None):
         """
         Draw results on a frame.
 
@@ -108,7 +112,7 @@ class BaseDrawer(Base, Root):
         self._last_drawn_frame = img.copy()
         self._last_raw_frame = img.copy()
 
-        img = self._annotate_frame(self._last_drawn_frame, tracking_units, positions, roi)
+        img = self._annotate_frame(self._last_drawn_frame, tracking_units, positions, roi, metadata=metadata)
         self._last_annot_frame = img
 
         if self._draw_frames:
@@ -132,7 +136,7 @@ class BaseDrawer(Base, Root):
                     # codec
                     VideoWriter_fourcc(*self._video_out_fourcc),
                     # framerate
-                    self._video_out_fps,
+                    self.framerate,
                     # resolution (reverse of first two dims in shape)
                     (img.shape[1], img.shape[0])
                 ),
@@ -143,7 +147,7 @@ class BaseDrawer(Base, Root):
                     # codec
                     VideoWriter_fourcc(*self._video_out_fourcc),
                     # framerate
-                    self._video_out_fps,
+                    self.framerate,
                     # resolution (reverse of first two dims in shape)
                     (img.shape[1], img.shape[0])
                 )
@@ -179,7 +183,7 @@ class NullDrawer(BaseDrawer):
         """
         super(NullDrawer, self).__init__(draw_frames=False)
 
-    def _annotate_frame(self, img, tracking_units, positions, roi):
+    def _annotate_frame(self, img, tracking_units, positions, roi, metadata=None):
         pass
 
 
@@ -197,7 +201,7 @@ class DefaultDrawer(BaseDrawer):
         """
         super().__init__(*args, **kwargs)
 
-    def _annotate_frame(self, img, tracking_units, positions=None, roi=True):
+    def _annotate_frame(self, img, tracking_units, positions=None, roi=True, metadata=None):
         if img is None:
             return
 
@@ -230,6 +234,12 @@ class DefaultDrawer(BaseDrawer):
 
                     cv2.ellipse(img, ((pos["x"], pos["y"]), (pos["w"], pos["h"]), pos["phi"]), self._black_colour, 3, LINE_AA)
                     cv2.ellipse(img, ((pos["x"], pos["y"]), (pos["w"], pos["h"]), pos["phi"]), colour, 1, LINE_AA)
+
+            if metadata is not None:
+                cv2.putText(img, metadata["time"], (50, 30), self._font, 2, (255, 255, 255))
+                cv2.putText(img, "%s" % str(metadata["frame"]).zfill(5), (img.shape[1] - 250, 30), self._font, 2, (255, 255, 255))
+                cv2.putText(img, "%s" % str(metadata["framerate"]).zfill(2), (img.shape[1] - 100, 30), self._font, 2, (255, 255, 255))
+
 
         return img
 

@@ -85,7 +85,7 @@ class LearnMemConfiguration(object):
             'kwargs': {
                 'draw_frames': False,
                 'video_out_fourcc': "DIVX",
-                'video_out_fps': None # match that of the camera
+                'framerate': None # match that of the camera
             },
             'last_drawn_path': "/tmp/last_img.png",
             'last_annot_path': "/tmp/last_img_annot.png",
