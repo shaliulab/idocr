@@ -1,5 +1,0 @@
-pin_id,start,end,on,off
-ONBOARD_LED,0,-1,1/60,1/60
-MAIN_VALVE,0,-1,NaN,NaN
-VACUUM,0,-1,NaN,NaN
-IRLED,0,-1,NaN,NaN

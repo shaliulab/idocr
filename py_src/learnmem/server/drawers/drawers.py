@@ -1,8 +1,14 @@
 __author__ = 'quentin'
 
+import logging
 import os
 
 import cv2
+
+from learnmem.server.core.base import Base, Root
+from learnmem.configuration import LearnMemConfiguration
+
+
 try:
     from cv2.cv import CV_FOURCC as VideoWriter_fourcc
     from cv2.cv import CV_AA as LINE_AA
@@ -10,8 +16,9 @@ except ImportError:
     from cv2 import VideoWriter_fourcc
     from cv2 import LINE_AA
 
-from learnmem.server.core.base import Base, Root
-from learnmem.configuration import LearnMemConfiguration
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 class BaseDrawer(Base, Root):
 
@@ -50,6 +57,7 @@ class BaseDrawer(Base, Root):
             cv2.namedWindow(self._window_name, cv2.WINDOW_AUTOSIZE)
         self._last_drawn_frame = None
         self.arena = None
+        self._frame_count = 0
 
     def _annotate_frame(self, img, tracking_units, positions, roi):
         """
@@ -120,7 +128,7 @@ class BaseDrawer(Base, Root):
 
                 "raw": cv2.VideoWriter(
                     # path to resulting video
-                    self._video_out,
+                    self._video_out.replace(".avi", "_ORIGINAL.avi"),
                     # codec
                     VideoWriter_fourcc(*self._video_out_fourcc),
                     # framerate
@@ -131,7 +139,7 @@ class BaseDrawer(Base, Root):
 
                 "annot": cv2.VideoWriter(
                     # path to resulting video
-                    self._video_out.replace(".avi", "_annot.avi"), # TODO More elegant way of deriving the path
+                    self._video_out.replace(".avi", "_ANNOTATED.avi"), # TODO More elegant way of deriving the path
                     # codec
                     VideoWriter_fourcc(*self._video_out_fourcc),
                     # framerate
@@ -144,6 +152,7 @@ class BaseDrawer(Base, Root):
 
         self._video_writers["raw"].write(self._last_raw_frame)
         self._video_writers["annot"].write(self._last_annot_frame)
+        self._frame_count += 1
 
         return img
 
@@ -157,6 +166,7 @@ class BaseDrawer(Base, Root):
 
 
     def close(self):
+        # logger.warning("Drawer has drawn %d frames", self._frame_count)
         self.__del__()
 
 

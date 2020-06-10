@@ -51,6 +51,10 @@ class PylonCamera(AdaptorCamera, Root):
         # import ipdb; ipdb.set_trace()
 
         while self.camera.IsGrabbing():
+
+
+            logger.warning('Input framerate is %s', str(self.framerate))
+
             grab = self._grab()
             if not grab.GrabSucceeded():
                 logger.debug("Pylon could not fetch next frame. Trial no %d", failed_count)

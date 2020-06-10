@@ -255,17 +255,46 @@ parser.add_argument(
     help="Turn off recognizer module"
 )
 parser.add_argument(
-    "--endless", action='store_true', dest="endless",
+    "--wrap", action='store_true', dest="wrap",
     help="If pasased a video, play it in a loop. Useful for debugging"
 )
+parser.add_argument(
+    "--no-wrap", action='store_false', dest="wrap",
+    help="If pasased a video, DO NOT play it in a loop. Useful for analysis"
+)
 
+parser.add_argument(
+    "--use-wall-clock", action='store_true', dest='use_wall_clock',
+    help="""
+    Default. If passed, the time is computed using the output of time.time()
+    """
+)
+parser.add_argument(
+    "--no-use-wall-clock", action='store_false', dest='use_wall_clock',
+    help="""
+    If passed, the time is computed using the CAP_PROP_POS_MSEC property
+    of the OpenCV capture class. This is only compatible with the
+    OpenCV camera and when analyzing a video offline.
+    """
+)
+
+parser.add_argument(
+    "--sync", action='store_true', dest='sync',
+    help="""
+    """
+)
+parser.add_argument(
+    "--no-sync", action='store_false', dest='sync',
+    help="""
+    """
+)
 # Module settings
 parser.add_argument(
-    "-m", "--mapping_path", type=str,
+    "-m", "--mapping_path", type=str, dest="mapping_path",
     help="Absolute path to csv providing pin number-pin name mapping"
 )
 parser.add_argument(
-    "--paradigm_path", type=str,
+    "--paradigm-path", type=str, dest="paradigm_path",
     help="Absolute path to csv providing the Arduino top level paradigm"
 )
 
@@ -287,6 +316,30 @@ parser.add_argument(
     """
 )
 
+parser.add_argument(
+    "-f", "--framerate", type=int,
+    help=
+    """
+    Framerate of the analysis and the output video.
+    """
+)
+
+parser.add_argument(
+    "-a", "--adaptation-time", type=int, dest="adaptation_time",
+    help=
+    """
+    Number of seconds to wait before starting paradigm and saving tracking data
+    from the moment this script is started. If not provided, it is taken from config.
+    """
+)
+
+parser.add_argument(
+    "-d", "--duration", type=int, dest="max_duration",
+    help=
+    """
+    Maximum number of seconds the software will run. If not provided, it is taken from config.
+    """
+)
 
 # User input for classes
 parser.add_argument("--board", type=str, choices=list_options("board"))
@@ -308,7 +361,8 @@ parser.set_defaults(
     control=False, recognize=False,
     port=9000,
     arduino_port="/dev/ttyACM0",
-    experimenter="Sayed"
+    wrap=None,
+    default=True
 )
 
 config = LearnMemConfiguration()

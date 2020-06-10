@@ -1,7 +1,0 @@
-pin_id,start,end,on,off,block
-ODOR_A_RIGHT, 00,01,NaN,NaN,
-ODOR_B_RIGHT, 00,01,NaN,NaN,
-ODOR_A_RIGHT, 02,03,NaN,NaN,
-ODOR_B_LEFT,  02,03,NaN,NaN,
-ODOR_A_LEFT,  05,06,NaN,NaN,
-ODOR_B_RIGHT, 05,06,NaN,NaN,

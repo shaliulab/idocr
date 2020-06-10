@@ -23,6 +23,7 @@ from learnmem.server.controllers.boards import ArduinoDummy, ArduinoMegaBoard, A
 from learnmem.server.roi_builders.target_roi_builder import IDOCROIBuilder
 from learnmem.server.drawers.drawers import DefaultDrawer
 from learnmem.server.utils.debug import IDOCException
+from learnmem.helpers import hours_minutes_seconds, iso_format, MachineDatetime
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,16 @@ class ControlThread(Base, Root):
     def __init__(self, machine_id, version, result_dir, user_data, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
-        self._settings = {}
+
+        if user_data["adaptation_time"] is None:
+            adaptation_time = self._config.content["experiment"]["adaptation_time"]
+        else:
+            adaptation_time = user_data["adaptation_time"]
+
+        self._settings.update({
+            "adaptation_time": adaptation_time
+        })
+
         self._submodules = {"recognizer": None, "controller": None, "result_writer": None}
 
         self.machine_id = machine_id
@@ -89,10 +99,8 @@ class ControlThread(Base, Root):
         self.version = version
         self._result_dir = result_dir
 
-        # TODO: Fix this dirty init function
-        self._config = LearnMemConfiguration()
-        for k in self._config.content['experiment']:
-            setattr(self, k, self._config.content['experiment'][k])
+        self._location = self._config.content['experiment']['location']
+        self._max_duration = self._config.content['experiment']['max_duration']
 
         ## Assignment of attributes
         self.control = user_data['control']
@@ -126,14 +134,41 @@ class ControlThread(Base, Root):
         }
 
     @property
+    def run_id(self):
+        return "%s_%s" % (self._start_datetime, self.machine_id)
+
+    @property
+    def run_id_short(self):
+        return "%s_%s" % (self._start_datetime, self.machine_id[:5])
+
+    @property
+    def adaptation_time(self):
+        return self._settings['adaptation_time']
+
+    @property
+    def adaptation_time_human(self):
+        return iso_format(
+                    hours_minutes_seconds(
+                        self._settings['adaptation_time']
+                    )
+                )
+
+
+    @property
+    def adaptation_offset(self):
+        return max(0, self.adaptation_time - self.elapsed_seconds)
+
+    @property
     def metadata(self):
         metadata = pd.DataFrame([
+            {"field": "run_id", "value": self.run_id_short},
             {"field": "machine_id", "value": self.machine_id},
             {"field": "machine_name", "value": self.machine_name},
             {"field": "version", "value": self.version},
             {"field": "date_time", "value": self.start_datetime},
             {"field": "selected_options", "value": self.selected_options},
-            {"field": "settings", "value": self.settings}
+            {"field": "settings", "value": self.settings},
+            {"field": "user_data", "value": self._user_data}
         ])
 
         return metadata
@@ -157,10 +192,11 @@ class ControlThread(Base, Root):
 
         self._info.update({
             "id": self.machine_id,
-            "location": self._config.content["experiment"]["location"],
+            "location": self._location,
             "name": self.machine_name,
             "status": self.status["control_thread"],
-            "submodules": {k: self.status[k] for k in self._submodules}
+            "submodules": {k: self.status[k] for k in self._submodules},
+            "clock": self.clock
 
         })
 
@@ -234,7 +270,7 @@ class ControlThread(Base, Root):
 
     @property
     def video_out(self):
-        filename = self.start_datetime + '_idoc_' + get_machine_id() + ".avi"
+        filename = self.run_id + ".avi"
         self._video_out = os.path.join(
             self.result_writer.result_dir,
             filename
@@ -353,8 +389,11 @@ class ControlThread(Base, Root):
             paradigm_path=self._user_data["paradigm_path"],
             result_writer=self.result_writer,
             board_class=self._pick_class("board"),
-            arduino_port=self._user_data["arduino_port"]
+            arduino_port=self._user_data["arduino_port"],
+            use_wall_clock=self._user_data["use_wall_clock"],
+            adaptation_offset=self.adaptation_offset
         )
+        # self.controller.experiment_start = self.experiment_start
         self._settings.update(self.controller.settings)
 
 
@@ -377,11 +416,15 @@ class ControlThread(Base, Root):
         drawer_class = self._pick_class("drawer")
         drawer_args = self._config.content['drawer']['args']
         drawer_kwargs = self._config.content['drawer']['kwargs']
-        camera_framerate = self._config.content['io']['camera']['kwargs']['framerate']
 
-        video_out_fps = drawer_kwargs["video_out_fps"] or camera_framerate
-        drawer_kwargs["video_out_fps"] = video_out_fps
-
+        drawer_kwargs["video_out_fps"] = (
+            # if a video_out_fps is available in the drawer config, take it
+            drawer_kwargs["video_out_fps"] or
+            # otherwise the one specified by the user
+            self._user_data["framerate"] or
+            # if the user specified nothing, match to the camera
+            self._config.content['io']['camera']['kwargs']['framerate']
+        )
 
         drawer = drawer_class(
             *drawer_args,
@@ -393,8 +436,10 @@ class ControlThread(Base, Root):
         tracker_class = self._pick_class("tracker")
         self.recognizer = Recognizer(
             tracker_class, camera_class, roi_builder, self.result_writer, drawer,
-            start_saving=True, video_path=self._user_data["video_path"]
+            user_data=self._user_data,
+            adaptation_offset=self.adaptation_offset,
         )
+
         self._settings.update(self.recognizer.settings)
 
     def initialise_submodules(self):
@@ -420,6 +465,36 @@ class ControlThread(Base, Root):
         else:
             return None
 
+    @property
+    def last_t(self):
+        if self.recognize:
+            return self.recognizer.last_t
+        else:
+            None
+
+    @property
+    def clock(self):
+
+        clock = None
+        if self.control:
+            if self.controller is not None:
+
+                adaptation_time = "%s / %s" % tuple([iso_format(hours_minutes_seconds(e)) for e in [self.controller.adaptation_left, self.controller._adaptation_offset]])
+
+                if self.controller.running:
+                    experiment_time = "%s / %s" % tuple([iso_format(hours_minutes_seconds(e)) for e in [self.controller.elapsed_seconds, self.controller.programmer.duration]])
+                else:
+                    experiment_time = None
+
+
+                clock = {
+                    "adaptation_time": adaptation_time,
+                    "experiment_time": experiment_time
+                }
+
+        return clock
+
+
     def run(self):
         r"""
         Start all the submodules.
@@ -427,7 +502,7 @@ class ControlThread(Base, Root):
         super().run()
         self.initialise_submodules()
 
-        while not self.stopped:
+        while not self.stopped and self.elapsed_seconds < self._max_duration:
 
             # TODO check next frame has come!
             # self.recognizer.load_camera()
@@ -437,6 +512,15 @@ class ControlThread(Base, Root):
             # self.recognizer.start()
             self._end_event.wait(1/self.sampling_rate)
             if self.control:
+
+                if self.controller is not None:
+                    self.controller.last_t = self.last_t
+                    for thread in self.controller.programmer.paradigm:
+                        if thread.is_alive():
+                            thread.tick(self.last_t)
+
+
+
                 if self.controller.progress > 100:
                     self.stop_experiment()
                     break
@@ -466,39 +550,27 @@ class ControlThread(Base, Root):
         self.result_writer.running = True
 
         if self.recognize:
-            if self.recognizer.running:
-                # tell the recognizer it can start_saving from now on
-                # please note it could alreadey be saving if start_saving=True
-                # was passed at init time and the result_writer was running
-                # if it was not True, then the time difference between now and when
-                # the recognizer started running will be substracted in the resulting data
-                # so as to align it to the controller
-                self.recognizer.start_saving()
-            else:
-                if not self.recognizer.ready:
-                    try:
-                        # if the recognizer is not ready, it needs to prepare:
-                        # * find the regions of interest (ROIS)
-                        # * bind a tracker to each ROI
-                        self.recognizer.prepare()
-                    except Exception as error:
-                        logger.warning("Could not prepare recognizer. Please try again")
-                        logger.warning(error)
-                        logger.warning(traceback.print_exc())
-                        return None
 
-                    # tell the recognizer it can start saving and the offset will be 0
-                    self.recognizer.start_saving(0)
+            if not self.recognizer.ready:
+                try:
+                    # if the recognizer is not ready, it needs to prepare:
+                    # * find the regions of interest (ROIS)
+                    # * bind a tracker to each ROI
+                    self.recognizer.prepare()
+                except Exception as error:
+                    logger.warning("Could not prepare recognizer. Please try again")
+                    logger.warning(error)
+                    logger.warning(traceback.print_exc())
+                    return None
 
-                # start tracking flies
-                self.recognizer.start()
+            # start tracking animals
+            self.recognizer.start()
 
         if self.control:
             # start the paradigm loaded in the controller
             self.controller.start()
 
 
-        print(self.settings)
         self.result_writer.initialise_metadata(self.metadata)
         self.result_writer.initialise_roi_map(self.recognizer.rois)
 
@@ -516,7 +588,7 @@ class ControlThread(Base, Root):
         Only the stop() method can do that.
         """
 
-        if not self._user_data["endless"] or force:
+        if not self._user_data["wrap"] or force:
 
             if self.recognize:
                 self.recognizer.stop()

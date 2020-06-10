@@ -1,4 +1,6 @@
 
+<div ng-if="device.controller.status != 'offline'" class="progress-bar" ng-style="progress_bar"></div>
+
 <div class="last_drawn_img">
   <img ng-if="device.status == 'running'"  ng-src="{{ device.url_img }}" alt="" width="640"></img>
 </div>

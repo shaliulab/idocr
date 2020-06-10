@@ -52,6 +52,8 @@ app.controller('deviceController', function($scope, $http, $routeParams, $interv
         var refresh_data = false;
         var spStart= new Spinner(opts).spin();
         var starting_tracking= document.getElementById('starting');
+        var ncolors = 20;
+        var colors =  generateColor('#000000','#ff0ff0', ncolors);
 
 
 
@@ -179,6 +181,19 @@ app.controller('deviceController', function($scope, $http, $routeParams, $interv
         var refresh = function(){
 	    console.log("Refreshing");
         if (document.visibilityState=="visible"){
+
+            index = Math.min(ncolors-1, parseInt(($scope.device.controller.progress / 100) * ncolors));
+            console.log("index");
+            console.log(index);
+            console.log("colors");
+            console.log(colors);
+            color = "#" + colors[index];
+            console.log(color);
+
+            $scope.progress_bar = {
+                "width": $scope.device.controller.progress +  "%",
+                "background-color": color,
+            };
 
             $scope.server.update_logs();
             console.log($scope.server.parameters);

@@ -33,8 +33,8 @@ class MachineDatetime(datetime.datetime):
         return "%s_%s" % (date, clock_time)
 
 
-def hours_minutes_seconds(timedelta):
-    return timedelta.seconds//3600, (timedelta.seconds//60)%60, timedelta.seconds%60
+def hours_minutes_seconds(seconds):
+    return int(seconds // 3600), int((seconds // 60) % 60), int(seconds % 60)
 
 def iso_format(dhm):
     hours, minutes, seconds = dhm

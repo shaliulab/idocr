@@ -127,7 +127,9 @@ class Status(Root):
         self.ready = False
         self.stopped = False
         self._time_zero = None
+        self._time_init = MachineDatetime.now()
         self._start_datetime = None
+        self.experiment_start = None
 
         self._status = "idle"
 
@@ -158,23 +160,44 @@ class Status(Root):
 
         time_diff = iso_format(
             hours_minutes_seconds(
-                datetime.datetime.now() - self._time_zero
+                (datetime.datetime.now() - self._time_zero).seconds
             )
         )
         return time_diff
+
+    @property
+    def init_elapsed_seconds(self):
+        if self._time_init is None:
+            return None
+
+        time_diff = (datetime.datetime.now() - self._time_init).total_seconds()
+        return time_diff
+
+
 
 
     @property
     def elapsed_seconds(self):
         """
         Compute the number of seconds since running was set to True
-        Return it in format HH:MM:SS.
+        Return a float
         """
         if self._time_zero is None:
             return None
 
         time_diff = (datetime.datetime.now() - self._time_zero).total_seconds()
         return time_diff
+
+    @property
+    def experiment_elapsed_seconds(self):
+
+        if self.experiment_start is None:
+            return None
+
+        time_diff = (datetime.datetime.now() - self.experiment_start).total_seconds()
+        return time_diff
+
+
 
     @property
     def start_datetime(self):

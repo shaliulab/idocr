@@ -8,6 +8,7 @@ import pandas as pd
 from learnmem.server.hardware.interfaces.interfaces import DefaultInterface
 from learnmem.server.programmers.programmers import Programmer
 from learnmem.server.core.base import Base, Root
+from learnmem.helpers import hours_minutes_seconds, iso_format, MachineDatetime
 
 # Tell pylint everything here is abstract classes
 # pylint: disable=undefined-loop-variable
@@ -25,9 +26,10 @@ class Controller(DefaultInterface, Base, Root):
     _programmerClass = Programmer
     valid_actions = ["start", "stop", "reset"]
 
-    def __init__(self, mapping_path, paradigm_path, result_writer, board_class, *args, arduino_port='/dev/ttyACM0', sampling_rate=10.0, **kwargs): # pylint: disable=line-too-long
-
-        r"""
+    def __init__(
+            self, mapping_path, paradigm_path, result_writer, board_class, *args,
+            arduino_port='/dev/ttyACM0', sampling_rate=10.0, adaptation_offset=0, **kwargs):
+        """
         :param mapping_path: Path to a .csv showing which hardware is phisically wired to which pin.
         :type mapping_path: str
 
@@ -50,12 +52,9 @@ class Controller(DefaultInterface, Base, Root):
         """
 
         DefaultInterface.__init__(self)
-        # import ipdb; ipdb.set_trace()
-        super().__init__(*args, **kwargs)
 
-        self._settings.update({
-            "adaptation_time": self._config.content["controller"]["adaptation_time"]
-        })
+        use_wall_clock = kwargs.pop("use_wall_clock")
+        super().__init__(*args, **kwargs)
 
         self._mapping_path = mapping_path or self._config.content["controller"]["mapping_path"]
         self._paradigm_path = paradigm_path or self._config.content["controller"]["paradigm_path"]
@@ -70,6 +69,7 @@ class Controller(DefaultInterface, Base, Root):
         self._arduino_port = arduino_port
         self._board = self._board_class(self._arduino_port)
         self._result_writer = result_writer
+        self._adaptation_offset = adaptation_offset
 
         # Programmer instance that processes user input
         # into a 'program', an organized sequence of events
@@ -78,10 +78,23 @@ class Controller(DefaultInterface, Base, Root):
         self._submodules['programmer'] = self._programmerClass(
             result_writer,
             self._board, self._pin_state, sampling_rate,
-            self._mapping, paradigm_path=self._paradigm_path
+            self._mapping, *args,
+            use_wall_clock=use_wall_clock,
+            paradigm_path=self._paradigm_path
         )
+
         self._settings.update(self._submodules['programmer'].settings)
         self._progress = 0
+        self._last_t = 0
+
+
+    @property
+    def last_t(self):
+        return self._last_t
+
+    @last_t.setter
+    def last_t(self, last_t):
+        self._last_t = last_t
 
     def toggle(self, hardware, value):
 
@@ -125,7 +138,7 @@ class Controller(DefaultInterface, Base, Root):
             return self._progress
 
         else:
-            diff = (datetime.datetime.now() - self._time_zero).total_seconds()
+            diff = max((datetime.datetime.now() - self._time_zero).total_seconds(), 0)
 
         try:
             progress = diff / self.programmer.duration
@@ -133,16 +146,8 @@ class Controller(DefaultInterface, Base, Root):
             progress = 0
 
         self._progress = progress * 100
+
         return self._progress
-
-    @property
-    def adaptation_time(self):
-        return self._settings['adaptation_time']
-
-    @adaptation_time.setter
-    def adaptation_time(self, adaptation_time):
-        self._settings['adaptation_time'] = adaptation_time
-
 
     @property
     def mapping(self):
@@ -251,14 +256,27 @@ class Controller(DefaultInterface, Base, Root):
     def ready(self, value): # pylint: disable=unused-argument
         return None
 
+
+    @property
+    def wait(self):
+        return max(0, self._adaptation_offset - self.init_elapsed_seconds)
+
+    @property
+    def adaptation_left(self):
+        return max(0, self._adaptation_offset - self.wait)
+
     def run(self):
         r"""
         Start executing the threads in self._submodules['programmer'].paradigm.
         """
 
+        logger.warning("Controller has elapsed %3.f seconds since init", self.init_elapsed_seconds)
 
+        while self.wait > 0:
+            self._end_event.wait(0.1)
+
+        self.ready = True
         super().run()
-
 
         if not self._submodules['programmer'].ready:
             logger.warning("Please load a program before recording")

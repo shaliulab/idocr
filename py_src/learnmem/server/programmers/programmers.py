@@ -38,10 +38,14 @@ class Programmer(Settings, Root):
     table = None
     _paradigms_dir = None
 
-    def __init__(self, result_writer, board, pin_state, sampling_rate, mapping, paradigm_path, *args, **kwargs): # pylint: disable=line-too-long
+    def __init__(
+            self, result_writer, board, pin_state, sampling_rate, mapping, paradigm_path, *args,
+            use_wall_clock=True, **kwargs
+        ):
 
         super().__init__(*args, **kwargs)
 
+        self._use_wall_clock = use_wall_clock
         self._result_writer = result_writer
         self._paradigms_dir = self._config.content["folders"]["paradigms"]["path"]
         self._board = board
@@ -52,7 +56,10 @@ class Programmer(Settings, Root):
         self._paradigm = []
         self.table = []
         self._submodules = {}
-        self._settings = {'paradigm_path': None}
+        self._settings.update({
+            'paradigm_path': None,
+        })
+
         self.paradigm_path = paradigm_path
 
 
@@ -349,16 +356,14 @@ class Programmer(Settings, Root):
             "total": Counter([v[e] for e in ["start", "end"] for v in self.table])
         }
 
-        logger.debug(switch_times)
-
         self._barriers = {k: Barrier(v) for k, v in switch_times["total"].items()}
 
-        for swtich_time in self._barriers:
-            logging.debug(
+        for switch_time in self._barriers:
+            logging.warning(
                 "Barrier at time %d with id %s will wait for %d parties",
-                swtich_time,
-                id(self._barriers[swtich_time]),
-                self._barriers[swtich_time].parties
+                switch_time,
+                id(self._barriers[switch_time]),
+                self._barriers[switch_time].parties
             )
 
         return self._barriers
@@ -396,7 +401,9 @@ class Programmer(Settings, Root):
             extra_kwargs = self._parse(row, i)
             kwargs.update(extra_kwargs)
             kwargs["result_writer"] = self._result_writer
+            kwargs["use_wall_clock"] = self._use_wall_clock
             logger.debug(kwargs)
+
 
             board_name = kwargs["board"].board_compatible
 

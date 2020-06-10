@@ -3,7 +3,6 @@ import json
 import os
 import logging
 
-import numpy as np
 import yaml
 
 logging.basicConfig(level=logging.INFO)
@@ -66,9 +65,9 @@ class LearnMemConfiguration(object):
                 'kwargs': {
                     'framerate': 10, 'exposure_time': 50000,
                     'resolution': (960, 720),
-                    'drop_each': 1, 'max_duration': np.inf,
-                    #'video_path': None,
-                    'wrap': True
+                    'drop_each': 1,
+                    'use_wall_clock': True,
+                    'wrap': False
                 }
             }
         },
@@ -76,7 +75,6 @@ class LearnMemConfiguration(object):
         'controller': {
             'mapping_path': '/1TB/Cloud/Lab/Gitlab/learnmem/py_src/mappings/mega.csv',
             'paradigm_path': 'unittest_long.csv',
-            'adaptation_time': 600,
             'arduino_port': "/dev/ttyACM0",
             'pwm': {
             },
@@ -93,11 +91,9 @@ class LearnMemConfiguration(object):
             'last_annot_path': "/tmp/last_img_annot.png",
         },
 
-        # TODO Sort this stuff
         'experiment': {
-            "decision_zone_mm": 10,
-            "min_exits_required": 5,
-            "max_time_minutes": 60,
+            'adaptation_time': 600,
+            "max_duration": 3600,
             "location": None
         }
     }

@@ -7,10 +7,11 @@ taking the user input and the information from a Controller instance
 # Standard library imports
 import logging
 from threading import Event, BrokenBarrierError
-from learnmem.server.utils.debug import IDOCException
 import time
 
+from learnmem.server.utils.debug import IDOCException
 from learnmem.server.core.base import Base, Root, StatusThread
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 #pylint: disable=W0223
@@ -27,7 +28,7 @@ class BaseControllerThread(Base, Root):
 
     def __init__(
             self, i: int, hardware: str, board, pin_state: dict, pin_number: int, mode: str, start, end, value: float, *args,
-            sampling_rate=10.0, result_writer=None, **kwargs
+            sampling_rate=10.0, result_writer=None, use_wall_clock=False, **kwargs
         ):
         """
 
@@ -106,14 +107,28 @@ class BaseControllerThread(Base, Root):
         )
 
         self._pin_number = pin_number
-        self.start_seconds = start
-        self.end_seconds = end
+        self._start = start
+        self._end = end
         self._value = value
         self.sampling_rate = sampling_rate
+        self._last_t = 0
+        self._use_wall_clock = use_wall_clock
 
         string = 'd:%d:%s' % (self._pin_number, self._mode)
         logger.debug(string)
         self._pin = self._board.get_pin(string)
+
+
+    def tick(self, last_t):
+        self._last_t = last_t
+
+    @property
+    def start_seconds(self):
+        return self._start
+
+    @property
+    def end_seconds(self):
+        return self._end
 
     @property
     def hardware(self):
@@ -183,14 +198,14 @@ class BaseControllerThread(Base, Root):
         # even if the pin is controlled with a wave
         # Shall I change this so the monitor displays the wave?
 
-        logger.info("Turning %s on (%s)", self._hardware, value or self.value)
+        logger.info("%s: Turning %s on (%s)", self._last_t, self._hardware, value or self.value)
         self._notify(value or self.value)
 
         return self._turn_on(value or self.value)
 
     def turn_off(self):
 
-        logger.debug("Turning %s  off (0)", self._hardware)
+        logger.debug("%s: Turning %s  off (0)", self.last_t, self._hardware)
         self._notify(0)
         return self._turn_off()
 
@@ -205,24 +220,46 @@ class BaseControllerThread(Base, Root):
 
     def _notify(self, value):
         self.pin_state[self._hardware] = value
+        logger.debug("%s notifying %s", self.hardware, str(value))
+
         self._result_writer.process_row(
-            data={"t": self.elapsed_seconds, **self.pin_state},
+            self.pin_state,
             table_name="CONTROLLER_EVENTS"
         )
 
+    @property
+    def last_t(self):
+        return self._last_t
+
+    @last_t.setter
+    def last_t(self):
+        if self._use_wall_clock:
+            return self.elapsed_seconds
+        else:
+            # Use the clock of the recognizer
+            # Very useful when analyzing a video offline
+            # so the video and the controller get aligned
+            # Need to use --no-wall-clock-time
+            return self._last_t
+
     def run(self):
 
-        self.running = True
+
+        super().run()
+
+        # print("Hardware %s is running" % self._hardware)
+
 
         logger.debug(
             "%s (class %s) is starting to run",
             self.name, self.__class__.__name__
         )
 
-        while self.elapsed_seconds < self.start_seconds:
-            time.sleep(1/self.sampling_rate)
+        while self.last_t < self.start_seconds:
+
+            time.sleep(1 / self.sampling_rate)
             if self.stopped:
-                logger.info('%s is stopping early', self.name)
+                logger.info('%s: %s is stopping early', self.last_t, self.name)
                 self.turn_off()
                 return
 
@@ -234,20 +271,22 @@ class BaseControllerThread(Base, Root):
             self.name, self.__class__.__name__
         )
 
+        # print("Hardware %s reached the start barrier with id %s. Already %d waiting" % (self._hardware, id(self._barriers["start"]), self._barriers["start"].n_waiting))
+
         try:
             self._barriers["start"].wait()
         except (KeyError, BrokenBarrierError):
-            logger.info('%s is stopping early', self.name)
-            return
+            logger.info('%s: %s is stopping early', self.last_t, self.name)
+            return None
 
-        # turn on
+        # print("Hardware %s TURNS ON" % self._hardware)
         self.turn_on()
 
         # wait until you should turn off
-        while self.elapsed_seconds < self.end_seconds:
+        while self.last_t < self.end_seconds:
             time.sleep(1/self.sampling_rate)
             if self.stopped:
-                logger.info('%s is stopping early', self.name)
+                logger.info('%s: %s is stopping early', self.last_t, self.name)
                 self.turn_off()
                 return
 
@@ -257,14 +296,14 @@ class BaseControllerThread(Base, Root):
         # signal to other threads ending simultaneously
         # and those that should start right afterwards
         logger.debug(
-            "%s (class %s) reached the end barrier",
-            self.name, self.__class__.__name__
+            "%s: %s (class %s) reached the end barrier",
+            self.last_t, self.name, self.__class__.__name__
         )
 
         try:
             self._barriers["end"].wait()
         except (KeyError, BrokenBarrierError):
-            logger.info('%s is stopping early', self.name)
+            logger.info('%s: %s is stopping early', self.last_t, self.name)
             return
 
     def abort(self):
@@ -338,20 +377,13 @@ class WaveBaseControllerThread(BaseControllerThread):
         Turn on the pin, wait on seconds, turn off the pin, wait off seconds and start over
         as long as the _shore event is not set
         """
-        print("The wave has started")
 
-        self._notify(value or self.value)
+
         while not self._shore.is_set():
             self._turn_on(value or self.value)
             self._shore.wait(self._seconds_on)
             self._turn_off()
             self._shore.wait(self._seconds_off)
-
-        logger.info(
-            "%s (class %s) has reached the shore",
-            self.name, self.__class__.__name__
-        )
-        self._notify(0)
 
 
     def turn_on(self, value=None):
@@ -361,16 +393,26 @@ class WaveBaseControllerThread(BaseControllerThread):
             self.get_thread_wave(value or self.value)
 
 
-            if not self._thread_wave.running:
-                print("Starting thread")
-                self._thread_wave.start()
+        # if self._hardware == "LED_R_RIGHT":
+            # print("TURN ON")
+
+        if not self._thread_wave.running:
+            logger.info(
+                "%s: %s (class %s) is starting",
+                self.last_t, self.name, self.__class__.__name__
+            )
+
+            # print("Starting thread")
+            self._notify(value or self.value)
+            self._thread_wave.start()
 
     def turn_off(self):
         logger.info(
-            "%s (class %s) is setting the shore",
-            self.name, self.__class__.__name__
+            "%s: %s (class %s) is finishing",
+            self.last_t, self.name, self.__class__.__name__
         )
         self._thread_wave.stop()
+        self._notify(0)
         self._shore.set()
 
 
@@ -408,20 +450,21 @@ class DummyMixin():
     def _turn_on(self, value=None):
         if not self.stopped:
             self.pin.write(value or self.value)
-            logger.info(
-                "%s (class %s) is setting %s to %.8f @ %.4f",
-                self.name, self.__class__.__name__, self._hardware, value or self._value, self.elapsed_seconds or 0
-            )
+            # logger.info(
+            #     "%s (class %s) is setting %s to %.8f @ %.4f",
+            #     self.name, self.__class__.__name__, self._hardware, value or self._value, self.elapsed_seconds or 0
+            # )
 
 
     def _turn_off(self):
         self.pin.write(0)
 
         if not self.stopped:
-            logger.info(
-                "%s (class %s) is setting %s to %.8f @ %.4f",
-                self.name, self.__class__.__name__, self._hardware, 0, self.elapsed_seconds or 0
-            )
+            pass
+            # logger.info(
+            #     "%s (class %s) is setting %s to %.8f @ %.4f",
+            #     self.name, self.__class__.__name__, self._hardware, 0, self.elapsed_seconds or 0
+            # )
 
 class DefaultDummyThread(DummyMixin, BaseControllerThread):
     r"""

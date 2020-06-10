@@ -20,12 +20,14 @@ logger.setLevel(level=logging.INFO)
 
 class Recognizer(Base, Root):
 
-    valid_actions = ["start", "stop", "start_saving", "prepare", "reset"]
+    valid_actions = ["start", "stop", "prepare", "reset"]
 
     def __init__(
             self, tracker_class, camera_class,
-            roi_builder, result_writer, drawer, *args,
-            rois=None, stimulators=None, start_saving=True, video_path=None, **kwargs
+            roi_builder, result_writer, drawer,
+            rois=None, stimulators=None,
+            user_data=None,
+            adaptation_offset=0
         ):
         """
         Class to orchestrate the tracking of multiple objects.
@@ -47,26 +49,24 @@ class Recognizer(Base, Root):
         :param stimulators: The class that will be used to analyse the position of the object and interact with the system/hardware.
         :type stimulators: list(:class:`~ethoscope.stimulators.stimulators.BaseInteractor`)
         :type stimulators: list(:class:`~ethoscope.stimulators.stimulators.BaseInteractor`)
-        :param start_saving: Whether the recognizer should start saving the position of the objects immediately after start, or wait until start_saving is called.
-        :type start_saving: bool
         :param args: additional arguments passed to the abstract classes
         :param kwargs: additional keyword arguments passed to the abstract classes
         """
 
-        self._args = args
-        self._kwargs = kwargs
-        super().__init__(*args, **kwargs)
+        super().__init__()
+        self._user_data = user_data
+
+        # print("user_data")
+        # print(user_data)
         self._last_frame_idx = 0
         self._force_stop = False
         self._last_positions = {}
         self._last_time_stamp = 0
         self._last_tick = 0
         self._period = 5
-        self._start_saving = start_saving
-        self._start_offset = 0
+        self._adaptation_offset = adaptation_offset
         self._unit_trackers = []
         self._rois = rois
-        self._video_path = video_path
         self._frame_buffer = None
         self._last_t = 0
         self.rois = []
@@ -75,15 +75,16 @@ class Recognizer(Base, Root):
         self._submodules["result_writer"] = result_writer
         self._submodules["camera"] = None
 
-        try:
-            self._verbose = kwargs.pop("verbose")
-        except KeyError:
-            self._verbose = False
-
         self._tracker_class = tracker_class
         self._camera_class = camera_class
         self._roi_builder = roi_builder
         self._stimulators = stimulators
+
+
+
+    @property
+    def last_t(self):
+        return self._last_t
 
     @property
     def info(self):
@@ -112,11 +113,38 @@ class Recognizer(Base, Root):
             self._submodules["camera"].close()
 
 
+        user_data = self._user_data.copy()
+        # Pass settings the user may have passed upon starting the program
+        # kwargs to be passed on initialization of camera class
+        camera_kwargs["video_path"] = user_data.pop("video_path")
+        camera_kwargs["max_duration"] = user_data.pop("max_duration") or self._config.content['experiment']['max_duration']
+        if user_data["use_wall_clock"] is not None:
+            camera_kwargs["use_wall_clock"] = user_data.pop("use_wall_clock")
+        else:
+            camera_kwargs["use_wall_clock"] = self._config.content['io']['camera']['kwargs']['use_wall_clock']
+
+
         self._submodules["camera"] = self._camera_class(
             *camera_args,
-            video_path=self._video_path,
             **camera_kwargs
         )
+
+        # Pass settings the user may have passed upon starting the program
+        # kwargs that can be passed afterwards
+
+        if user_data is not None:
+            for setting in user_data:
+                if setting in self._submodules["camera"].settings:
+                    if user_data[setting] is not None:
+                        # logger.debug("Assigning ", setting, "to camera")
+                        self._submodules["camera"].settings[setting] = user_data[setting]
+                    else:
+                        pass
+                        # logger.debug("Not assigning ", setting, "to camera. Input value is None")
+
+                else:
+                    pass
+                    # logger.debug("Not assigning ", setting, "to camera. Setting does not belong")
 
 
     def _build(self):
@@ -205,31 +233,6 @@ class Recognizer(Base, Root):
         """
         return self._last_frame_idx
 
-    def start_saving(self, start_offset=None):
-        """
-        Call this method to sync the time of the recognizer with the time
-        of other processes running in IDOC i.e. the controller
-        When called, it signals the recognizer that it can start saving i.e.
-        record the position of the flies to the result_writer
-        If given no start_offset, it is computed as the difference between
-        now and when the run() method started executing. If given a start offet,
-        it is set as the start offset of the recognizer.
-        """
-        self._start_saving = True
-
-        if start_offset is None:
-            self._start_offset = (datetime.datetime.now() - self._time_zero).total_seconds()
-        else:
-            self._start_offset = start_offset
-
-    @property
-    def start_offset_ms(self):
-        """
-        Return the offset time that must be substracted
-        to align the recognizer with other processes
-        e.g. controller from the camera time in ms
-        """
-        return self._start_offset * 1000
 
     def run(self):
         """
@@ -247,14 +250,25 @@ class Recognizer(Base, Root):
         super().run()
 
         try:
-            logger.info("Monitor starting a run")
+            logger.info("Recognizer starting a run")
 
             for items in enumerate(self.camera):
 
                 i, (t_ms, frame) = items
+                self._last_t = (t_ms / 1000)
+                # print(self._last_t)
+
+                if self._user_data["sync"]:
+                    while t_ms > (self.elapsed_seconds * 1000):
+                        time.sleep(0.1)
+
+                if self.result_writer is not None:
+                    self.result_writer.last_t = self._last_t
+
+                # logger.warning('Reading  frame at %d', t_ms)
 
                 if self.stopped:
-                    logger.info("Monitor object stopped from external request")
+                    logger.info("Recognizer object stopped from external request")
                     break
 
                 self._last_frame_idx = i
@@ -276,12 +290,10 @@ class Recognizer(Base, Root):
                     # if abs_pos is not None:
                     self._last_positions[track_u.roi.idx] = abs_pos
 
-                    if self.result_writer is not None and self._start_saving:
+                    if self.result_writer is not None:
                         frame_count = FrameCountVariable(i)
                         data_rows[0].append(frame_count)
                         self.result_writer.write(
-                            # time in ms since start_saving
-                            t_ms - self.start_offset_ms,
                             # pass roi to tell the result writer the fly id
                             track_u.roi,
                             # actual tracking data
@@ -289,24 +301,27 @@ class Recognizer(Base, Root):
                         )
 
                 if self.drawer is not None:
+                    # logger.debug("Drawing frame %d", i)
                     annot = self.drawer.draw(frame, tracking_units=self._unit_trackers, positions=self._last_positions)
+                    # annot = self.drawer.draw(frame, tracking_units=self._unit_trackers, positions=self._last_positions, metadata={"t": self._last_t})
                     tick = int(round((t_ms/1000.0)/self._period))
 
                     if tick > self._last_tick:
+                        # logger.debug("Writing frame %d", i)
                         self.drawer.write(frame, annot)
 
                     self._last_tick = tick
 
-                self._last_t = t_ms
+
 
 
         except Exception as error:
-            logger.warning("Monitor closing with an exception")
+            logger.warning("Recognizer closing with an exception")
             logger.warning(traceback.format_exc())
             raise error
 
         finally:
-            logger.info("Monitor closing")
+            logger.info("Recognizer closing")
             self.stop()
 
     def stop(self):
@@ -326,7 +341,7 @@ class Recognizer(Base, Root):
         # self.__init__(
         #     self._tracker_class, self._camera_class,
         #     self._submodules['roi_builder'], self._submodules['result_writer'], self._submodules['drawer'], *self._args,
-        #     rois=self._rois, stimulators=self._stimulators, start_saving=True, video_path=self._video_path, **self._kwargs
+        #     rois=self._rois, stimulators=self._stimulators, video_path=self._video_path, **self._kwargs
         # )
 
 if __name__ == "__main__":
@@ -358,8 +373,7 @@ if __name__ == "__main__":
 
         recognizer = Recognizer(
             AdaptiveBGModel, camera_class,
-            roi_builder, result_writer, drawer,
-            start_saving=True, video_path=None
+            roi_builder, result_writer, drawer
         )
 
         recognizer.prepare()

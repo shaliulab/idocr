@@ -38,23 +38,25 @@ class CSVResultWriter(Settings, Status, Root):
         self._cache = {table: [] for table in self._updated_tables}
         self._start_datetime = start_datetime
         self._root_dir = config.content["folders"]["results"]["path"]
+        self._machine_id = get_machine_id()
 
         self._result_dir = os.path.join(
             self._root_dir,
-            get_machine_id(),
+            self._machine_id,
             get_machine_name(),
             start_datetime
         )
-        print(self._result_dir)
+        logger.info("Results will be saved in %s", self._result_dir)
 
         logger.debug('Output will be saved in %s', self._result_dir)
         os.makedirs(self._result_dir, exist_ok=False)
 
-        self._prefix = start_datetime + '_idoc_' + get_machine_id()
-        self._output_csv = os.path.join(self._result_dir, self._prefix + ".csv")
+        self._run_id_long = "%s_%s" % (start_datetime, self._machine_id)
+        self._output_csv = os.path.join(self._result_dir, self._run_id_long + ".csv")
         self._var_map_initialised = False
         self._metadata_initialised = False
         self._roi_map_initialised = False
+        self.last_t = None
 
     @property
     def result_dir(self):
@@ -66,7 +68,7 @@ class CSVResultWriter(Settings, Status, Root):
             metadata.to_csv(
                 os.path.join(
                     self._result_dir,
-                    self._prefix + "_METADATA.csv"
+                    self._run_id_long + "_METADATA.csv"
                 )
             )
 
@@ -85,7 +87,7 @@ class CSVResultWriter(Settings, Status, Root):
             roi_map_df.to_csv(
                 os.path.join(
                     self._result_dir,
-                    self._prefix + "_ROI_MAP.csv"
+                    self._run_id_long + "_ROI_MAP.csv"
                 )
             )
             self._roi_map_initialised = True
@@ -116,32 +118,45 @@ class CSVResultWriter(Settings, Status, Root):
         var_map_df.to_csv(
             os.path.join(
                 self._result_dir,
-                self._prefix  + "_VAR_MAP.csv"
+                self._run_id_long  + "_VAR_MAP.csv"
             )
         )
 
         self._var_map_initialised = True
 
-    def write(self, t_ms, roi, data_rows):
+    def write(self, roi, data_rows):
         """
         An adaptor for the DataPoint instances to be compatible
         with process_row
         """
-        t_ms = int(round(t_ms))
+
         table_name = "ROI_%d" % roi.idx
 
         if not self._var_map_initialised:
             self.initialise_var_map(data_rows[0])
 
         for row in data_rows:
-            data_points = {**{"id": 0, "t_ms": t_ms}, **{v.header_name: v for v in row.values()}}
+            data_points = {**{"id": 0}, **{v.header_name: v for v in row.values()}}
             self.process_row(data_points, table_name)
 
     def process_row(self, data, table_name):
         """
-        Store a new controller event
+        Store a new data point
         """
+
+        # if table_name == "CONTROLLER_EVENTS":
+        #     print({k: v for k, v in data.items() if v != 0})
+
         data = {k.strip(" "): data[k] for k in data}
+
+        if not self.running:
+            self.run()
+
+        data.update({"t": self.last_t})
+        data.update({"elapsed_seconds": self.elapsed_seconds})
+
+        # print(self.elapsed_seconds)
+        # print(self._time_zero)
 
         if self.running and not self.stopped:
             if len(self._cache[table_name]) >= self._max_n_rows_to_insert:
@@ -149,7 +164,7 @@ class CSVResultWriter(Settings, Status, Root):
             self._cache[table_name].append(data)
 
     def get_table_path(self, table_name):
-        filename = "%s_%s.csv" % (self._prefix, table_name.upper())
+        filename = "%s_%s.csv" % (self._run_id_long, table_name.upper())
         table_path = os.path.join(self._result_dir, filename)
         return table_path
 

@@ -6,13 +6,16 @@ import time
 from learnmem.server.core.base import Settings, Status, Root
 from learnmem.server.utils.debug import IDOCException
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 # Tell pylint everything here is abstract classes
 # pylint: disable=W0223
 
 
 class BaseCamera(Settings, Status, Root):
 
-    def __init__(self, *args, drop_each=1, max_duration=None, **kwargs):
+    def __init__(self, *args, drop_each=1, max_duration=None, use_wall_clock=True, **kwargs):
         """
         The template class to generate and use video streams.
 
@@ -23,10 +26,13 @@ class BaseCamera(Settings, Status, Root):
         """
         super().__init__(*args, **kwargs)
 
-        self._settings = {"drop_each": drop_each, "max_duration": max_duration}
+        self._settings = {"drop_each": drop_each}
         self.capture = None
+        self._max_duration = max_duration
         self._frame_idx = 0
         self._shape = (None, None)
+        self._use_wall_clock = use_wall_clock
+        logger.info("Using wall clock is %r", self._use_wall_clock)
 
     # TODO Why are 3 params beyond self needed here?
     def __exit__(self): # pylint: disable=unexpected-special-method-signature
@@ -55,7 +61,7 @@ class BaseCamera(Settings, Status, Root):
             if (self._frame_idx % self._settings["drop_each"]) == 0:
                 yield t_ms, out
 
-            if self._settings["max_duration"] is not None and t_ms > self._settings["max_duration"]:
+            if self._max_duration is not None and t_ms > self._max_duration * 1000:
                 break
 
     def _next_time_image(self):
@@ -109,6 +115,7 @@ class AdaptorCamera(BaseCamera, Root):
             "framerate": framerate or self._config.content['io']['camera']['kwargs']['framerate'],
             "exposure_time": exposure_time or self._config.content['io']['camera']['kwargs']['exposure_time'],
             "resolution": resolution or self._config.content['io']['camera']['kwargs']['resolution'],
+            "video_path": None
         })
 
 

@@ -14,12 +14,9 @@ logger.setLevel(logging.INFO)
 
 class OpenCVCamera(AdaptorCamera, Root):
 
-    def __init__(self, *args, video_path=None, wrap=True, **kwargs):
+    def __init__(self, *args, video_path=None, wrap=False, **kwargs):
 
         self._wrap = wrap
-        print("self._wrap")
-        print(self._wrap)
-
         self._time_s = 0
         self._wrap_s = 0
 
@@ -30,17 +27,21 @@ class OpenCVCamera(AdaptorCamera, Root):
 
         super().__init__(*args, **kwargs)
 
+
     def is_last_frame(self):
         return False
 
     def _time_stamp(self):
 
-        if self._video_path == 0:
+        if self._video_path == 0 or self._use_wall_clock:
             now = time.time()
             self._time_s = now - self._start_time
         else:
             self._time_s = self.camera.get(cv2.CAP_PROP_POS_MSEC) / 1000
 
+        # add wrap_s if it's running in wrap mode
+        # wrap_s will be n x the number of seconds of the video
+        # where n is the number of times it's already been looped over
         return self._time_s + self._wrap_s
 
     def is_opened(self):
@@ -48,6 +49,7 @@ class OpenCVCamera(AdaptorCamera, Root):
 
     def _next_image(self):
         ret, img = self.camera.read()
+        # logger.debug("FPS of input is %s", str(self.camera.get(cv2.CAP_PROP_FPS)))
         if self._wrap and not ret:
             self._wrap_s += self._time_s
             logger.info("Rewinding video to the start")
@@ -120,3 +122,7 @@ class OpenCVCamera(AdaptorCamera, Root):
     @property
     def shape(self):
         return int(self.camera.get(4)), int(self.camera.get(3))
+
+
+if __name__ == "__main__":
+    import ipdb; ipdb.set_trace()
