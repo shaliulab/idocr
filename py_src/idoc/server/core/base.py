@@ -17,7 +17,7 @@ import traceback
 
 from idoc.helpers import hours_minutes_seconds, iso_format, MachineDatetime
 from idoc.configuration import IDOCConfiguration
-from idoc.server.utils.debug import IDOCException
+from idoc.debug import IDOCException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -30,11 +30,6 @@ class Root:
     _config = IDOCConfiguration()
 
 
-# TODO Implement it in a way so that settings from a submodule are not mixed with those
-# of another submodule in the parent module self._settings
-# i.e. instead of self._settings(update(submodule.settings))
-# one could do self._settings[submodule.name] = submodule.settings
-# and then update it using only the subdictionary
 class Settings(Root):
     r"""
     Communication bridge between modules in IDOC.
@@ -67,12 +62,19 @@ class Settings(Root):
         r"""
         Update the existing settings without extending them.
         """
-        # only update pairs with key under self._settings_keys
+        # only keep settings that already existed
         new_settings = {k: settings[k] for k in self._settings if k in settings}
-        self._settings.update(new_settings)
+        # only update those that are different
+        for k in self._settings:
+            if self._settings[k] != new_settings[k]:
+                self._settings[k] = new_settings[k]
+
+        # self._settings.update(new_settings)
 
         # notify submodules
         self.send()
+        # actually apply the changes
+        self.update()
 
         logger.warning("Module %s with settings %s", self.__class__.__name__, self._settings)
 
@@ -89,18 +91,29 @@ class Settings(Root):
 
 
     def send_recursive(self, module, settings):
+        """
+        Take a module and a settings dictionary
+        For every submodule in the module and every setting
+        If the setting matches the name of a submodule, repeat recursively
+        otherwise, the setting is an actual setting and we need to set it
+        """
 
+        # For each submodule of the passed module
         for submodule in module._submodules:
+            # And for each setting
             for k in self._settings:
-                print(self._settings)
-                if k in module._submodules[submodule]._submodules:
-                    print("===============")
-                    print(self._submodules)
-                    print(self.__class__.__name__)
-                    print(module._submodules[submodule].__class__.__name__)
-                    self.send_recursive(module._submodules[submodule], settings)
-                else:
-                    module._submodules[submodule]._settings = settings
+                # If the setting is a dictionary for a submodule of the submodule
+                if module._submodules[submodule] is not None:
+                    if k in module._submodules[submodule]._submodules:
+                        # pick just those settings and call send_recursive again only with the current submodule
+                        local_settings = settings[k]
+                        self.send_recursive(module._submodules[submodule], local_settings)
+                    else:
+                        if k in settings:
+                            module._submodules[submodule]._settings[k] = settings[k]
+
+                    module._submodules[submodule].update()
+
 
     def send(self):
         r"""
@@ -135,7 +148,7 @@ class Settings(Root):
         """
         for k in self._settings:
             if k in self._submodules:
-                pass
+                self.send_recursive(self._submodules[k], {k: self._settings[k]})
             else:
                 logger.debug("Updating self.%s to %s", k, self._settings[k])
                 try:
@@ -215,9 +228,6 @@ class Status(Root):
 
         time_diff = (datetime.datetime.now() - self._time_init).total_seconds()
         return time_diff
-
-
-
 
     @property
     def elapsed_seconds(self):

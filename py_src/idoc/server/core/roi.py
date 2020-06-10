@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from idoc.server.utils.debug import IDOCException
+from idoc.debug import IDOCException
 
 __author__ = 'quentin'
 

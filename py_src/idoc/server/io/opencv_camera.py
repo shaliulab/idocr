@@ -6,7 +6,7 @@ import cv2
 
 from idoc.server.core.base import Root
 from idoc.server.io.cameras import AdaptorCamera
-# from idoc.server.utils.debug import IDOCException
+# from idoc.debug import IDOCException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

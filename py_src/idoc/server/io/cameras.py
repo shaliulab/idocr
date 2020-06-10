@@ -4,7 +4,7 @@ import logging
 import time
 
 from idoc.server.core.base import Settings, Status, Root
-from idoc.server.utils.debug import IDOCException
+from idoc.debug import IDOCException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -26,7 +26,7 @@ class BaseCamera(Settings, Status, Root):
         """
         super().__init__(*args, **kwargs)
 
-        self._settings = {"drop_each": drop_each}
+        self._settings.update({"drop_each": drop_each})
         self.capture = None
         self._max_duration = max_duration
         self._frame_idx = 0
@@ -57,6 +57,9 @@ class BaseCamera(Settings, Status, Root):
                 break
             t_ms = int(1000 * time_s)
             at_least_one_frame = True
+
+            # print("self._settings")
+            # print(self._settings)
 
             if (self._frame_idx % self._settings["drop_each"]) == 0:
                 logger.debug("Time: %s, Framerate: %s", t_ms, self.framerate)

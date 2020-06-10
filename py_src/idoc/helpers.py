@@ -40,6 +40,9 @@ def hours_minutes_seconds(seconds):
     return int(seconds // 3600), int((seconds // 60) % 60), int(seconds % 60)
 
 def iso_format(dhm):
+    if dhm is None:
+        return ""
+
     hours, minutes, seconds = dhm
     return f'{hours:02d}:{minutes:02d}:{seconds:02d}'
 

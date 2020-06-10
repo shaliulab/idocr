@@ -22,7 +22,7 @@ from idoc.server.roi_builders.high_contrast_roi_builder import HighContrastROIBu
 from idoc.server.controllers.boards import ArduinoDummy, ArduinoMegaBoard, ArduinoBoard
 from idoc.server.roi_builders.target_roi_builder import IDOCROIBuilder
 from idoc.server.drawers.drawers import DefaultDrawer
-from idoc.server.utils.debug import IDOCException
+from idoc.debug import IDOCException
 from idoc.helpers import hours_minutes_seconds, iso_format, MachineDatetime
 
 logger = logging.getLogger(__name__)
@@ -516,12 +516,18 @@ class ControlThread(Base, Root):
             # self.recognizer.start()
             self._end_event.wait(1/self.sampling_rate)
             if self.control:
-
                 if self.controller is not None:
                     self.controller.last_t = self.last_t
+                    # print(self.last_t)
                     for thread in self.controller.programmer.paradigm:
-                        if thread.is_alive():
-                            thread.tick(self.last_t)
+                        # print(thread.is_alive())
+                        # if thread.is_alive():
+                        # print("Updating last_t")
+                        # if thread._hardware == "LED_R_RIGHT":
+                        #     print("Pushing %s to LED_R_RIGHT with id %s" % (self.last_t, id(thread)))
+
+                        thread.last_t = self.last_t
+
 
 
 

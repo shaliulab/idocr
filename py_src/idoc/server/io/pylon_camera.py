@@ -134,7 +134,11 @@ class PylonCamera(AdaptorCamera, Root):
     @framerate.setter
     def framerate(self, framerate):
         logger.info("Setting framerate to %s", str(framerate))
-        self.camera.AcquisitionFrameRateAbs.SetValue(framerate)
+        try:
+            self.camera.AcquisitionFrameRateAbs.SetValue(framerate)
+        except Exception as error:
+            logger.warning(error)
+            logger.warning(traceback.print_exc())
         self._settings["framerate"] = framerate
 
     @property
@@ -149,7 +153,12 @@ class PylonCamera(AdaptorCamera, Root):
     @exposure_time.setter
     def exposure_time(self, exposure_time):
         logger.info("Setting exposure time to %3.f", exposure_time)
-        self.camera.ExposureTimeAbs.SetValue(exposure_time)
+        try:
+            self.camera.ExposureTimeAbs.SetValue(exposure_time)
+        except Exception as error:
+            logger.warning(error)
+            logger.warning(traceback.print_exc())
+
         self._settings["exposure_time"] = exposure_time
 
     @property
@@ -160,6 +169,10 @@ class PylonCamera(AdaptorCamera, Root):
         """
         self._settings["resolution"] = (self.camera.Width.GetValue(), self.camera.Height.GetValue())
         return self._settings["resolution"]
+
+    @resolution.setter
+    def resolution(self, resolution):
+        pass
 
     @property
     def shape(self):

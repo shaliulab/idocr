@@ -10,7 +10,7 @@ from idoc.server.core.tracking_unit import TrackingUnit
 from idoc.server.core.variables import FrameCountVariable
 from idoc.server.core.base import Base, Root
 from idoc.server.roi_builders.roi_builders import DefaultROIBuilder
-from idoc.server.utils.debug import IDOCException, EthoscopeException
+from idoc.debug import IDOCException, EthoscopeException
 from idoc.helpers import iso_format, hours_minutes_seconds
 
 __author__ = 'quentin'
@@ -125,6 +125,10 @@ class Recognizer(Base, Root):
             camera_kwargs["use_wall_clock"] = user_data.pop("use_wall_clock")
         else:
             camera_kwargs["use_wall_clock"] = self._config.content['io']['camera']['kwargs']['use_wall_clock']
+
+
+        print("KWARGS")
+        print(camera_kwargs)
 
 
         self._submodules["camera"] = self._camera_class(

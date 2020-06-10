@@ -10,7 +10,7 @@ import numpy as np
 
 from idoc.server.core.base import DescribedObject
 from idoc.server.core.roi import ROI
-from idoc.server.utils.debug import IDOCException, EthoscopeException
+from idoc.debug import IDOCException, EthoscopeException
 
 logger = logging.getLogger(__name__)
 

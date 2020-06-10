@@ -12,7 +12,7 @@ import cv2
 
 from idoc.server.roi_builders.roi_builders import BaseROIBuilder
 from idoc.server.core.roi import ROI
-from idoc.server.utils.debug import IDOCException, EthoscopeException
+from idoc.debug import IDOCException, EthoscopeException
 from idoc.server.roi_builders.helpers import find_quadrant
 
 try:

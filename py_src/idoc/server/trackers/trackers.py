@@ -5,7 +5,7 @@ from collections import deque
 from idoc.server.core.base import DescribedObject
 from idoc.server.core.variables import IsInferredVariable
 from idoc.server.core.base import Root
-from idoc.server.utils.debug import IDOCException
+from idoc.debug import IDOCException
 
 class NoPositionError(Exception):
     """

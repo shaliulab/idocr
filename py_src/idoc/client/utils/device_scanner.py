@@ -3,14 +3,15 @@
 import logging
 from threading import Thread
 import time
-import urllib.error, urllib.request, urllib.parse
+import urllib.error
+import urllib.request
+import urllib.parse
 
 import requests
 
-
 from idoc.client.utils.logging_server import LogRecordSocketReceiver
 from idoc.client.utils.mixins import HTTPMixin
-from idoc.server.utils.debug import IDOCException # TODO MOve debug to the common level
+from idoc.debug import IDOCException, ScanException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

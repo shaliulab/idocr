@@ -3,17 +3,11 @@ import logging
 import urllib.request
 
 from idoc.decorators import retry
-
+from idoc.debug import ScanException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-
-class ScanException(BaseException):
-    r"""
-    A BaseException raised when `~_get_json` fails
-    """
-    pass
 
 class HTTPMixin:
 

@@ -13,7 +13,7 @@ from idoc.server.trackers.trackers import BaseTracker, NoPositionError
 from idoc.server.core.variables import XPosVariable, YPosVariable, \
     XYDistance, WidthVariable, HeightVariable, PhiVariable
 from idoc.server.core.data_point import DataPoint
-from idoc.server.utils.debug import IDOCException
+from idoc.debug import IDOCException
 
 try:
     CV_VERSION = int(cv2.__version__.split(".")[0])

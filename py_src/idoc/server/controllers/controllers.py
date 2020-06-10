@@ -283,6 +283,7 @@ class Controller(DefaultInterface, Base, Root):
             logger.info(self._submodules['programmer'].list())
             return
 
+        self._submodules['programmer']._locked = True
         for thread in self._submodules['programmer'].paradigm:
             try:
                 thread.time_zero = self.time_zero

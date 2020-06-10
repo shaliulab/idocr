@@ -18,7 +18,7 @@ from idoc.server.core.base import Root, Settings
 from idoc.server.controllers.threads import DefaultArduinoThread, WaveArduinoThread
 from idoc.server.controllers.threads import DefaultDummyThread, WaveDummyThread
 from idoc.configuration import IDOCConfiguration
-from idoc.server.utils.debug import IDOCException
+from idoc.debug import IDOCException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -59,6 +59,8 @@ class Programmer(Settings, Root):
         self._settings.update({
             'paradigm_path': None,
         })
+
+        self._locked = False
 
         self.paradigm_path = paradigm_path
 
@@ -105,7 +107,12 @@ class Programmer(Settings, Root):
         can run them.
         """
 
+        # logger.warning("Updating paradigm_path")
+
         if paradigm_path is None:
+            return
+
+        if paradigm_path == self._settings['paradigm_path']:
             return
 
         self._settings['paradigm_path'] = paradigm_path
@@ -392,7 +399,11 @@ class Programmer(Settings, Root):
         A paradigm is a list of ControllerThread instances
         """
 
-        self._paradigm = []
+        if self._locked:
+            return
+
+        self._paradigm.clear()
+        logger.warning("Clearing paradigm")
 
         for i, row in enumerate(self.table):
 

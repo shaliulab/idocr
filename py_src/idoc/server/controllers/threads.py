@@ -9,7 +9,7 @@ import logging
 from threading import Event, BrokenBarrierError
 import time
 
-from idoc.server.utils.debug import IDOCException
+from idoc.debug import IDOCException
 from idoc.server.core.base import Base, Root, StatusThread
 
 logger = logging.getLogger(__name__)
@@ -119,9 +119,6 @@ class BaseControllerThread(Base, Root):
         self._pin = self._board.get_pin(string)
 
 
-    def tick(self, last_t):
-        self._last_t = last_t
-
     @property
     def start_seconds(self):
         return self._start
@@ -198,7 +195,7 @@ class BaseControllerThread(Base, Root):
         # even if the pin is controlled with a wave
         # Shall I change this so the monitor displays the wave?
 
-        logger.info("%s: Turning %s on (%s)", self._last_t, self._hardware, value or self.value)
+        logger.info("%s: Turning %s on (%s)", self.last_t, self._hardware, value or self.value)
         self._notify(value or self.value)
 
         return self._turn_on(value or self.value)
@@ -232,6 +229,11 @@ class BaseControllerThread(Base, Root):
         return self._last_t
 
     @last_t.setter
+    def last_t(self, last_t):
+        # print("Receiving in LED_R_RIGHT last_t = %s" % last_t)
+        self._last_t = last_t
+
+    @last_t.getter
     def last_t(self):
         if self._use_wall_clock:
             return self.elapsed_seconds
@@ -250,12 +252,15 @@ class BaseControllerThread(Base, Root):
         # print("Hardware %s is running" % self._hardware)
 
 
-        logger.debug(
+        logger.warning(
             "%s (class %s) is starting to run",
             self.name, self.__class__.__name__
         )
 
         while self.last_t < self.start_seconds:
+
+            # if self._hardware == "LED_R_RIGHT":
+            #     print("Value in LED_R_RIGHT with id(%s) is %s" % (id(self), self.last_t))
 
             time.sleep(1 / self.sampling_rate)
             if self.stopped:
@@ -266,9 +271,9 @@ class BaseControllerThread(Base, Root):
 
         # make sure all contemporaneous threads start as close to each other as possible
         # this call locks the thread until the contemporaneous threads reach the same state
-        logger.debug(
-            "%s (class %s) reached the start barrier",
-            self.name, self.__class__.__name__
+        logger.warning(
+            "%s: %s (class %s) reached the start barrier",
+            self.last_t, self.name, self.__class__.__name__
         )
 
         # print("Hardware %s reached the start barrier with id %s. Already %d waiting" % (self._hardware, id(self._barriers["start"]), self._barriers["start"].n_waiting))
@@ -295,7 +300,7 @@ class BaseControllerThread(Base, Root):
 
         # signal to other threads ending simultaneously
         # and those that should start right afterwards
-        logger.debug(
+        logger.warning(
             "%s: %s (class %s) reached the end barrier",
             self.last_t, self.name, self.__class__.__name__
         )
@@ -397,20 +402,15 @@ class WaveBaseControllerThread(BaseControllerThread):
             # print("TURN ON")
 
         if not self._thread_wave.running:
-            logger.info(
-                "%s: %s (class %s) is starting",
-                self.last_t, self.name, self.__class__.__name__
-            )
+            logger.info("%s: Turning %s on (%s)", self.last_t, self._hardware, value or self.value)
 
             # print("Starting thread")
             self._notify(value or self.value)
             self._thread_wave.start()
 
     def turn_off(self):
-        logger.info(
-            "%s: %s (class %s) is finishing",
-            self.last_t, self.name, self.__class__.__name__
-        )
+
+        logger.info("%s: Turning %s off (0)", self.last_t, self._hardware)
         self._thread_wave.stop()
         self._notify(0)
         self._shore.set()

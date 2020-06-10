@@ -8,7 +8,7 @@ import numpy as np
 from idoc.server.core.base import Settings, Root
 from idoc.server.roi_builders.roi_builders import BaseROIBuilder
 from idoc.server.core.roi import ROI
-from idoc.server.utils.debug import EthoscopeException
+from idoc.debug import EthoscopeException
 
 try:
     CV_VERSION = int(cv2.__version__.split(".")[0])
