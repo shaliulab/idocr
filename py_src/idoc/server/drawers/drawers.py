@@ -47,7 +47,7 @@ class BaseDrawer(Base, Root):
         super().__init__(*args, **kwargs)
         self._settings.update({"framerate": None})
 
-        self._video_out = video_out
+        self.video_out = video_out
         self._draw_frames = draw_frames
         self._video_writers = {}
         self._window_name = "ethoscope_" + str(os.getpid())
@@ -119,20 +119,16 @@ class BaseDrawer(Base, Root):
             cv2.imshow(self._window_name, self._last_drawn_frame)
             cv2.waitKey(0)
 
-        if self._video_out is None:
+        if self.video_out is None:
             return self._last_drawn_frame
 
         if len(self._video_writers) == 0:
 
-            # print(self._video_out)
-            # print(self._video_out_fps)
-            # print(img.shape)
-            # print(VideoWriter_fourcc(*self._video_out_fourcc))
             self._video_writers = {
 
                 "raw": cv2.VideoWriter(
                     # path to resulting video
-                    self._video_out.replace(".avi", "_ORIGINAL.avi"),
+                    self.video_out.replace(".avi", "_ORIGINAL.avi"),
                     # codec
                     VideoWriter_fourcc(*self._video_out_fourcc),
                     # framerate
@@ -143,7 +139,7 @@ class BaseDrawer(Base, Root):
 
                 "annot": cv2.VideoWriter(
                     # path to resulting video
-                    self._video_out.replace(".avi", "_ANNOTATED.avi"), # TODO More elegant way of deriving the path
+                    self.video_out.replace(".avi", "_ANNOTATED.avi"), # TODO More elegant way of deriving the path
                     # codec
                     VideoWriter_fourcc(*self._video_out_fourcc),
                     # framerate

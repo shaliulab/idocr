@@ -23,7 +23,7 @@ class CSVResultWriter(Settings, Status, Root):
     Save results to csv files styled in the format:
     start_datetime + '_idoc_' + self._machine_id + _TABLENAME .csv
     """
-    def __init__(self, start_datetime, *args, nrois=20, max_n_rows_to_insert=10, **kwargs):
+    def __init__(self, *args, nrois=20, max_n_rows_to_insert=10, **kwargs):
 
         super().__init__(*args, **kwargs)
         super().run()
@@ -36,31 +36,43 @@ class CSVResultWriter(Settings, Status, Root):
 
         self._tables = self._updated_tables.extend(self._static_tables)
         self._cache = {table: [] for table in self._updated_tables}
-        self._start_datetime = start_datetime
         self._root_dir = config.content["folders"]["results"]["path"]
         self._machine_id = get_machine_id()
 
-        self._result_dir = os.path.join(
-            self._root_dir,
-            self._machine_id,
-            get_machine_name(),
-            start_datetime
-        )
-        logger.info("Results will be saved in %s", self._result_dir)
-
-        logger.debug('Output will be saved in %s', self._result_dir)
-        os.makedirs(self._result_dir, exist_ok=False)
-
-        self._run_id_long = "%s_%s" % (start_datetime, self._machine_id)
-        self._output_csv = os.path.join(self._result_dir, self._run_id_long + ".csv")
         self._var_map_initialised = False
         self._metadata_initialised = False
         self._roi_map_initialised = False
         self.last_t = None
 
+        self.start_datetime = None
+        self._result_dir = None
+        self._output_csv = None
+        self._run_id_long = None
+
+    @property
+    def run_id_long(self):
+        self._run_id_long = "%s_%s" % (self.start_datetime, self._machine_id)
+        return self._run_id_long
+
+
     @property
     def result_dir(self):
+        logger.debug('Output will be saved in %s', self._result_dir)
+
+        self._result_dir = os.path.join(
+            self._root_dir,
+            self._machine_id,
+            get_machine_name(),
+            self.start_datetime
+        )
+        os.makedirs(self._result_dir, exist_ok=False)
+
         return self._result_dir
+
+    @property
+    def output_csv(self):
+        self._output_csv = os.path.join(self.result_dir, self.run_id_long + ".csv")
+
 
     def initialise_metadata(self, metadata):
 
@@ -68,7 +80,7 @@ class CSVResultWriter(Settings, Status, Root):
             metadata.to_csv(
                 os.path.join(
                     self._result_dir,
-                    self._run_id_long + "_METADATA.csv"
+                    self.run_id_long + "_METADATA.csv"
                 )
             )
 
@@ -87,7 +99,7 @@ class CSVResultWriter(Settings, Status, Root):
             roi_map_df.to_csv(
                 os.path.join(
                     self._result_dir,
-                    self._run_id_long + "_ROI_MAP.csv"
+                    self.run_id_long + "_ROI_MAP.csv"
                 )
             )
             self._roi_map_initialised = True
@@ -118,7 +130,7 @@ class CSVResultWriter(Settings, Status, Root):
         var_map_df.to_csv(
             os.path.join(
                 self._result_dir,
-                self._run_id_long  + "_VAR_MAP.csv"
+                self.run_id_long  + "_VAR_MAP.csv"
             )
         )
 
@@ -141,30 +153,28 @@ class CSVResultWriter(Settings, Status, Root):
 
     def process_row(self, data, table_name):
         """
-        Store a new data point
+        Store a new data point only if running and not stopped.
         """
 
-        # if table_name == "CONTROLLER_EVENTS":
-        #     print({k: v for k, v in data.items() if v != 0})
-
-        data = {k.strip(" "): data[k] for k in data}
-
-        if not self.running:
-            self.run()
-
-        data.update({"t": self.last_t})
-        data.update({"elapsed_seconds": self.elapsed_seconds})
-
-        # print(self.elapsed_seconds)
-        # print(self._time_zero)
-
         if self.running and not self.stopped:
+            data = {k.strip(" "): data[k] for k in data}
+
+            data.update({"t": self.last_t})
+            data.update({"elapsed_seconds": self.elapsed_seconds})
+
+            # print(self.elapsed_seconds)
+            # print(self._time_zero)
+
             if len(self._cache[table_name]) >= self._max_n_rows_to_insert:
                 self.store_and_clear(table_name)
             self._cache[table_name].append(data)
 
     def get_table_path(self, table_name):
-        filename = "%s_%s.csv" % (self._run_id_long, table_name.upper())
+        """
+        Generate the absolute path to one of the tables
+        generated in the output.
+        """
+        filename = "%s_%s.csv" % (self.run_id_long, table_name.upper())
         table_path = os.path.join(self._result_dir, filename)
         return table_path
 

@@ -47,6 +47,9 @@ class ArduinoDummy:
         pin = PIN(signal, number, mode)
         return pin
 
+    def exit(self):
+        pass
+
 
 class ArduinoBoard(Arduino):
     r"""

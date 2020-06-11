@@ -52,7 +52,7 @@ class PylonCamera(AdaptorCamera, Root):
 
         while self.camera.IsGrabbing():
 
-            logger.warning('Input framerate is %s', str(self.framerate))
+            # logger.warning('Input framerate is %s', str(self.framerate))
 
             grab = self._grab()
             if not grab.GrabSucceeded():

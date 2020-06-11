@@ -9,6 +9,8 @@ import logging
 from threading import Event, BrokenBarrierError
 import time
 
+import numpy as np
+
 from idoc.debug import IDOCException
 from idoc.server.core.base import Base, Root, StatusThread
 
@@ -288,12 +290,15 @@ class BaseControllerThread(Base, Root):
         self.turn_on()
 
         # wait until you should turn off
-        while self.last_t < self.end_seconds:
-            time.sleep(1/self.sampling_rate)
-            if self.stopped:
-                logger.info('%s: %s is stopping early', self.last_t, self.name)
-                self.turn_off()
-                return
+        if np.isnan(self.end_seconds):
+            self._end_event.wait()
+        else:
+            while self.last_t < self.end_seconds:
+                time.sleep(1 / self.sampling_rate)
+                if self.stopped:
+                    logger.info('%s: %s is stopping early', self.last_t, self.name)
+                    self.turn_off()
+                    return
 
         # turn off
         self.turn_off()

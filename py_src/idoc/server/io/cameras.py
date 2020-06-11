@@ -36,7 +36,7 @@ class BaseCamera(Settings, Status, Root):
 
     # TODO Why are 3 params beyond self needed here?
     def __exit__(self): # pylint: disable=unexpected-special-method-signature
-        logging.info("Closing camera")
+        logger.info("Closing camera")
         self.close()
 
     def __iter__(self):
@@ -154,4 +154,4 @@ class AdaptorCamera(BaseCamera, Root):
 
     @resolution.setter
     def resolution(self):
-        logging.warning("NotImplemented")
+        logger.warning("NotImplemented")

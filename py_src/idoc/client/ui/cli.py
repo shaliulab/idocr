@@ -2,331 +2,403 @@
 import logging
 import math
 import os
-import subprocess
+import sys
+import signal
 from threading import Thread, Event
 import tempfile
 import time
+import traceback
 import urllib.request, urllib.error, urllib.parse
+import warnings
+import webbrowser
 
 # Local application imports
 import cv2
 import numpy as np
-from idoc import PROJECT_DIR
+
 from idoc.configuration import IDOCConfiguration
 from idoc.client.analysis.analysis import RSession
 from idoc.client.utils.device_scanner import DeviceScanner
+from idoc.debug import IDOCException
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def RepresentsInt(s):
-    try:
-        int(s)
-        return True
-    except ValueError:
-        return False
+class CliUI():
+    """
+    Control IDOC interactively with a command line interface
+    sending HTTP requests to the server API on behalf of the user.
+    """
 
+    _last_img_annot = "/tmp/last_img_annot.png"
 
-class CLIGui():
+    def __init__(self, device_id):
 
-    _exit_event = Event()
-    _error_event = Event()
+        self._config = IDOCConfiguration()
+        self._device_id = device_id
+        self._ds = DeviceScanner()
+        self._ds.start()
+        self._answer = 0
+        # self._func = None
+        self.running = False
+        self.stopped = False
 
-    def __init__(self):
+        self._menus = {
+            "root": [
+                ('WARM UP', self.warm_up, "root"),
+                ('CHANGE CONFIGURATION', None, "settings"),
+                ('LOAD PARADIGM', None, "paradigms"),
+                ('CHECK', self.check, "root"),
+                ('START', self.start_experiment, "root"),
+                ('ANALYZE', self.analyze, "root"),
+                ('STOP', self.stop, "root"),
+                ('RESET', self.reset, "root"),
 
-        CFG = IDOCConfiguration()
+                ('QUIT', self.quit, "root"),
 
-        self.odor_A = CFG.content["experiment"]["odor_A"]
-        self.odor_B = CFG.content["experiment"]["odor_B"]
-        self.answer = None
+            ],
 
-        # print(programs)
-        self.menus = {
-            "general": ['open camera, start tracker and run main valve', 'camera settings and adaptation time', 'load program', 'name odors', 'confirm', 'record', 'analyze with R', 'quit'],
-            "settings" : ['change fps', 'change acquisition_time', 'change adaptation_time (minutes)', 'return'],
-            "programs" : list(self.programs.values()) + ['return'],
-            "Rsettings": ['run', 'experiment_folder', 'decision_zone_mm', 'min_exits_required', 'max_time_minutes', 'return']
-            }
-        self.effects = {
-            "general": ['tracker starting', 'settings confirmed', 'paradigm loaded', 'saving odor names', 'confirmed' , None, 'launching R', 'quitting'],
-            "settings": [None, None, None, None],
-            "programs" : ['Loaded {}'.format(e) for e in self.menus['programs']] + [None]
-
+            "settings" : [
+                ['recognizer', 'camera', 'framerate'],
+                ['recognizer', 'camera', 'exposure_time'],
+                ['adaptation_time'],
+                []
+            ]
         }
 
-        self.menu_name = "general"
-        self.answer = self.let_user_pick(self.menu_name)
-        self.r_session = RSession()
+        self._pick_dict = {"root": self._pick_menu, "settings": self._pick_setting, "paradigms": self._pick_paradigm}
+
+        # give time for the device scanner to find the device
+        time.sleep(2)
+        self.initialise_device()
+
+
+    def initialise_device(self):
+        try:
+           self._device = self._ds.get_device_by_id(self._device_id)
+        except Exception as error:
+            logger.error(error)
+            time.sleep(1)
+            self.initialise_device()
+
 
     @property
-    def programs(self):
-        return self._device.info["programs"]
-
-    def let_user_pick(self, menu_name):
-        print("Please choose:")
-        options = self.menus[menu_name]
-        for idx, element in enumerate(options):
-            print("{}: {}".format(idx+1,element))
-        i = input("Enter number: ")
-        if i == '':
-            i = self.let_user_pick(menu_name)
-
-        while not RepresentsInt(i):
-            logger.warning('You entered answer: {}'.format(i))
-            logger.warning('This is not valid. Try again!')
-            i = self.let_user_pick(menu_name)
-
-        result = int(i)
-        return result
-
-    def run(self):
-        '''
-        '''
-
+    def paradigms(self):
         try:
-            menu_name = self.menu_name
+            paradigms = self._device.info["controller"]["paradigms"]
+            paradigms = [e for e in paradigms.values()]
+            paradigms.append(None)
+            return paradigms
 
-            success = self.proceed(menu_name, self.answer)
-            self.display_log(success, menu_name)
+        except AttributeError:
+            return [None]
 
-
-            key_too_large = self.answer > len(self.menus[menu_name])
-
-            if self.answer == 2 and menu_name == "general":
-                menu_name = "settings"
-
-            elif self.answer == 3 and menu_name == "general":
-                menu_name = "programs"
-
-            elif self.answer == 7 and menu_name == "general":
-                menu_name = "Rsettings"
-
-            elif not success:
-                menu_name = "general"
-
-            elif success and menu_name == 'programs':
-                menu_name = "general"
-
-            elif key_too_large:
-                logger.warning('Sorry, the number you entered does not match any option. Please enter a valid number!')
-
-            self.answer = self.let_user_pick(menu_name)
-            #print(self.answer)
-            self.menu_name = menu_name
-
-            if not menu_name == "general" and self.answer == len(self.menus["general"]):
-                self._error_event.set()
-
-        except Exception as e:
-            logger.warning("answer = %s", self.answer)
-            logger.warning('I do not understand that answer')
-            logger.warning(e)
-            # self._error_event.set()
-
-        if self._error_event.is_set():
-            self.close()
-
-    def close(self):
-        """
-        Quit the GUI and close the remote control thread
-        This is the callback function of the X button in the window
-        Note: this is the only method that closes the GUI
-        """
-        answer = input('Save results (Y/N): ')
-        self._device.close(answer)
-        if answer == "Y":
-            self.r_session.run()
-
-        self._exit_event.set()
-
-
-
-    def name_odors(self):
-        self.odor_A = input('Name of odor A: ')
-        self.odor_B = input('Name of odor B: ')
-
-
-    def proceed(self, menu_name, answer):
-
-        while len(self.menus[menu_name]) < answer-1:
-            logger.warning('You entered answer: {}'.format(answer))
-            logger.warning('This is not valid. Try again!')
-            answer = self.let_user_pick(menu_name)
-
-        options = self.menus[menu_name][answer-1]
-        switch_menu = self.answer == len(self.menus[menu_name])
-        if switch_menu:
+    @staticmethod
+    def represents_int(s):
+        try:
+            int(s)
+            return True
+        except ValueError:
             return False
 
 
-        if menu_name == "general":
-            if not self._device.info["play_event"] and answer == 1 and self._device.info["track"]:
-                self._device.control("play")
-
-                subprocess.call(['python',  '-m',  'webbrowser',  "file:///tmp/last_img.jpg"])
-                return True
-
-            elif answer == 3:
-                pass
-                # handled by its submenu
-
-            elif answer == 4:
-                self.name_odors()
-                return True
-
-            elif not self._device.info["arena_ok_event"] and answer == 5:
-
-                logger.info(f'Acquistion time: {self._device.info["acquistion_time"]}')
-                logger.info(f'FPS: {self._device.info["fps"]}')
-                odors = " ".join([self._device.info["odor_A"], self._device.info["odor_B"]])
-
-                logger.info(f'Odors: {odors}')
-
-                logger.info(f'Program path: {self._device.info["program_path"]}')
-                logger.info(f'Adaptation time: {self._device.info["adaptation_time"]}')
-                confirm  = input('Press N if there is something wrong in the live feed or the settings above: ')
-                if confirm != 'N':
-                    self._device.control("ok_arena")
-                    return True
-                else:
-                    return False
-
-            elif not self._device.info["record_event"] and answer == 6:
-                self._device.control("record")
-                self.progress_bar(seconds=self._device.info["adaptation_seconds"], background=False, name='adaptation time', until_event="_exit_event")
-
-                return True
-
-            # elif answer >= len(self.menus[menu_name]) or answer is None:
-            #     logger.warning("Invalid answer entered")
-            #     return False
-
-        elif menu_name == 'programs':
-
-        # new_program_path = input('Please enter a path to a programs csv file: ')
-            try:
-                self._device.load_program(self.menus['programs'][self.answer-1])
-            except IndexError:
-                pass
-            return True
+    # Core functionality
+    ## Methods needed to run the CliUI
+    ## * _pick_menu: ask the user to perform an action
+    ## * _pick_setting: ask the user to enter an option or some input
+    ## * _apply: apply or execute the input provided by the user
+    ## * run: iterate a new question and execution
 
 
-        elif menu_name == 'Rsettings':
-
-            if answer == 1:
-                self.r_session.run()
-                return True
-
-            elif answer < len(self.menus[menu_name]):
-
-                try:
-
-                    param_name = self.menus[menu_name][answer-1]
-                except IndexError:
-                    pass
-
-                param_value = int(input("Enter new {}: ".format(param_name)))
-                # TODO Send settings to the r_session
-                return True
-
-
-        elif menu_name == "settings":
-
-            settings_options = [e.split('(')[0] if len(e.split('(')) > 1 else e for e in self.menus[menu_name]]
-            settings_options = [e.split(' ')[1] if len(e.split(' ')) > 1 else e for e in settings_options]
-
-            if answer == settings_options.index('fps')+1:
-                self.update_setting("fps")
-
-            elif answer == settings_options.index('acquisition_time')+1:
-                self.update_setting("acquisition_time")
-
-            elif answer == settings_options.index('adaptation_time')+1:
-                self.update_setting("adaptation_time")
-
-
-    def prompt_new_value(self, info, param_name):
-
-        old_value = info[param_name]
-        logger.info('{} is set to {}'.format(param_name, old_value))
-        value = float(input("Enter new {}: ".format(param_name)))
-        # print(param_name)
-        time.sleep(.2)
-        return value
-
-    def push_new_value(self, value, param_name):
-
-        self._device.push(value, param_name)
-
-    def update_setting(self, param_name, min=0, max=9999999999):
-
-        new_value = self.prompt_new_value(self._device.info, param_name)
-        while new_value < min or new_value > max:
-            logger.warning(f'Please provide a value between {min} and {max}')
-            new_value = self.prompt_new_value(self._device.info, param_name)
-
-            self.push_new_value(new_value, param_name)
-
-
-    def display_log(self, success, menu_name):
-        if success:
-            try:
-                effect = self.effects[menu_name][self.answer-1]
-
-                if not effect is None:
-                    logger.info(effect.format(""))
-                # else:
-                #     logger.info(effect)
-
-                time.sleep(2)
-            except IndexError:
-                pass
-            except Exception as e:
-                logger.warning(e)
-
-    def progress_bar(self, seconds, background=True, until_event=None, name=''):
-
-        event_done = Event()
-        if background:
-            progress_bar_thread = Thread(
-                    name='progress_bar_main',
-                    target=self.progress_bar_main,
-                    kwargs={
-                        "seconds": seconds,
-                        "until_event": until_event,
-                        "name": name
-
-                        }
-                )
-
-            logger.debug('Background progress bar')
-            progress_bar_thread.start()
+    def _user_input(self, prompt):
+        answer = input(prompt)
+        if self.represents_int(answer):
+            answer = int(answer)
 
         else:
-            logger.debug('Foreground progress bar')
-            self.progress_bar_main(seconds, until_event=until_event, name=name)
+            print('You entered answer: %s' % answer)
+            print('This is not valid. Try again!')
 
-        return event_done
+            answer = self._user_input(prompt)
 
-    def progress_bar_main(self, seconds, until_event=None, name=''):
+        return answer
 
-        refresh_every_n_seconds = 1
-        niters = max(math.ceil(seconds / refresh_every_n_seconds),0)
+    def _pick_menu(self):
+        """
+        Present the user with a list of menus
+        """
 
-        if not until_event is None:
-            while not until_event:
-                time.sleep(0.5)
+        print("Please choose:")
+        options = self._menus["root"]
+        for idx, opt in enumerate(options):
+            print("{}: {}".format(idx + 1, opt[0]))
 
-        logger.info('Running {}...'.format(name))
+        self._answer = self._user_input("Enter number: ")
+        return self._answer
+
+
+    def _pick_setting(self):
+
+        print("Please choose:")
+        options = self._menus["settings"]
+        for idx, opt in enumerate(options):
+            print("{}: {}".format(idx + 1, '/'.join(opt)))
+
+        self._answer = self._user_input("Enter number: ")
+        return self._answer
+
+    def _pick_paradigm(self):
+        print("Please choose:")
+        options = self.paradigms
+        for idx, opt in enumerate(options):
+            print("{}: {}".format(idx + 1, opt))
+
+        self._answer = self._user_input("Enter number: ")
+        return self._answer
+
+
+
+    def _apply(self, menu_name, answer):
+        """
+        Apply the selected option and achieve a side-effect.
+        """
+
+
+        # answer is 0 when an error happpened in the previous pick operation
+        if answer == 0:
+            return "root"
+
+
+        # FIXME Weird handling when we are loading a paradigm
+        if menu_name == "paradigms":
+            options = self.paradigms
+        else:
+            options = self._menus[menu_name]
+
+        opt = options[answer - 1]
+
+        # the last option is always reserved for a return/stop operation
+        # that has no side effects (only effects within the core CLI)
+        # handled by self.run
+        if answer == len(options) and menu_name != "root":
+            new_menu = "root"
+
+        elif menu_name == "root":
+            name, func, new_menu = opt
+            # import ipdb; ipdb.set_trace()
+            if new_menu == "root":
+                new_menu = func(answer)
+
+            else:
+                if new_menu == "settings":
+                    # ignore opt and just get a new answer
+                    answer = self._pick_setting()
+                elif new_menu == "paradigms":
+                    answer = self._pick_paradigm()
+
+                new_menu = self._apply(new_menu, answer)
+                # open the new menu
+
+        else:
+
+            if menu_name == "settings":
+                self._change_setting(answer)
+                answer = self._pick_setting()
+
+            elif menu_name == "paradigms":
+                self._load_paradigm(answer)
+                answer = self._pick_paradigm()
+
+            else:
+                # TODO Warn the user
+                pass
+
+            new_menu = self._apply(menu_name, answer)
+
+        return new_menu
+
+
+    def run(self, menu_name="root"):
+        """
+        Everytime this method is called
+        * the user picks an option from the current menu
+        * the option is applied (we get a side-effect)
+        * a new menu is chosen automatically
+        """
+
+        self.running = True
+
+        answer = self._pick_menu()
+
+        while not self.stopped:
+            try:
+                new_menu = self._apply(menu_name, answer)
+                func = self._pick_dict[new_menu]
+                answer = func()
+
+            except Exception as error:
+                warnings.warn('I do not understand %s' % self._answer)
+                warnings.warn(error)
+                warnings.warn(traceback.print_exc())
+                new_menu = "root"
+                answer = 0
+
+
+
+    # Side effect functionality
+    ## Methods needed to apply the wishes of the user
+
+    def _load_paradigm(self, answer):
+        """
+        Receive an answer and post the corresponding paradigm_path to the device
+        """
+
+        paradigm_path = self.paradigms[answer - 1]
+        data = {"paradigm_path": paradigm_path}
+        self._device.post_paradigm(data)
+
+        return "paradigms"
+
+    def warm_up(self, answer):
+        """
+        Communicate with the device to warm_up.
+
+        Start the recognizer and the always_on_hardware
+        without saving data.
+        Open a broser tab to view the flies
+        """
+        self._device.warm_up()
+        webbrowser.open_new_tab("file://%s" % self._last_img_annot)
+
+        return "root"
+
+
+    def start_experiment(self, answer):
+        """
+        Communicate with the device to start an experiment.
+        """
+        self._device.start_experiment()
+
+        return "root"
+
+    def check(self, answer):
+        """
+        View the status of IDOC
+        """
+        warnings.warn("Not implemented")
+        return "root"
+
+    def analyze(self, answer):
+        warnings.warn("Not implemented")
+        return "root"
+
+    def stop(self, answer):
+        """
+        "Ask the user if output should be saved
+        and quit the program
+        """
+        # TODO Ask functionality
+        self._device.stop_experiment()
+        return "root"
+
+    def reset(self, answer):
+
+        self._device.reset_experiment()
+        return "root"
+
+    def quit(self, answer):
+        print("Quitting IDOC")
+        self._ds.stop()
+        self.stopped = True
+        time.sleep(1)
+        sys.exit(0)
+
+    def _change_setting(self, answer):
+        """
+        Update the IDOC setting the user has selected with the answer
+        Answer is an integer from 1 to length of self_menus['settings']
+        """
+        settings = self._menus["settings"].copy()
+
+        selected_setting = settings[answer - 1]
 
         try:
-            from tqdm import tqdm
-            iterator = tqdm(range(int(niters)))
+            new_value = self.prompt_new_setting(selected_setting)
+        except IDOCException:
+            return
 
-        except ModuleNotFoundError:
-            iterator = range(int(niters))
+        print("Setting %s to %s" % ('/'.join(selected_setting), new_value))
 
-        for i in iterator:
-            time.sleep(refresh_every_n_seconds)
-            if getattr(self, until_event).is_set():
-                break
+        if len(selected_setting) == 1:
+            setting_name = selected_setting[0]
+            submodule = "control_thread"
+
+        else:
+            setting_name = selected_setting[::-1][0]
+            submodule = selected_setting[:len(selected_setting) - 1]
+
+        settings = {"settings": {setting_name: new_value}, "submodule": submodule}
+        self._device.post_settings(settings)
+
+        return "settings"
+
+    def prompt_new_setting(self, setting_name):
+        """
+        Ask the user to enter a new value for setting setting_name
+        """
+
+        device_settings = self._device.info['settings']
+
+        # if the setting name is a list, it means it is a submodule setting
+        # and we need to dig in the device_settings dict until a match is found
+        if isinstance(setting_name, str):
+            pass
+
+        elif isinstance(setting_name, list):
+            submodule_setting = dict(device_settings)
+            for level in setting_name:
+                if level in submodule_setting:
+                    submodule_setting = submodule_setting[level]
+                    if not isinstance(submodule_setting, dict):
+                        break
+                else:
+                    warnings.warn("%s is not configurable yet." % level)
+                    warnings.warn("Hint: Did you start the module this setting controls?.")
+                    raise IDOCException("Setting %s is not implemented" % level)
+
+            device_settings = submodule_setting
+            setting_name = level
+
+        else:
+            # TODO Ellaborate more info for the user here
+            warnings.warn("Setting is not valid")
+            warnings.warn(setting_name)
+            return
+
+        # Pick the value of the old setting and report it to the user
+        print('%s is set to %s', setting_name, device_settings)
+        # Ask the user to enter a new value
+        value = float(input("Enter new %s: " % setting_name))
+
+        # TODO Validation here
+
+        return value
+
+if __name__ == "__main__":
+
+    from idoc.helpers import get_machine_id
+
+    device_id = get_machine_id()
+    cli = CliUI(device_id=device_id)
+    time.sleep(5)
+
+    signals = ('TERM', 'HUP', 'INT')
+    for sig in signals:
+        signal.signal(getattr(signal, 'SIG' + sig), cli.stop)
+
+
+    cli.run()
+
+
+

@@ -9,6 +9,7 @@ import logging.handlers
 import os
 import signal
 from threading import Thread
+import urllib.parse
 
 import bottle
 import coloredlogs
@@ -53,10 +54,21 @@ def update():
     A dictionary with the current values is returned
     upong GETting to this same URL.
     """
-    settings_json = bottle.request.body.read() # pylint: disable=no-member
-    json_data = json.loads(settings_json)
-    settings = json_data['settings']
-    submodule = json_data['submodule']
+
+    post_data = bottle.request.body.read() # pylint: disable=no-member
+
+    if isinstance(post_data, bytes):
+        data_decoded = post_data.decode()
+    else:
+        data_decoded = post_data
+
+    try:
+        data_parsed = json.loads(data_decoded)
+    except json.decoder.JSONDecodeError:
+        data_parsed = urllib.parse.parse_qs(data_decoded)
+
+    settings = data_parsed['settings']
+    submodule = data_parsed['submodule']
     if submodule == "control_thread":
         control.settings = settings
     else:
@@ -64,7 +76,10 @@ def update():
         for module in submodule:
             target = getattr(target, module)
 
-        target.settings = settings
+        if target is not None:
+            target.settings = settings
+        else:
+            logger.warning("Module %s is not initialized yet.", module)
 
     return {"status": "success"}
 
@@ -123,9 +138,32 @@ def load_paradigm():
     else:
         data_decoded = post_data
 
-    data_parsed = json.loads(data_decoded)
+    try:
+        data_parsed = json.loads(data_decoded)
+    except json.decoder.JSONDecodeError:
+        data_parsed = urllib.parse.parse_qs(data_decoded)
+
     paradigm_path = data_parsed["paradigm_path"][0]
     control.load_paradigm(paradigm_path=paradigm_path)
+    return {"status": "success"}
+
+
+@app.post('/description/<id>')
+@warning_decorator
+@wrong_id
+def description():
+    r"""
+    Set a description of the experiment
+    """
+    post_data = bottle.request.body.read() # pylint: disable=no-member
+    if isinstance(post_data, bytes):
+        data_decoded = post_data.decode()
+    else:
+        data_decoded = post_data
+
+    data_parsed = json.loads(data_decoded)
+    control.description = data_parsed["description"]
+
     return {"status": "success"}
 
 

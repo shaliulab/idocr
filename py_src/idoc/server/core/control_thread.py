@@ -8,7 +8,7 @@ import pandas as pd
 
 # Local application imports
 from idoc.server.controllers.controllers import Controller
-from idoc.server.core.base import Base, Root
+from idoc.server.core.base import Base, Root, Status
 from idoc.server.core.recognizer import Recognizer
 # from idoc.server.trackers.simple_tracker import SimpleTracker
 from idoc.server.trackers.adaptive_bg_tracker import AdaptiveBGModel
@@ -76,7 +76,7 @@ class ControlThread(Base, Root):
     sampling_rate = 50 # overriden by conf
 
 
-    valid_actions = ["start", "stop", "start_experiment", "stop_experiment"]
+    valid_actions = ["start", "stop", "warm_up", "start_experiment", "stop_experiment", "reset_experiment"]
 
     def __init__(self, machine_id, version, result_dir, user_data, *args, **kwargs):
 
@@ -118,7 +118,15 @@ class ControlThread(Base, Root):
         self._video_out = None
         self._user_data = user_data
         self._status = {}
+        self.description = ""
+
         logger.info("Control thread initialized")
+        self.initialise_submodules()
+        logger.info("Control thread submodules initialized")
+
+
+
+
 
     @property
     def selected_options(self):
@@ -173,7 +181,8 @@ class ControlThread(Base, Root):
             {"field": "date_time", "value": self.start_datetime},
             {"field": "selected_options", "value": self.selected_options},
             {"field": "settings", "value": self.settings},
-            {"field": "user_data", "value": self._user_data}
+            {"field": "user_data", "value": self._user_data},
+            {"field": "description", "value": self.description}
         ])
 
         return metadata
@@ -195,13 +204,15 @@ class ControlThread(Base, Root):
         else:
             self._info["controller"] = {"status": "offline"}
 
+
         self._info.update({
             "id": self.machine_id,
             "location": self._location,
             "name": self.machine_name,
             "status": self.status["control_thread"],
-            "submodules": {k: self.status[k] for k in self._submodules},
-            "clock": self.clock
+            "clock": self.clock,
+            "settings": self.settings,
+            "result_writer": {"status": self.result_writer.status}
 
         })
 
@@ -225,13 +236,6 @@ class ControlThread(Base, Root):
 
     @status.getter
     def status(self):
-
-        self._status.update({
-            "recognizer": self.recognizing,
-            "controller": self.controlling,
-            "result_writer": self.result_writer.status,
-        })
-
 
         if not self.running:
             self._status["control_thread"] = "idle"
@@ -346,10 +350,11 @@ class ControlThread(Base, Root):
                 return self.status
 
             else:
+                logger.info("Running action %s on module %s", action, instance)
                 getattr(instance, action)()
 
         except RuntimeError as error:
-            logger.warning("%s is already started", submodule)
+            logger.warning("You passed action: %s. %s is already started", action, submodule)
 
         except Exception as error:
             logger.warning(error)
@@ -381,7 +386,6 @@ class ControlThread(Base, Root):
         result_writer_kwargs = self._config.content['io']['result_writer']['kwargs']
 
         self.result_writer = result_writer_class(
-            start_datetime=self.start_datetime,
             *result_writer_args,
             **result_writer_kwargs
         )
@@ -395,8 +399,7 @@ class ControlThread(Base, Root):
             result_writer=self.result_writer,
             board_class=self._pick_class("board"),
             arduino_port=self._user_data["arduino_port"],
-            use_wall_clock=self._user_data["use_wall_clock"],
-            adaptation_offset=self.adaptation_offset
+            use_wall_clock=self._user_data["use_wall_clock"]
         )
         # self.controller.experiment_start = self.experiment_start
         self._settings['controller'] = self.controller.settings
@@ -433,7 +436,6 @@ class ControlThread(Base, Root):
 
         drawer = drawer_class(
             *drawer_args,
-            video_out=self.video_out,
             **drawer_kwargs
         )
 
@@ -441,15 +443,11 @@ class ControlThread(Base, Root):
         tracker_class = self._pick_class("tracker")
         recognizer = Recognizer(
             tracker_class, camera_class, roi_builder, self.result_writer, drawer,
-            user_data=self._user_data,
-            adaptation_offset=self.adaptation_offset,
+            user_data=self._user_data
         )
         self._add_submodule("recognizer", recognizer)
 
     def initialise_submodules(self):
-
-        logger.debug("Starting submodules")
-        logger.debug(self._submodules)
 
         self.initialise_result_writer()
 
@@ -458,9 +456,6 @@ class ControlThread(Base, Root):
 
         if self.recognize:
             self.initialise_recognizer()
-
-        logger.debug(self._submodules)
-
 
     @property
     def last_drawn_frame(self):
@@ -479,58 +474,59 @@ class ControlThread(Base, Root):
     @property
     def clock(self):
 
-        clock = None
+        experiment_time = None
+        adaptation_time = None
+
         if self.control:
             if self.controller is not None:
 
-                adaptation_time = "%s / %s" % tuple([iso_format(hours_minutes_seconds(e)) for e in [self.controller.adaptation_left, self.controller._adaptation_offset]])
+                adaptation_time = "%s / %s" % tuple([iso_format(hours_minutes_seconds(e)) for e in [
+                    self.controller.adaptation_left,
+                    self.controller.adaptation_offset
+                ]])
 
-                if self.controller.running:
-                    experiment_time = "%s / %s" % tuple([iso_format(hours_minutes_seconds(e)) for e in [self.controller.elapsed_seconds, self.controller.programmer.duration]])
-                else:
-                    experiment_time = None
+            if self.controller.running:
+                experiment_time = "%s / %s" % tuple([iso_format(hours_minutes_seconds(e)) for e in [
+                    self.controller.elapsed_seconds,
+                    self.controller.programmer.duration
+                ]])
 
 
-                clock = {
-                    "adaptation_time": adaptation_time,
-                    "experiment_time": experiment_time
-                }
+        clock = {
+            "adaptation_time": adaptation_time,
+            "experiment_time": experiment_time
+        }
 
         return clock
 
 
     def run(self):
-        r"""
-        Start all the submodules.
+        """
+        Update the submodules if required as long as the experiment can go on:
+        * The elapsed seconds since this function was called is less than max_duration
+        * Controller progress is les than 100%
+        * The stop experiment method is not called
+
+        If any of the three statements above stop are not True, the function terminates execution
+
         """
         super().run()
-        self.initialise_submodules()
+
+        self.result_writer.start_datetime = self.start_datetime
+
+        if self.recognize:
+            self.recognizer.start_datetime = self.start_datetime
+            self.recognizer.video_out = self.video_out
+
+        if self.control:
+            self.controller.adaptation_offset = self.adaptation_offset
 
         while not self.stopped and self.elapsed_seconds < self._max_duration:
 
-            # TODO check next frame has come!
-            # self.recognizer.load_camera()
-            # # prepare recognizer upon user input
-            # self.recognizer.prepare()
-            # # start recognizer upon user input
-            # self.recognizer.start()
             self._end_event.wait(1/self.sampling_rate)
-            if self.control:
-                if self.controller is not None:
-                    self.controller.last_t = self.last_t
-                    # print(self.last_t)
-                    for thread in self.controller.programmer.paradigm:
-                        # print(thread.is_alive())
-                        # if thread.is_alive():
-                        # print("Updating last_t")
-                        # if thread._hardware == "LED_R_RIGHT":
-                        #     print("Pushing %s to LED_R_RIGHT with id %s" % (self.last_t, id(thread)))
 
-                        thread.last_t = self.last_t
-
-
-
-
+            if self.control and self.controller is not None:
+                self.controller.tick(self.last_t)
                 if self.controller.progress > 100:
                     self.stop_experiment()
                     break
@@ -544,12 +540,28 @@ class ControlThread(Base, Root):
         super().stop()
         self.stop_experiment(force=True)
 
+
+    def warm_up(self):
+        """
+        Convenience method to start the recognizer
+        with the minimal controller hardware required to do an experiment
+        This is listed in the _always_on_hardware list of the controller.
+        """
+
+        self.controller.run_minimal()
+        self.recognizer.prepare()
+        self.recognizer.start()
+
+
     def start_experiment(self):
         r"""
-        Convenience combination of commands targeted to start an experiment
+        Convenience combination of commands targeted to start an experiment:
 
-        * The recognizer starts saving the position of the flies
+        * The start datetime of the experiment is set
+        * The recognizer starts if it is not already
+          (by) means of another method with the power of starting the recognizer
         * The controller starts executing its paradigm
+        * The METADATA and ROI_MAP tables are generated
         """
 
         # set the self.start_datetime property to now with format
@@ -573,8 +585,9 @@ class ControlThread(Base, Root):
                     logger.warning(traceback.print_exc())
                     return None
 
-            # start tracking animals
-            self.recognizer.start()
+            if not self.recognizer.running:
+                # start tracking animals
+                self.recognizer.start()
 
         if self.control:
             # start the paradigm loaded in the controller
@@ -607,3 +620,9 @@ class ControlThread(Base, Root):
                 self.controller.stop()
 
             self.result_writer.clear()
+
+
+    def reset_experiment(self):
+        self.stop_experiment(force=True)
+        Status.run(self)
+        self.initialise_submodules()

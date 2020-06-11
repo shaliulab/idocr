@@ -66,8 +66,9 @@ class Settings(Root):
         new_settings = {k: settings[k] for k in self._settings if k in settings}
         # only update those that are different
         for k in self._settings:
-            if self._settings[k] != new_settings[k]:
-                self._settings[k] = new_settings[k]
+            if k in new_settings:
+                if self._settings[k] != new_settings[k]:
+                    self._settings[k] = new_settings[k]
 
         # self._settings.update(new_settings)
 
@@ -97,22 +98,23 @@ class Settings(Root):
         If the setting matches the name of a submodule, repeat recursively
         otherwise, the setting is an actual setting and we need to set it
         """
+        # TODO Refactor this to make it more readable
 
         # For each submodule of the passed module
-        for submodule in module._submodules:
+        for name, submodule in module._submodules.items():
             # And for each setting
             for k in self._settings:
                 # If the setting is a dictionary for a submodule of the submodule
-                if module._submodules[submodule] is not None:
-                    if k in module._submodules[submodule]._submodules:
+                if submodule is not None:
+                    if k in submodule._submodules:
                         # pick just those settings and call send_recursive again only with the current submodule
                         local_settings = settings[k]
-                        self.send_recursive(module._submodules[submodule], local_settings)
+                        self.send_recursive(submodule, local_settings)
                     else:
-                        if k in settings:
-                            module._submodules[submodule]._settings[k] = settings[k]
+                        if k in settings and k in submodule._settings:
+                            submodule._settings[k] = settings[k]
 
-                    module._submodules[submodule].update()
+                    submodule.update()
 
 
     def send(self):
@@ -125,7 +127,7 @@ class Settings(Root):
 
             logger.warning("%s sending to %s", self.__class__.__name__, submodule.__class__.__name__)
             logger.warning(self._settings)
-            self.send_recursive(self, self._settings)
+            self.send_recursive(submodule, self._settings)
 
     def receive(self):
         r"""
@@ -250,11 +252,14 @@ class Status(Root):
         time_diff = (datetime.datetime.now() - self.experiment_start).total_seconds()
         return time_diff
 
-
-
     @property
     def start_datetime(self):
         return self._start_datetime
+
+    @start_datetime.setter
+    def start_datetime(self, start_datetime):
+        self._start_datetime = start_datetime
+
 
     @property
     def time_zero(self):
@@ -286,22 +291,27 @@ class Status(Root):
         """
         if not self.running:
             self._status = "idle"
-            return self._status
+            status = self._status
 
-        if self.ready and not self.running:
+        elif self.ready and not self.running:
             self._status = 'ready'
-            return self._status
+            status = self._status
 
-        if self.running and not self.stopped:
+        elif self.running and not self.stopped:
             self._status = "running"
-            return self._status
+            status = self._status
 
-        if self.stopped:
+        elif self.stopped:
             self._status = "stopped"
-            return self._status
+            status = self._status
 
-        logger.debug('%s status undefined', self.__class__.__name__)
-        self._status = 'undefined'
+        else:
+            logger.debug('%s status undefined', self.__class__.__name__)
+            status = 'undefined'
+
+        self._status = status
+        # print("%s status: %s" % (self.__class__.__name__, status))
+
         return self._status
 
     def run(self):

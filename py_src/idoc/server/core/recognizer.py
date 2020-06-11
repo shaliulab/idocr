@@ -27,8 +27,7 @@ class Recognizer(Base, Root):
             self, tracker_class, camera_class,
             roi_builder, result_writer, drawer,
             rois=None, stimulators=None,
-            user_data=None,
-            adaptation_offset=0
+            user_data=None
         ):
         """
         Class to orchestrate the tracking of multiple objects.
@@ -65,7 +64,6 @@ class Recognizer(Base, Root):
         self._last_time_stamp = 0
         self._last_tick = 0
         self._period = 5
-        self._adaptation_offset = adaptation_offset
         self._unit_trackers = []
         self._rois = rois
         self._frame_buffer = None

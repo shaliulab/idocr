@@ -39,8 +39,8 @@ class Programmer(Settings, Root):
     _paradigms_dir = None
 
     def __init__(
-            self, result_writer, board, pin_state, sampling_rate, mapping, paradigm_path, *args,
-            use_wall_clock=True, **kwargs
+            self, result_writer, board_class, pin_state, sampling_rate, mapping, paradigm_path, *args,
+            use_wall_clock=True, arduino_port="/dev/ttyACM0", **kwargs
         ):
 
         super().__init__(*args, **kwargs)
@@ -48,7 +48,9 @@ class Programmer(Settings, Root):
         self._use_wall_clock = use_wall_clock
         self._result_writer = result_writer
         self._paradigms_dir = self._config.content["folders"]["paradigms"]["path"]
-        self._board = board
+        self._arduino_port = arduino_port
+        self._board_class = board_class
+        self._board = None
         self._sampling_rate = sampling_rate
         self._mapping = mapping
         self.pin_state = pin_state
@@ -60,10 +62,14 @@ class Programmer(Settings, Root):
             'paradigm_path': None,
         })
 
+        self._loaded = False
         self._locked = False
-
         self.paradigm_path = paradigm_path
 
+
+    @property
+    def board(self):
+        return self._board
 
     def list(self, dict_format=True):
         r"""
@@ -115,6 +121,16 @@ class Programmer(Settings, Root):
         if paradigm_path == self._settings['paradigm_path']:
             return
 
+        # if there already is an initialized board, close it
+        # so we can open it again
+        # a fresh board is always needed because otherwise a
+        # pyfirmata.pyfirmata.PinAlreadyTakenError is raised
+        # when the Thread classes attempt to retrieve their pin
+        self._loaded = False
+        if self._board is not None:
+            self._board.exit()
+
+        self._board = self._board_class(self._arduino_port)
         self._settings['paradigm_path'] = paradigm_path
 
         # load the data in paradigm_path into Python
@@ -127,13 +143,14 @@ class Programmer(Settings, Root):
             logger.debug(traceback.print_exc())
             return
 
-        if self.table is None:
+        if self.table == []:
             logger.warning("Error reading your paradigm into IDOC")
             return
 
         # actually generate the threads that this paradigm dictates
         try:
             self._prepare()
+            self._loaded = True
         except Exception as error:
             logger.warning("Error loading your paradigm into IDOC")
             logger.debug(error)
@@ -272,8 +289,6 @@ class Programmer(Settings, Root):
             pin_number = self._mapping[hardware]
         except KeyError:
             raise Exception("%s is not available in the mapping" % hardware)
-
-
 
         # Deduce a mode and a value from user input and the config file
         value = None

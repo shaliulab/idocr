@@ -25,10 +25,11 @@ class Controller(DefaultInterface, Base, Root):
 
     _programmerClass = Programmer
     valid_actions = ["start", "stop", "reset"]
+    _always_on_hardware = ["MAIN_VALVE", "VACUUM", "IRLED"]
 
     def __init__(
             self, mapping_path, paradigm_path, result_writer, board_class, *args,
-            arduino_port='/dev/ttyACM0', sampling_rate=10.0, adaptation_offset=0, **kwargs):
+            arduino_port='/dev/ttyACM0', sampling_rate=10.0, **kwargs):
         """
         :param mapping_path: Path to a .csv showing which hardware is phisically wired to which pin.
         :type mapping_path: str
@@ -67,9 +68,8 @@ class Controller(DefaultInterface, Base, Root):
         # Board instance compatible with the threads classes
         self._board_class = board_class
         self._arduino_port = arduino_port
-        self._board = self._board_class(self._arduino_port)
         self._result_writer = result_writer
-        self._adaptation_offset = adaptation_offset
+        self.adaptation_offset = 0
 
         # Programmer instance that processes user input
         # into a 'program', an organized sequence of events
@@ -77,16 +77,16 @@ class Controller(DefaultInterface, Base, Root):
 
         self._submodules['programmer'] = self._programmerClass(
             result_writer,
-            self._board, self._pin_state, sampling_rate,
+            self._board_class, self._pin_state, sampling_rate,
             self._mapping, *args,
             use_wall_clock=use_wall_clock,
-            paradigm_path=self._paradigm_path
+            paradigm_path=self._paradigm_path,
+            arduino_port=self._arduino_port
         )
 
         self._settings['programmer'] = self._submodules['programmer'].settings
         self._progress = 0
         self._last_t = 0
-
 
     @property
     def last_t(self):
@@ -169,19 +169,21 @@ class Controller(DefaultInterface, Base, Root):
         """
         # logging.debug('Requesting Controller.info')
         self._info.update({
-            "paradigms": self._submodules['programmer'].list(),
+            "status": self.status,
+            "paradigms": self.programmer.list(),
+            # "paradigm_path": self.programmer.paradigm_path,
             "pin_state": self.pin_state,
             "mapping": self.mapping,
             "progress": self.progress,
-            "board": self._board.__class__.__name__,
-            "duration": self._submodules['programmer'].duration
+            "board": self.programmer.board.__class__.__name__,
+            "duration": self.programmer.duration
         })
         # logging.debug('Controller.info OK')
 
         return self._info
 
     def load(self, paradigm_path):
-        self._submodules['programmer'].paradigm_path = paradigm_path
+        self.programmer.paradigm_path = paradigm_path
 
     @property
     def pin_state(self):
@@ -192,7 +194,7 @@ class Controller(DefaultInterface, Base, Root):
         return self._pin_state
 
     def list(self):
-        return self._submodules['programmer'].list()
+        return self.programmer.list()
 
     def _load_mapping(self, mapping_path):
         r"""
@@ -204,10 +206,10 @@ class Controller(DefaultInterface, Base, Root):
         required_columns = ['pin_id', 'pin_number']
 
         if not all([e in mapping_df.columns for e in required_columns]):
-            logging.warning("Provided mapping is not valid")
-            logging.warning("mapping_path: %s", mapping_path)
-            logging.warning("Required columns %s", ' '.join(required_columns))
-            logging.warning("Provided columns %s", ' '.join(mapping_df.columns))
+            logger.warning("Provided mapping is not valid")
+            logger.warning("mapping_path: %s", mapping_path)
+            logger.warning("Required columns %s", ' '.join(required_columns))
+            logger.warning("Provided columns %s", ' '.join(mapping_df.columns))
 
 
             return
@@ -259,11 +261,36 @@ class Controller(DefaultInterface, Base, Root):
 
     @property
     def wait(self):
-        return max(0, self._adaptation_offset - self.init_elapsed_seconds)
+        return max(0, self.adaptation_offset - self.init_elapsed_seconds)
 
     @property
     def adaptation_left(self):
-        return max(0, self._adaptation_offset - self.wait)
+        return max(0, self.adaptation_offset - self.wait)
+
+
+    def run_minimal(self):
+        """
+        Start executing the threads whose hardware matches the names listed in
+        self._always_on_hardware.
+        """
+
+        for hardware in self._always_on_hardware:
+            for thread in self.programmer.paradigm:
+                if thread.hardware == hardware:
+                    thread.start()
+                    # TODO what happens with the time_zero?
+
+
+    def tick(self, last_t):
+        """
+        Update the time in the threads
+        """
+
+        self.last_t = last_t
+        if self.programmer._loaded:
+            for thread in self.programmer.paradigm:
+                thread.last_t = self.last_t
+
 
     def run(self):
         r"""
@@ -287,7 +314,13 @@ class Controller(DefaultInterface, Base, Root):
         for thread in self._submodules['programmer'].paradigm:
             try:
                 thread.time_zero = self.time_zero
-                thread.start()
+
+                # catch if the thread is already started because it is listed on the always_on_hardware
+                if thread.is_alive() and thread.hardware in self._always_on_hardware:
+                    pass
+                else:
+                    thread.start()
+
             except Exception as error:
                 logger.info(thread)
                 logger.error(error)

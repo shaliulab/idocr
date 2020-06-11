@@ -1,5 +1,5 @@
 # for now it will not scan devices, just retrieve attributes of a device running on localhost
-
+import json
 import logging
 from threading import Thread
 import time
@@ -46,7 +46,10 @@ class Device(Thread, HTTPMixin):
                                      "restart" : ["stopped"],
                                      "offline": []}
 
-    def __init__(self, ip, *args, port=9000, **kwargs):
+
+
+
+    def __init__(self, ip, *args, port=9000, remote=False, log_server=False, **kwargs):
 
         self._ip = ip
         self._port = port
@@ -54,27 +57,52 @@ class Device(Thread, HTTPMixin):
         self._settings = {}
         self._id_url = "http://%s:%i/%s" % (ip, port, self._remote_pages['id'])
         self._id = ""
-        self._logs_cache = []
-        self._tcpserver = LogRecordSocketReceiver()
+        self._log_server = log_server
+        self._remote = remote
+
+        self.running = False
+        self.stopped = False
+
+        if self._log_server:
+            self._logs_cache = []
+            self._tcpserver = LogRecordSocketReceiver()
+
         super().__init__(*args, **kwargs)
 
-    def controls(self, submodule, action):
-        template = "http://%s:%d/%s/%s/%s/%s"
-        url = template % (
-            self._ip, self._port,
-            self._remote_pages["controls"],
-            submodule, action, self.id
-        )
+    def get_api(self, api_endpoint, remote=False):
 
+        if api_endpoint is list:
+            api_endpoint = "/".join(api_endpoint)
+
+
+        if self._remote or remote:
+            url = "http://%s:%s/device/%s/%s" % (
+                self._ip, self._port,
+                self.id, api_endpoint
+            )
+
+        else:
+            url = "http://%s:%s/%s/%s" % (
+                self._ip, self._port,
+                api_endpoint, self.id
+            )
+
+        return url
+
+
+    def controls(self, submodule, action):
+
+        url = self.get_api([self._remote_pages["controls"], submodule, action])
         return self._get_json(url)
 
     def close(self, answer="Y"):
 
-        url = "http://%s:%d/close/%s" % (self._ip, self._port, self.id)
+        url = self.get_api("close")
         self._get_json(url, post_data={"answer": answer})
 
     def get_paradigms(self):
-        url = "http://%s:%d/list_paradigms/%s" % (self._ip, self._port, self.id)
+
+        url = self.get_api("list_paradigms")
         return self._get_json(url)
 
     def post_paradigm(self, paradigm_path):
@@ -83,25 +111,46 @@ class Device(Thread, HTTPMixin):
         :type paradigm_path: bytes
         """
 
-        # print(paradigm_path)
-        # b'{"paradigm_path": ["unittest_long.csv"]}'
-
-        url = "http://%s:%d/load_paradigm/%s" % (self._ip, self._port, self.id)
+        url = self.get_api("load_paradigm")
+        # import ipdb; ipdb.set_trace()
         requests.post(url, data=paradigm_path)
         # self._get_json(url, post_data={"paradigm_path": paradigm_path})
 
-    def post(self, data):
-        url = "http://%s:%d/settings/%s" % (self._ip, self._port, self.id)
-        self._get_json(url, post_data=data)
+    def post_settings(self, settings):
+        """
+        Post a settings dictionary
+        """
+        url = self.get_api("settings")
+        # import ipdb; ipdb.set_trace()
+        self._get_json(url, post_data=json.dumps(settings).encode())
+
 
     @property
     def settings(self):
         return self._settings
 
+    @settings.getter
     def settings(self):
-        url = "http://%s:%d/settings/%s" % (self._ip, self._port, self.id)
+
+        url = self.get_api("settings")
         self._settings = self._get_json(url)
         return self._settings
+
+    def start_experiment(self):
+        url = self.get_api("controls/control_thread/start_experiment")
+        self._get_json(url)
+
+    def stop_experiment(self):
+        url = self.get_api("controls/control_thread/stop_experiment")
+        self._get_json(url)
+
+    def reset_experiment(self):
+        url = self.get_api("controls/control_thread/reset_experiment")
+        self._get_json(url)
+
+    def warm_up(self):
+        url = self.get_api("controls/control_thread/warm_up")
+        self._get_json(url)
 
     @property
     def info(self):
@@ -109,18 +158,18 @@ class Device(Thread, HTTPMixin):
 
     def get_info(self):
         logging.debug('Getting self._info')
-        url = "http://%s:%d/info/%s" % (self._ip, self._port, self.id)
+        url = self.get_api("info")
         self._info = self._get_json(url)
         logging.debug('_get_json self._info')
         return self._info
 
-    def get_logs(self):
-        return self._logs_cache
+    # def get_logs(self):
+    #     return self._logs_cache
 
-    def post_logs(self, post_data):
-        parsed_data = urllib.parse.parse_qs(post_data.decode())
-        # print(parsed_data)
-        self._logs_cache.extend(parsed_data["logs"])
+    # def post_logs(self, post_data):
+    #     parsed_data = urllib.parse.parse_qs(post_data.decode())
+    #     # print(parsed_data)
+    #     self._logs_cache.extend(parsed_data["logs"])
 
 
     def _reset_info(self):
@@ -159,11 +208,21 @@ class Device(Thread, HTTPMixin):
 
     def run(self):
 
-        print('About to start TCP server...')
-        self._tcpserver.serve_until_stopped()
+        self.running = True
+
+        if self._log_server:
+            print('About to start TCP server...')
+            self._tcpserver.serve_until_stopped()
+
+        while not self.stopped:
+            # Implement here whatever I need
+            time.sleep(1)
 
     def stop(self):
-        self._tcpserver.abort = True
+
+        self.stopped = True
+        if self._log_server:
+            self._tcpserver.abort = True
 
     def last_image(self):
         """
@@ -178,7 +237,8 @@ class Device(Thread, HTTPMixin):
         except KeyError:
             raise KeyError("Cannot find last image for device %s" % self._id)
 
-        img_url = "http://%s:%i/%s/%s" % (self._ip, self._port, self._remote_pages['static'], img_path)
+        img_url = self.get_api([self._remote_pages['static'], img_path], remote=False)
+        # img_url = "http://%s:%i/%s/%s" % (self._ip, self._port, self._remote_pages['static'], img_path)
         try:
             return urllib.request.urlopen(img_url, timeout=5)
         except urllib.error.HTTPError:
@@ -188,12 +248,15 @@ class Device(Thread, HTTPMixin):
 
 class DeviceScanner(Thread):
 
-
-    def __init__(self, *args, device_refresh_period=5, deviceClass=Device, **kwargs):
+    def __init__(self, *args, device_refresh_period=5, deviceClass=Device, remote=False, **kwargs):
 
         self.devices = []
         self._device_refresh_period = device_refresh_period
         self._deviceClass = deviceClass
+        self._remote = remote
+        self._max_trials = 50
+        self.running = False
+        self.stopped = False
         super(DeviceScanner, self).__init__(*args, **kwargs)
 
 
@@ -211,7 +274,10 @@ class DeviceScanner(Thread):
     def get_device(self, idx):
         return self.devices[idx]
 
-    def get_device_by_id(self, machine_id):
+    def get_device_by_id(self, machine_id, silent=True, trials=0):
+
+        if silent and trials == 0:
+            print("Connecting to IDOC device in machine %s" % (machine_id))
 
         for device in self.devices:
             try:
@@ -222,16 +288,24 @@ class DeviceScanner(Thread):
             if info_id == machine_id:
                 return device
 
-        message = "Device with machine_id %s is not available." % machine_id
-        raise IDOCException(message)
+        if silent or trials > self._max_trials: # pylint: disable=no-else-return
+            trials += 1
+            time.sleep(2)
+            return self.get_device_by_id(machine_id, trials=trials)
+
+        else:
+            message = "Device with machine_id %s is not available." % machine_id
+            raise IDOCException(message)
 
     def run(self):
 
-        device = self._deviceClass(ip="localhost")
+        self.running = True
+
+        device = self._deviceClass(ip="localhost", remote=self._remote)
         device.start()
         self.devices.append(device)
 
-        while True:
+        while not self.stopped:
             time.sleep(self._device_refresh_period)
 
             for device in self.devices:
@@ -241,3 +315,5 @@ class DeviceScanner(Thread):
     def stop(self):
         for device in self.devices:
             device.stop()
+
+        self.stopped = True
