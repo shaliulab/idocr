@@ -133,7 +133,7 @@ class PylonCamera(AdaptorCamera, Root):
 
     @framerate.setter
     def framerate(self, framerate):
-        logger.info("Setting framerate to %s", str(framerate))
+        # logger.info("Setting framerate to %s", str(framerate))
         try:
             self.camera.AcquisitionFrameRateAbs.SetValue(framerate)
         except Exception as error:
@@ -152,7 +152,7 @@ class PylonCamera(AdaptorCamera, Root):
 
     @exposure_time.setter
     def exposure_time(self, exposure_time):
-        logger.info("Setting exposure time to %3.f", exposure_time)
+        # logger.info("Setting exposure time to %3.f", exposure_time)
         try:
             self.camera.ExposureTimeAbs.SetValue(exposure_time)
         except Exception as error:

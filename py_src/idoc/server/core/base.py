@@ -197,6 +197,8 @@ class Status(Root):
             "elapsed_time": self.elapsed_time
         })
 
+        self._user_data = None
+
 
     def reset(self):
         """

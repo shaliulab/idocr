@@ -63,7 +63,7 @@ class Recognizer(Base, Root):
         self._last_positions = {}
         self._last_time_stamp = 0
         self._last_tick = 0
-        self._period = 5
+        self._period = 2
         self._unit_trackers = []
         self._rois = rois
         self._frame_buffer = None
@@ -80,6 +80,9 @@ class Recognizer(Base, Root):
 
         self._last_frames = []
         self._last_times = []
+        self._time_running = False
+        self._time_offset = 0
+        self._frame_offset = 0
 
 
 
@@ -241,7 +244,11 @@ class Recognizer(Base, Root):
             self._last_times.pop(0)
 
         self._last_times.append(last_time_stamp_s)
-        self._last_time_stamp = last_time_stamp_s
+
+        if self._time_running:
+            self._last_time_stamp = last_time_stamp_s - self._time_offset
+        else:
+            self._time_offset = last_time_stamp_s
 
 
     @property
@@ -262,8 +269,11 @@ class Recognizer(Base, Root):
             self._last_frames.pop(0)
 
         self._last_frames.append(last_frame_idx)
-        self._last_frame_idx = last_frame_idx
 
+        if self._time_running:
+            self._last_frame_idx = last_frame_idx - self._frame_offset
+        else:
+            self._frame_offset = last_frame_idx
 
     @property
     def fps(self):

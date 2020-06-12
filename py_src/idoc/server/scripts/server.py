@@ -1,3 +1,5 @@
+#!  /home/vibflysleep/anaconda3/envs/learnmem/bin/python
+
 ############################
 ### Main callable script
 ############################
@@ -8,7 +10,9 @@ import logging
 import logging.handlers
 import os
 import signal
+import sys
 from threading import Thread
+import time
 import urllib.parse
 
 import bottle
@@ -389,6 +393,22 @@ parser.add_argument(
     """
 )
 
+parser.add_argument(
+    "--run", action='store_true', dest='run',
+    help="Batch run"
+)
+parser.add_argument(
+    "--no-run", action='store_false', dest='run',
+    help="Batch run"
+)
+
+parser.add_argument(
+    "--start-datetime", type=str, dest='start_datetime',
+    help=
+    """
+    """
+)
+
 # User input for classes
 parser.add_argument("--board", type=str, choices=list_options("board"))
 parser.add_argument("--camera", type=str, help="Stream source", choices=list_options("camera"))
@@ -410,7 +430,8 @@ parser.set_defaults(
     port=9000,
     arduino_port="/dev/ttyACM0",
     wrap=None,
-    default=True
+    default=True,
+    max_duration=None
 )
 
 config = IDOCConfiguration()
@@ -448,9 +469,10 @@ def stop(signo=None, _frame=None):
     r"""
     A function to bind the arrival of specific signals to an action.
     """
-    logger.info("Received signal %s", signo)
+    logger.debug("Received signal %s", signo)
     try:
         control.stop()
+        logger.info('Quitting')
         os._exit(0) # pylint: disable=protected-access
         # sys.exit(0)
     except Exception as error:
@@ -466,5 +488,10 @@ for sig in signals:
 def main():
     control.start()
     server_thread.start()
+    control.join()
+    # while not control.stopped:
+    #     time.sleep(1)
+
+    stop()
 
 main()

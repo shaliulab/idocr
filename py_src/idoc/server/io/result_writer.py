@@ -44,10 +44,17 @@ class CSVResultWriter(Settings, Status, Root):
         self._roi_map_initialised = False
         self.last_t = None
 
-        self.start_datetime = None
-        self._result_dir = None
+        self.start_datetime = ""
+        self._result_dir = ""
         self._output_csv = None
         self._run_id_long = None
+
+
+    @property
+    def info(self):
+        return {
+            "result_dir": self.result_dir
+        }
 
     @property
     def run_id_long(self):
@@ -57,15 +64,25 @@ class CSVResultWriter(Settings, Status, Root):
 
     @property
     def result_dir(self):
-        logger.debug('Output will be saved in %s', self._result_dir)
 
-        self._result_dir = os.path.join(
-            self._root_dir,
-            self._machine_id,
-            get_machine_name(),
-            self.start_datetime
-        )
-        os.makedirs(self._result_dir, exist_ok=False)
+        if self.running:
+            logger.debug('Output will be saved in %s', self._result_dir)
+
+            self._result_dir = os.path.join(
+                self._root_dir,
+                self._machine_id,
+                get_machine_name(),
+                self.start_datetime
+            )
+
+            try:
+                os.makedirs(self._result_dir, exist_ok=False)
+            except FileExistsError:
+                logger.warning('Output directory already exists. This is weird. Are you passing a custom start_datetime?')
+                logger.warning(self._result_dir)
+
+        else:
+            self._result_dir = ""
 
         return self._result_dir
 

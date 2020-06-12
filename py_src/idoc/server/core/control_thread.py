@@ -2,6 +2,7 @@
 import datetime
 import logging
 import os.path
+import time
 import traceback
 
 import pandas as pd
@@ -100,7 +101,7 @@ class ControlThread(Base, Root):
         self._result_dir = result_dir
 
         self._location = self._config.content['experiment']['location']
-        self._max_duration = self._config.content['experiment']['max_duration']
+        self._max_duration = user_data['max_duration'] or self._config.content['experiment']['max_duration']
 
         ## Assignment of attributes
         self.control = user_data['control']
@@ -123,10 +124,6 @@ class ControlThread(Base, Root):
         logger.info("Control thread initialized")
         self.initialise_submodules()
         logger.info("Control thread submodules initialized")
-
-
-
-
 
     @property
     def selected_options(self):
@@ -157,7 +154,6 @@ class ControlThread(Base, Root):
     def adaptation_time(self, adaptation_time):
         self._settings['adaptation_time'] = adaptation_time
 
-
     @property
     def adaptation_time_human(self):
         return iso_format(
@@ -165,7 +161,6 @@ class ControlThread(Base, Root):
                         self._settings['adaptation_time']
                     )
                 )
-
 
     @property
     def adaptation_offset(self):
@@ -204,6 +199,7 @@ class ControlThread(Base, Root):
         else:
             self._info["controller"] = {"status": "offline"}
 
+        self._info["result_writer"] = self.result_writer.info
 
         self._info.update({
             "id": self.machine_id,
@@ -390,6 +386,9 @@ class ControlThread(Base, Root):
             **result_writer_kwargs
         )
 
+        if self._user_data['start_datetime'] is not None:
+            self.result_writer.start_datetime = self._user_data['start_datetime']
+
 
     def initialise_controller(self):
         logger.debug('Starting controller')
@@ -434,6 +433,10 @@ class ControlThread(Base, Root):
             self._config.content['io']['camera']['kwargs']['framerate']
         )
 
+        if self._user_data['start_datetime'] is not None:
+            start_datetime = self._user_data['start_datetime']
+            drawer_kwargs['video_out'] = os.path.join(self._result_dir, self.machine_id, self.machine_name, start_datetime, '%s_%s.avi' % (start_datetime, self.machine_id))
+
         drawer = drawer_class(
             *drawer_args,
             **drawer_kwargs
@@ -466,10 +469,10 @@ class ControlThread(Base, Root):
 
     @property
     def last_t(self):
-        if self.recognize:
+        if self.recognize and self.running:
             return self.recognizer.last_t
-        else:
-            None
+
+        return 0
 
     @property
     def clock(self):
@@ -508,15 +511,12 @@ class ControlThread(Base, Root):
         * The stop experiment method is not called
 
         If any of the three statements above stop are not True, the function terminates execution
-
         """
         super().run()
 
-        self.result_writer.start_datetime = self.start_datetime
-
-        if self.recognize:
-            self.recognizer.start_datetime = self.start_datetime
-            self.recognizer.video_out = self.video_out
+        # if self.recognize:
+        #     self.recognizer.start_datetime = self.start_datetime
+        #     self.recognizer.drawer.video_out = self.video_out
 
         if self.control:
             self.controller.adaptation_offset = self.adaptation_offset
@@ -531,6 +531,9 @@ class ControlThread(Base, Root):
                     self.stop_experiment()
                     break
 
+        if self._user_data['run']:
+            self.stop()
+
         return
 
     def stop(self):
@@ -539,6 +542,7 @@ class ControlThread(Base, Root):
         """
         super().stop()
         self.stop_experiment(force=True)
+        logger.info('Quitting control thread')
 
 
     def warm_up(self):
@@ -554,7 +558,7 @@ class ControlThread(Base, Root):
 
 
     def start_experiment(self):
-        r"""
+        """
         Convenience combination of commands targeted to start an experiment:
 
         * The start datetime of the experiment is set
@@ -568,16 +572,27 @@ class ControlThread(Base, Root):
         # %YYYYY-MM-DD_HH-MM-SS
         self._set_start_datetime()
 
+        if self._user_data['start_datetime'] is not None:
+            self.result_writer.start_datetime = self._user_data['start_datetime']
+        else:
+            self.result_writer.start_datetime = self.start_datetime
+
         # allow the result_writer to write to disk the incoming data from now on
         self.result_writer.running = True
 
         if self.recognize:
+            self.recognizer.drawer.video_out = os.path.join(self._result_dir, self.machine_id, self.machine_name, self.start_datetime, self.run_id + '.avi')
+            self.recognizer._time_running = True
 
             if not self.recognizer.ready:
                 try:
                     # if the recognizer is not ready, it needs to prepare:
                     # * find the regions of interest (ROIS)
                     # * bind a tracker to each ROI
+
+                    if self.controller is not None:
+                        self.controller.run_minimal()
+
                     self.recognizer.prepare()
                 except Exception as error:
                     logger.warning("Could not prepare recognizer. Please try again")

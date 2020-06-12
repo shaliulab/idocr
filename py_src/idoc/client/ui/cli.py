@@ -1,9 +1,12 @@
+#! /home/vibflysleep/anaconda3/envs/idoc/bin/python
+
 # Standard library imports
 import logging
 import math
 import os
 import sys
 import signal
+import subprocess
 from threading import Thread, Event
 import tempfile
 import time
@@ -53,8 +56,11 @@ class CliUI():
                 ('START', self.start_experiment, "root"),
                 ('ANALYZE', self.analyze, "root"),
                 ('STOP', self.stop, "root"),
-                ('RESET', self.reset, "root"),
-
+                ('CLEAR', self.clear, "root"),
+                ('PROMPT', self.prompt, "root"),
+                ('STOP', self.stop, "root"),
+                ('RESTART', self.restart, "root"),
+                # ('RESET', self.reset, "root"),
                 ('QUIT', self.quit, "root"),
 
             ],
@@ -111,16 +117,20 @@ class CliUI():
     ## * run: iterate a new question and execution
 
 
-    def _user_input(self, prompt):
+    def _user_input(self, max_index, prompt="Enter number: "):
         answer = input(prompt)
-        if self.represents_int(answer):
-            answer = int(answer)
+        fail = False
+        fail = not self.represents_int(answer)
+        if not fail:
+            fail = answer > max_index
+            if not fail:
+                answer = int(answer)
 
-        else:
+        if fail:
             print('You entered answer: %s' % answer)
             print('This is not valid. Try again!')
 
-            answer = self._user_input(prompt)
+            answer = self._user_input(prompt, max_index)
 
         return answer
 
@@ -134,7 +144,7 @@ class CliUI():
         for idx, opt in enumerate(options):
             print("{}: {}".format(idx + 1, opt[0]))
 
-        self._answer = self._user_input("Enter number: ")
+        self._answer = self._user_input(len(options))
         return self._answer
 
 
@@ -145,7 +155,7 @@ class CliUI():
         for idx, opt in enumerate(options):
             print("{}: {}".format(idx + 1, '/'.join(opt)))
 
-        self._answer = self._user_input("Enter number: ")
+        self._answer = self._user_input(len(options))
         return self._answer
 
     def _pick_paradigm(self):
@@ -154,9 +164,8 @@ class CliUI():
         for idx, opt in enumerate(options):
             print("{}: {}".format(idx + 1, opt))
 
-        self._answer = self._user_input("Enter number: ")
+        self._answer = self._user_input(len(options))
         return self._answer
-
 
 
     def _apply(self, menu_name, answer):
@@ -239,8 +248,8 @@ class CliUI():
 
             except Exception as error:
                 warnings.warn('I do not understand %s' % self._answer)
-                warnings.warn(error)
-                warnings.warn(traceback.print_exc())
+                print(error)
+                print(traceback.print_exc())
                 new_menu = "root"
                 answer = 0
 
@@ -293,6 +302,17 @@ class CliUI():
         warnings.warn("Not implemented")
         return "root"
 
+    @staticmethod
+    def clear(self, answer):
+        for i in range(30):
+            print(" ")
+
+        return "root"
+
+    def prompt(self, answer):
+        self._pick_menu()
+        return "root"
+
     def stop(self, answer):
         """
         "Ask the user if output should be saved
@@ -300,6 +320,12 @@ class CliUI():
         """
         # TODO Ask functionality
         self._device.stop_experiment()
+        return "root"
+
+
+    def restart(self, answer):
+        logger.info("Restarting idoc_server systemd service. Please give a few seconds...")
+        subprocess.call(["systemctl", "restart", "idoc_server.service"])
         return "root"
 
     def reset(self, answer):

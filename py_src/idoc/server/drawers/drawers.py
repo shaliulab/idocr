@@ -58,6 +58,9 @@ class BaseDrawer(Base, Root):
         self._last_drawn_frame = None
         self.arena = None
         self._frame_count = 0
+        self._original_video = None
+        self._annotated_video = None
+        
 
     def framerate(self):
         return round(self._settings['framerate'])
@@ -124,11 +127,20 @@ class BaseDrawer(Base, Root):
 
         if len(self._video_writers) == 0:
 
+            # TODO More elegant way of deriving the path
+            self._original_video = self.video_out.replace(".avi", "_ORIGINAL.avi")
+            self._annotated_video = self.video_out.replace(".avi", "_ANNOTATED.avi")
+
+            logger.info('Videos will be saved to:')
+            logger.info(self._original_video)
+            logger.info(self._annotated_video)
+            
+
             self._video_writers = {
 
                 "raw": cv2.VideoWriter(
                     # path to resulting video
-                    self.video_out.replace(".avi", "_ORIGINAL.avi"),
+                    self._original_video,
                     # codec
                     VideoWriter_fourcc(*self._video_out_fourcc),
                     # framerate
@@ -139,7 +151,7 @@ class BaseDrawer(Base, Root):
 
                 "annot": cv2.VideoWriter(
                     # path to resulting video
-                    self.video_out.replace(".avi", "_ANNOTATED.avi"), # TODO More elegant way of deriving the path
+                    self._annotated_video, 
                     # codec
                     VideoWriter_fourcc(*self._video_out_fourcc),
                     # framerate

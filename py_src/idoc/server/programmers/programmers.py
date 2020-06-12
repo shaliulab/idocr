@@ -179,8 +179,14 @@ class Programmer(Settings, Root):
         if self._settings["paradigm_path"] is None:
             return None
 
-        return os.path.join(self._paradigms_dir, self._settings["paradigm_path"])
+        absolute_path = os.path.join(self._paradigms_dir, self._settings["paradigm_path"])
+        if os.path.exists(absolute_path) and os.path.isfile(absolute_path):
+            pass
+        else:
+            logger.warning('The passed paradigm does not exist. Check it is correct!!:')
+            logger.warning(absolute_path)
 
+        return absolute_path
 
     def _load_table(self, paradigm_path):
         r"""
@@ -204,7 +210,6 @@ class Programmer(Settings, Root):
             self._paradigm = None
             logger.warning("The passed paradigm does not exist!")
             return
-
 
         table_df = pd.read_csv(self.absolute_paradigm_path)
 

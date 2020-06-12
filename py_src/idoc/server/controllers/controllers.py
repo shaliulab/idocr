@@ -25,7 +25,7 @@ class Controller(DefaultInterface, Base, Root):
 
     _programmerClass = Programmer
     valid_actions = ["start", "stop", "reset"]
-    _always_on_hardware = ["MAIN_VALVE", "VACUUM", "IRLED"]
+    _always_on_hardware = ["TARGETS", "MAIN_VALVE", "VACUUM", "IRLED"]
 
     def __init__(
             self, mapping_path, paradigm_path, result_writer, board_class, *args,
@@ -277,8 +277,10 @@ class Controller(DefaultInterface, Base, Root):
         for hardware in self._always_on_hardware:
             for thread in self.programmer.paradigm:
                 if thread.hardware == hardware:
-                    thread.start()
+                    logger.info('Turning on %s', thread.hardware)
+                    thread.pin.write(1)
                     # TODO what happens with the time_zero?
+        time.sleep(2)
 
 
     def tick(self, last_t):
@@ -288,8 +290,9 @@ class Controller(DefaultInterface, Base, Root):
 
         self.last_t = last_t
         if self.programmer._loaded:
-            for thread in self.programmer.paradigm:
-                thread.last_t = self.last_t
+            if self.running:
+                for thread in self.programmer.paradigm:
+                    thread.last_t = self.last_t
 
 
     def run(self):
