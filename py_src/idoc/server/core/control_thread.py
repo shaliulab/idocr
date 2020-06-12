@@ -577,9 +577,12 @@ class ControlThread(Base, Root):
         else:
             self.result_writer.start_datetime = self.start_datetime
 
-        # allow the result_writer to write to disk the incoming data from now on
-        self.result_writer.running = True
+        # allow the result_writer to write to disk the incoming data from now on      
+        self.result_writer.set_running()
 
+        logger.warning('HERE')
+        logger.warning(self.result_writer.result_dir)
+        
         if self.recognize:
             self.recognizer.drawer.video_out = os.path.join(self._result_dir, self.machine_id, self.machine_name, self.start_datetime, self.run_id + '.avi')
             self.recognizer._time_running = True

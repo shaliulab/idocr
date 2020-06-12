@@ -87,6 +87,7 @@ class Controller(DefaultInterface, Base, Root):
         self._settings['programmer'] = self._submodules['programmer'].settings
         self._progress = 0
         self._last_t = 0
+        self._pins = {}
 
     @property
     def last_t(self):
@@ -241,7 +242,7 @@ class Controller(DefaultInterface, Base, Root):
 
     @property
     def columns(self):
-        r"""
+        """
         Returns a list with the hardware in use
         Useful to prepare the header of the output .csv.
         """

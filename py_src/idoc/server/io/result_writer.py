@@ -26,7 +26,6 @@ class CSVResultWriter(Settings, Status, Root):
     def __init__(self, *args, nrois=20, max_n_rows_to_insert=10, **kwargs):
 
         super().__init__(*args, **kwargs)
-        super().run()
 
         self._max_n_rows_to_insert = max_n_rows_to_insert
         updated_tables = ["ROI_%d" % i for i in range(1, nrois+1)]
@@ -75,12 +74,6 @@ class CSVResultWriter(Settings, Status, Root):
                 self.start_datetime
             )
 
-            try:
-                os.makedirs(self._result_dir, exist_ok=False)
-            except FileExistsError:
-                logger.warning('Output directory already exists. This is weird. Are you passing a custom start_datetime?')
-                logger.warning(self._result_dir)
-
         else:
             self._result_dir = ""
 
@@ -89,6 +82,18 @@ class CSVResultWriter(Settings, Status, Root):
     @property
     def output_csv(self):
         self._output_csv = os.path.join(self.result_dir, self.run_id_long + ".csv")
+
+
+    def set_running(self):
+
+        self.running = True
+
+        try:
+            os.makedirs(self.result_dir, exist_ok=False)
+        except FileExistsError:
+            logger.warning('Output directory already exists. This is weird. Are you passing a custom start_datetime?')
+            logger.warning(self.result_dir)
+
 
 
     def initialise_metadata(self, metadata):
@@ -158,14 +163,14 @@ class CSVResultWriter(Settings, Status, Root):
         An adaptor for the DataPoint instances to be compatible
         with process_row
         """
+        if self.running:
 
-        table_name = "ROI_%d" % roi.idx
-
-        if not self._var_map_initialised:
-            self.initialise_var_map(data_rows[0])
-
-        for row in data_rows:
-            data_points = {**{"id": 0}, **{v.header_name: v for v in row.values()}}
+            if not self._var_map_initialised:
+                self.initialise_var_map(data_rows[0])
+                
+            table_name = "ROI_%d" % roi.idx
+            for row in data_rows:
+                data_points = {**{"id": 0}, **{v.header_name: v for v in row.values()}}
             self.process_row(data_points, table_name)
 
     def process_row(self, data, table_name):

@@ -12,6 +12,7 @@
 #' @import data.table
 prepare_shape_data <- function(controller_data, hardware = "LED_R_LEFT") {
   
+  print(hardware)
   ## Preprocessing
   # Detect side of hardware
   hardware_side <- parse_side(hardware)
@@ -63,6 +64,8 @@ prepare_shape_data <- function(controller_data, hardware = "LED_R_LEFT") {
   shape_data <- shape_data[, .SD[c(1, 2, 4, 3)], by = "group"]
   
   shape_data$side <- hardware_side
+  
+  shape_data$hardware <- hardware
  
   return(shape_data)
 }

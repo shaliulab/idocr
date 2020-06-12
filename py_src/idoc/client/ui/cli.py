@@ -49,12 +49,12 @@ class CliUI():
 
         self._menus = {
             "root": [
-                ('WARM UP', self.warm_up, "root"),
-                ('CHANGE CONFIGURATION', None, "settings"),
                 ('LOAD PARADIGM', None, "paradigms"),
+                ('CHANGE CONFIGURATION', None, "settings"),
+                ('WARM UP', self.warm_up, "root"),
                 ('CHECK', self.check, "root"),
                 ('START', self.start_experiment, "root"),
-                ('ANALYZE', self.analyze, "root"),
+                # ('ANALYZE', self.analyze, "root"),
                 ('STOP', self.stop, "root"),
                 ('CLEAR', self.clear, "root"),
                 ('PROMPT', self.prompt, "root"),
@@ -302,8 +302,8 @@ class CliUI():
         return "root"
 
     @staticmethod
-    def clear(self, answer):
-        for i in range(30):
+    def clear(self):
+        for _ in range(30):
             print(" ")
 
         return "root"
@@ -312,7 +312,7 @@ class CliUI():
         self._pick_menu()
         return "root"
 
-    def stop(self, answer):
+    def stop(self, answer, signo):
         """
         "Ask the user if output should be saved
         and quit the program

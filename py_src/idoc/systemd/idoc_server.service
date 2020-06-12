@@ -7,6 +7,7 @@ After=ntpd.service
 [Service]
 Type=simple
 WorkingDirectory=/opt/idoc/py_src/idoc/server/scripts
+Environment="HOME=/home/vibflysleep"
 ExecStart=/home/vibflysleep/anaconda3/envs/idoc/bin/python  /opt/idoc/py_src/idoc/server/scripts/server.py --control --recognize --adaptation-time 0
 RestartSec=5
 Restart=always

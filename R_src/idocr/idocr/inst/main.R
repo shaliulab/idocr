@@ -6,15 +6,15 @@ library(ggplot2)
 library(ggforce)
 ## --------------
 
-main <- function(experiment_folder, old_mapping = FALSE, plot_basename = NULL) {
+main <- function(experiment_folder, old_mapping = FALSE, plot_basename = NULL, border = 10, min_exits_required = 5) {
   
   # experiment_folder <- "/learnmem_data/results/be979e46217f3a5ec0f254245eb68da5/ANTORTJIM-LAPTOP/2020-06-09_21-33-57/"
   # experiment_folder <- "/1TB/Cloud/Data/idoc_data/results/7eb8e224bdb944a68825986bc70de6b1/FLYSLEEPLAB_SETUP/2020-06-10_19-56-36"
   # experiment_folder <- "/1TB/Cloud/Data/idoc_data/results/be979e46217f3a5ec0f254245eb68da5/ANTORTJIM-LAPTOP/2020-06-10_11-53-34/"
   
-  border <- 10
+  # border <- 10
   rect_pad <- 0
-  min_exits_required <- 5
+  # min_exits_required <- 5
   
   # metadata <- load_metadata(experiment_folder)
   # run_id <- metadata[field == "run_id", value]
@@ -40,23 +40,13 @@ main <- function(experiment_folder, old_mapping = FALSE, plot_basename = NULL) {
   
   controller_data <- map(
     c("LED_R_LEFT", "LED_R_RIGHT"),
-    ~cbind(
-      prepare_shape_data(
+    ~prepare_shape_data(
         controller_data = controller_data,
         hardware = .
-      ),
-      hardware = .
     )
   ) %>%
     do.call(rbind, .) %>%
     mutate(t_ms = t * 1000)
-  
-  
-  # 
-  # shape_data <- controller_data %>%
-  #   group_by(hardware) %>%
-  #   group_split()
-  # 
   
   limits <- c(min(roi_data$x), max(roi_data$x))
   rects <- controller_data %>%
@@ -136,6 +126,7 @@ main <- function(experiment_folder, old_mapping = FALSE, plot_basename = NULL) {
     
   }
   
+  metadata <- load_metadata(experiment_folder)
   if (is.null(plot_basename)) {
     plot_basename <- sprintf(
       "%s_%s",
@@ -144,7 +135,7 @@ main <- function(experiment_folder, old_mapping = FALSE, plot_basename = NULL) {
     )
   }
   
-  for (extension in c('eps', 'png')) {
+  for (extension in c('pdf', 'png')) {
     plot_filename <- sprintf(
       "%s.%s",
       plot_basename,
@@ -156,6 +147,10 @@ main <- function(experiment_folder, old_mapping = FALSE, plot_basename = NULL) {
   return(p)
 }
 
-
-main(experiment_folder ='/1TB/Cloud/Data/idoc_data/results/7eb8e224bdb944a68825986bc70de6b1/FLYSLEEPLAB_SETUP/2020-06-10_17-42-08', old_mapping = TRUE, plot_basename = '2020-06-10_17-42-08')
-main(experiment_folder = '/1TB/Cloud/Data/idoc_data/results/7eb8e224bdb944a68825986bc70de6b1/FLYSLEEPLAB_SETUP/2020-06-10_17-48-53/', old_mapping = TRUE, plot_basename = '2020-06-10_17-48-53')
+  
+# main(experiment_folder ='/1TB/Cloud/Data/idoc_data/results/7eb8e224bdb944a68825986bc70de6b1/FLYSLEEPLAB_SETUP/2020-06-10_17-42-08', old_mapping = TRUE, plot_basename = '2020-06-10_17-42-08')
+# main(experiment_folder = '/1TB/Cloud/Data/idoc_data/results/7eb8e224bdb944a68825986bc70de6b1/FLYSLEEPLAB_SETUP/2020-06-10_17-48-53/', old_mapping = TRUE, plot_basename = '2020-06-10_17-48-53')
+p1 <- main(experiment_folder = '/1TB/Cloud/Data/idoc_data/results/FLYSLEEPLAB_SETUP/2020-06-12_13-27-08', border = 10, min_exits_required = 3)
+p2 <- main(experiment_folder = '/1TB/Cloud/Data/idoc_data/results/FLYSLEEPLAB_SETUP/2020-06-12_13-51-46', border = 10, min_exits_required = 3)
+p3 <- main(experiment_folder = "/1TB/Cloud/Data/idoc_data/results/FLYSLEEPLAB_SETUP/2020-06-12_15-00-24", border = 10, min_exits_required = 3)
+cowplot::plot_grid(p1, p2, nrow = 2)

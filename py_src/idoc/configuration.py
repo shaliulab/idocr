@@ -63,7 +63,7 @@ class IDOCConfiguration(object):
             'camera': {
                 'args': (),
                 'kwargs': {
-                    'framerate': 10, 'exposure_time': 50000,
+                    'framerate': 20, 'exposure_time': 50000,
                     'resolution': (960, 720),
                     'drop_each': 1,
                     'use_wall_clock': True,
