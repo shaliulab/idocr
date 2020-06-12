@@ -122,9 +122,8 @@ class CliUI():
         fail = False
         fail = not self.represents_int(answer)
         if not fail:
+            answer = int(answer)
             fail = answer > max_index
-            if not fail:
-                answer = int(answer)
 
         if fail:
             print('You entered answer: %s' % answer)
