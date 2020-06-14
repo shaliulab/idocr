@@ -4,6 +4,7 @@
 import logging
 import math
 import os
+import glob
 import sys
 import signal
 import subprocess
@@ -18,6 +19,7 @@ import webbrowser
 # Local application imports
 import cv2
 import numpy as np
+import pandas as pd
 
 from idoc.configuration import IDOCConfiguration
 from idoc.client.analysis.analysis import RSession
@@ -58,7 +60,7 @@ class CliUI():
                 ('STOP', self.stop, "root"),
                 ('CLEAR', self.clear, "root"),
                 ('PROMPT', self.prompt, "root"),
-                ('STOP', self.stop, "root"),
+                ('EXPORT', self.export, "root"),
                 ('RESTART', self.restart, "root"),
                 # ('RESET', self.reset, "root"),
                 ('QUIT', self.quit, "root"),
@@ -320,6 +322,37 @@ class CliUI():
         # TODO Ask functionality
         self._device.stop_experiment()
         return "root"
+        
+    @staticmethod
+    def get_run_id(experiment_folder):
+
+        metadata_csv = glob.glob("%s/*_METADATA.csv" % experiment_folder)[0]
+        metadata = pd.read_csv(metadata_csv)
+        start_datetime = metadata.loc[metadata['field'] == 'date_time', "value"]
+        machine_id = metadata.loc[metadata['field'] == 'run_id', "value"]
+        run_id = "%s_%s" % (start_datetime, machine_id)
+        return run_id
+
+
+    def _export_summary_csv(self, experiment_folder, run_id):
+        output_csv = os.path.join(experiment_folder, '%s_SUMMARY.csv' % run_id)
+        r_cmd =  "idocr::export_summary('%s', '%s')" % (experiment_folder, output_csv)
+        subprocess.call(["R", "-e", r_cmd])
+
+    def _export_pi_data(self, experiment_folder, run_id):
+        pass
+    
+
+    def export(self, answer):
+        """
+        Save convenience csv files for analysis in external software
+        """
+
+        experiment_folder = input('Enter experiment_folder: ')
+        if os.path.isdir(experiment_folder):
+            run_id = self.get_run_id(experiment_folder)
+            self._export_summary_csv(experiment_folder, run_id)
+            self._export_pi_data(experiment_folder, run_id)
 
 
     def restart(self, answer):

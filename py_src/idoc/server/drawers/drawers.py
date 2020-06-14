@@ -128,7 +128,7 @@ class BaseDrawer(Base, Root):
 
                     "ANNOTATED": cv2.VideoWriter(
                         # path to resulting video
-                        self._annotated_video, 
+                        self._annotated_video,
                         # codec
                         VideoWriter_fourcc(*self._video_out_fourcc),
                         # framerate
@@ -173,14 +173,18 @@ class BaseDrawer(Base, Root):
         return self._last_drawn_frame
 
     def __del__(self):
+
+        if super().stop():
+            return
+
         if self._draw_frames:
             cv2.waitKey(1)
             cv2.destroyAllWindows()
             cv2.waitKey(1)
+
         for video_writer in self._video_writers.values():
             logger.info('Releasing video writer')
             video_writer.release()
-
 
     def close(self):
         # logger.warning("Drawer has drawn %d frames", self._frame_count)

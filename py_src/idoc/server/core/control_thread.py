@@ -157,10 +157,10 @@ class ControlThread(Base, Root):
     @property
     def adaptation_time_human(self):
         return iso_format(
-                    hours_minutes_seconds(
-                        self._settings['adaptation_time']
-                    )
-                )
+            hours_minutes_seconds(
+                self._settings['adaptation_time']
+            )
+        )
 
     @property
     def adaptation_offset(self):
@@ -392,6 +392,7 @@ class ControlThread(Base, Root):
 
     def initialise_controller(self):
         logger.debug('Starting controller')
+
         self.controller = Controller(
             mapping_path=self._user_data["mapping_path"],
             paradigm_path=self._user_data["paradigm_path"],
@@ -491,7 +492,7 @@ class ControlThread(Base, Root):
             if self.controller.running:
                 experiment_time = "%s / %s" % tuple([iso_format(hours_minutes_seconds(e)) for e in [
                     self.controller.elapsed_seconds,
-                    self.controller.programmer.duration
+                    self.controller.duration
                 ]])
 
 
@@ -528,6 +529,7 @@ class ControlThread(Base, Root):
             if self.control and self.controller is not None:
                 self.controller.tick(self.last_t)
                 if self.controller.progress > 100:
+                    logger.info("Progress reached 100%")
                     self.stop_experiment()
                     break
 
@@ -577,12 +579,11 @@ class ControlThread(Base, Root):
         else:
             self.result_writer.start_datetime = self.start_datetime
 
-        # allow the result_writer to write to disk the incoming data from now on      
+        # allow the result_writer to write to disk the incoming data from now on
         self.result_writer.set_running()
 
-        logger.warning('HERE')
-        logger.warning(self.result_writer.result_dir)
-        
+        logger.warning("Saving results to %s", self.result_writer.result_dir)
+
         if self.recognize:
             self.recognizer.drawer.video_out = os.path.join(self._result_dir, self.machine_id, self.machine_name, self.start_datetime, self.run_id + '.avi')
             self.recognizer._time_running = True
@@ -613,7 +614,8 @@ class ControlThread(Base, Root):
 
 
         self.result_writer.initialise_metadata(self.metadata)
-        self.result_writer.initialise_roi_map(self.recognizer.rois)
+        if self.recognize and self.recognizer is not None:
+            self.result_writer.initialise_roi_map(self.recognizer.rois)
 
 
 
@@ -632,10 +634,12 @@ class ControlThread(Base, Root):
         if not self._user_data["wrap"] or force:
 
             if self.recognize:
-                self.recognizer.stop()
+                if not self.recognizer.stopped:
+                    self.recognizer.stop()
 
             if self.control:
-                self.controller.stop()
+                if not self.controller.stopped:
+                    self.controller.stop()
 
             self.result_writer.clear()
 

@@ -1,4 +1,4 @@
-#!  /home/vibflysleep/anaconda3/envs/learnmem/bin/python
+#!  /home/vibflysleep/anaconda3/envs/idoc/bin/python
 
 ############################
 ### Main callable script
@@ -330,19 +330,9 @@ parser.add_argument(
     """
 )
 
+# # Module settings
 parser.add_argument(
-    "--sync", action='store_true', dest='sync',
-    help="""
-    """
-)
-parser.add_argument(
-    "--no-sync", action='store_false', dest='sync',
-    help="""
-    """
-)
-# Module settings
-parser.add_argument(
-    "-m", "--mapping_path", type=str, dest="mapping_path",
+    "-m", "--mapping-path", type=str, dest="mapping_path",
     help="Absolute path to csv providing pin number-pin name mapping"
 )
 parser.add_argument(
@@ -355,10 +345,10 @@ parser.add_argument(
     help="Absolute path to the Arduino port. Usually '/dev/ttyACM0' in Linux and COM in Windows"
 )
 
-# parser.add_argument(
-#     "-f", "--framerate", type=int,
-#     help="Frames per second in the opened stream, overrides config."
-# )
+parser.add_argument(
+    "-f", "--framerate", type=int,
+    help="Frames per second in the opened stream, overrides config."
+)
 parser.add_argument(
     "-v", "--video-path", type=str, dest='video_path',
     help=
@@ -368,13 +358,6 @@ parser.add_argument(
     """
 )
 
-parser.add_argument(
-    "-f", "--framerate", type=int,
-    help=
-    """
-    Framerate of the analysis and the output video.
-    """
-)
 
 parser.add_argument(
     "-a", "--adaptation-time", type=int, dest="adaptation_time",
@@ -404,9 +387,7 @@ parser.add_argument(
 
 parser.add_argument(
     "--start-datetime", type=str, dest='start_datetime',
-    help=
-    """
-    """
+    help=""
 )
 
 # User input for classes

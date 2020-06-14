@@ -11,6 +11,7 @@ from idoc.server.core.base import Base, Root
 from idoc.helpers import hours_minutes_seconds, iso_format, MachineDatetime
 from idoc.server.controllers.threads import DefaultArduinoThread, WaveArduinoThread
 from idoc.server.controllers.threads import DefaultDummyThread, WaveDummyThread
+from idoc.debug import IDOCException
 
 
 
@@ -31,8 +32,9 @@ class Controller(DefaultInterface, Base, Root):
     valid_actions = ["start", "stop", "reset"]
     _always_on_hardware = ["TARGETS", "MAIN_VALVE", "VACUUM", "IRLED"]
     _threads = {
-    "ArduinoDummy": {"DEFAULT": DefaultDummyThread, "WAVE": WaveDummyThread},
-    "ArduinoX": {"DEFAULT": DefaultArduinoThread, "WAVE": WaveArduinoThread}
+        "ArduinoDummy": {"DEFAULT": DefaultDummyThread, "WAVE": WaveDummyThread},
+        "ArduinoBoard": {"DEFAULT": DefaultArduinoThread, "WAVE": WaveArduinoThread},
+        "ArduinoMegaBoard": {"DEFAULT": DefaultArduinoThread, "WAVE": WaveArduinoThread}
     }
 
 
@@ -67,7 +69,9 @@ class Controller(DefaultInterface, Base, Root):
         super().__init__(*args, **kwargs)
 
         self._mapping_path = mapping_path or self._config.content["controller"]["mapping_path"]
-        self._paradigm_path = paradigm_path or self._config.content["controller"]["paradigm_path"]
+        self._loaded = False
+        self._locked = False
+        self._paradigm = []
 
         # Build a dictionary mapping hardware to pin number
         self._mapping = self._load_mapping(self._mapping_path)
@@ -87,16 +91,14 @@ class Controller(DefaultInterface, Base, Root):
         # into a 'program', an organized sequence of events
         # that turn on and off the pins in the board
 
-        self._submodules['programmer'] = self._programmerClass(
-            *args, paradigm_path=self._paradigm_path
-        )
+        self._submodules['programmer'] = self._programmerClass()
+
+        self.paradigm_path = paradigm_path or self._config.content["controller"]["paradigm_path"]
 
         self._settings['programmer'] = self._submodules['programmer'].settings
         self._progress = 0
         self._last_t = 0
-        self._paradigm = []
-        self._loaded = False
-        self._locked = False
+
 
 
     @property
@@ -149,7 +151,7 @@ class Controller(DefaultInterface, Base, Root):
 
         except ValueError:
             return None
-    
+
 
     @property
     def progress(self):
@@ -170,7 +172,7 @@ class Controller(DefaultInterface, Base, Root):
             diff = max((datetime.datetime.now() - self._time_zero).total_seconds(), 0)
 
         try:
-            progress = diff / self.programmer.duration
+            progress = diff / self.duration
         except TypeError: #programmer.duration is not defined
             progress = 0
 
@@ -204,8 +206,8 @@ class Controller(DefaultInterface, Base, Root):
             "pin_state": self.pin_state,
             "mapping": self.mapping,
             "progress": self.progress,
-            "board": self.programmer.board.__class__.__name__,
-            "duration": self.programmer.duration
+            "board": self._board.__class__.__name__,
+            "duration": self.duration
         })
         # logging.debug('Controller.info OK')
 
@@ -224,6 +226,7 @@ class Controller(DefaultInterface, Base, Root):
         """
 
         seen_hardware = []
+        print(table)
         for row in table:
             hardware = row['hardware']
             if hardware not in seen_hardware:
@@ -232,21 +235,24 @@ class Controller(DefaultInterface, Base, Root):
                 pin_definition = '%s:%s:%s' % ('d', pin_number, mode)
                 pin = self._board.get_pin(pin_definition)
                 self._pins[hardware] = pin
+                seen_hardware.append(hardware)
 
             else:
-                pass   
+                pass
+
+        print("PINS")
+        print(self._pins)
 
     @property
     def paradigm_path(self):
-        return self._paradigm_path
+        return self._programmer.paradigm_path
 
     @paradigm_path.setter
     def paradigm_path(self, paradigm_path):
 
         # don't load again if the program has the same filename
         # this is done to avoid a superfluous update resetting the self.paradigm object
-        if paradigm_path != self.programmer.paradigm_path:
- 
+        if paradigm_path != self.programmer._settings["paradigm_path"]:
 
             # if there already is an initialized board, close it
             # so we can open it again
@@ -257,9 +263,19 @@ class Controller(DefaultInterface, Base, Root):
             if self._board is not None:
                 self._board.exit()
 
+            logger.warning("Initalizing %s", self._board_class.__name__)
             self._board = self._board_class(self._arduino_port)
-            self.programmer.paradigm_path = paradigm_path
+            try:
+                self.programmer.paradigm_path = paradigm_path
+            except IDOCException as error:
+                logger.warning(error)
+                self._paradigm.clear()
+                return
+
+            logger.warning("Loading pins")
             self.populate_pins(self.programmer.table)
+            logger.warning("Loaded pins: ")
+            logger.warning(self._pins)
             self._prepare()
 
 
@@ -307,11 +323,12 @@ class Controller(DefaultInterface, Base, Root):
         return list(self._mapping.keys())
 
     def load_paradigm(self, paradigm_path):
-        self._submodules['programmer'].paradigm_path = paradigm_path
+        if paradigm_path is not None:
+            self.programmer.paradigm_path = paradigm_path
 
     @property
     def ready(self):
-        return self._submodules["programmer"].paradigm_path is not None
+        return self.programmer.paradigm_path is not None
 
     @ready.setter
     def ready(self, value): # pylint: disable=unused-argument
@@ -345,7 +362,7 @@ class Controller(DefaultInterface, Base, Root):
         """
 
         self.last_t = last_t
-        if self.programmer._loaded:
+        if self._loaded:
             if self.running:
                 for thread in self._paradigm:
                     thread.last_t = self.last_t
@@ -370,14 +387,14 @@ class Controller(DefaultInterface, Base, Root):
             kwargs["result_writer"] = self._result_writer
             kwargs["sampling_rate"] = self._sampling_rate
             kwargs["pin"] = self._pins[kwargs['hardware']]
-            
+
             logger.debug(kwargs)
 
             ThreadClass = self._threads[self._board_class.__name__][thread]
 
             logger.debug("Selecting %s", ThreadClass.__name__)
             thread = ThreadClass(
-                **kwargs
+                **kwargs, pin_state=self._pin_state, use_wall_clock=self._use_wall_clock
             )
 
             self._paradigm.append(thread)
@@ -385,6 +402,9 @@ class Controller(DefaultInterface, Base, Root):
         barriers = self.programmer.make_barriers(self.programmer.table)
         self._paradigm = self.programmer.add_barriers(self._paradigm, barriers)
         logger.debug(self._paradigm)
+        print("self._paradigm")
+        print(self._paradigm)
+        self._loaded = True
 
 
     def lock(self):
@@ -425,7 +445,10 @@ class Controller(DefaultInterface, Base, Root):
         super().stop()
 
         for thread in self._paradigm:
+            logger.warning("thread.stop")
             thread.stop()
+
+        logger.warning("done with the threads")
 
         for thread in self._paradigm:
             if thread.is_alive():

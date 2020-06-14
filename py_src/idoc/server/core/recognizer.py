@@ -358,11 +358,11 @@ class Recognizer(Base, Root):
                     annot = self.drawer.draw(frame, tracking_units=self._unit_trackers, positions=self._last_positions, metadata=metadata)
                     tick = int(round((t_ms / 1000.0) / self._period))
                     self.drawer.write_videos(video_output=self._time_running)
-                    
+
                     if tick > self._last_tick:
                         # logger.debug("Writing frame %d", i)
                         self.drawer.write_frames()
-                    
+
                     self._last_tick = tick
 
         except Exception as error:

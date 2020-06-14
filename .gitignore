@@ -119,5 +119,6 @@ LeMDT/logs/*
 .vscode/
 **/pypylon
 **/swig*
+*bak
 
 

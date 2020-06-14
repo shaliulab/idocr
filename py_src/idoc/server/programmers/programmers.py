@@ -15,7 +15,6 @@ import numpy as np
 import pandas as pd
 
 from idoc.server.core.base import Root, Settings
-
 from idoc.configuration import IDOCConfiguration
 from idoc.debug import IDOCException
 
@@ -32,7 +31,7 @@ class Programmer(Settings, Root):
     _required_columns = ["hardware", "start", "end", "on", "off", "mode", "value"]
 
     def __init__(
-            self, paradigm_path, *args, **kwargs
+            self, *args, **kwargs
         ):
 
         super().__init__(*args, **kwargs)
@@ -44,8 +43,7 @@ class Programmer(Settings, Root):
         self._settings.update({
             'paradigm_path': None,
         })
-
-        self.paradigm_path = paradigm_path
+        self._locked = False
 
     def list(self, dict_format=True):
         r"""
@@ -79,11 +77,12 @@ class Programmer(Settings, Root):
         can run them.
         """
         # load the data in paradigm_path into Python
+        self._settings['paradigm_path'] = paradigm_path
 
         if not self._load_table(paradigm_path):
+            self._settings['paradigm_path'] = self._config.content['controller']['paradigm_path']
             raise IDOCException('The provided paradigm could not be loaded. See more details below')
-        
-        self._settings['paradigm_path'] = paradigm_path
+
 
     @property
     def absolute_paradigm_path(self):
@@ -122,19 +121,17 @@ class Programmer(Settings, Root):
     def _validate_paradigm_path(self, paradigm_path):
         """
         Check the paradigm path is valid. It should:
-        
+
         * Not be None
         * Be within the list of available paradigms
         """
         if paradigm_path is None:
 
             self.table = None
-            self._paradigm.clear()
             return False
 
         elif paradigm_path not in self.list(dict_format=False):
             self.table = None
-            self._paradigm .clear()
             logger.warning("The passed paradigm does not exist!")
             return False
 
@@ -158,9 +155,10 @@ class Programmer(Settings, Root):
             return False
 
         table_df = pd.read_csv(self.absolute_paradigm_path)
-        if not self._validate_paradigm_df(df):
+        if not self._validate_paradigm_df(table_df):
             logger.warning("Error reading your paradigm into IDOC. Paradigm is invalid")
             return False
+
 
         # convert on and off from ms to seconds
         # we assume the user enters this in ms because its more convenient for him/her
@@ -169,16 +167,17 @@ class Programmer(Settings, Root):
         table_df["on"] /= 1000
         table_df["off"] /= 1000
 
+        i = 0
         # coerce to a dictionary
         for row_tuple in table_df.iterrows():
             row = row_tuple[1].to_dict()
             self.table.append(row)
+            i += 1
 
         if self.table == []:
             logger.warning("Error reading your paradigm into IDOC. Table is empty")
             return False
-            
-        logger.debug(self.table)
+
         return True
 
     @staticmethod
@@ -211,7 +210,7 @@ class Programmer(Settings, Root):
             kwargs["seconds_off"] = row["off"]
 
         else:
-            raise IDOCException('Row %d: one of on or off is defined, but not both. Please fix this', i)
+            raise IDOCException('Row %d: one of on or off is defined, but not both. Please fix this' % i)
 
         return thread, kwargs
 

@@ -349,9 +349,10 @@ class Status(Root):
         """
         if self.stopped is True:
             logger.warning("%s is already stopped. Skipping", self.__class__.__name__)
-            return
+            return True
 
         self.stopped = True
+        return False
 
 class StatusThread(Status, Thread, Root):
     r"""
@@ -435,7 +436,7 @@ class DescribedObject(Root):
 
 class Base(Settings, StatusThread, Root):
     r"""
-    Provide the functionality in Settings and Status simultaneously,
+    Provide the functionality in Settings and StatusThread simultaneously,
     which is the standard in IDOC.
     """
     def __init__(self, *args, **kwargs): # pylint: disable=useless-super-delegation

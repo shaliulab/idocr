@@ -28,7 +28,7 @@ class BaseControllerThread(Base, Root):
     pin_state = None
 
     def __init__(
-            self, i: int, hardware: str, pin, pin_state: dict, pin_number: int, mode: str, start, end, value: float, *args,
+            self, i: int, hardware: str, pin, pin_state: dict, mode: str, start, end, value: float, *args,
             sampling_rate=10.0, result_writer=None, use_wall_clock=False, **kwargs
         ):
         """
@@ -48,14 +48,9 @@ class BaseControllerThread(Base, Root):
         It is updated live and shared by all the threads in run in the same Controller class
         This way, it can be used to query the state of the whole Controller.
 
-        :param pin_number:
-        Select a pin from a microcontroller board i.e. Arduino.
-        :type pin_number: ``int``
-
         :param mode:
         A valid mode for the get_pin function.
         Eiher i (input), o (output) or p (pwm).
-        :type pin_number: ``str``
 
         :param start:
         Time in seconds when the thread should turn on a pin.
@@ -102,7 +97,6 @@ class BaseControllerThread(Base, Root):
             self.__class__.__name__, id(self.pin_state)
         )
 
-        self._pin_number = pin_number
         self._start = start
         self._end = end
         self._value = value
@@ -110,8 +104,6 @@ class BaseControllerThread(Base, Root):
         self._last_t = 0
         self._use_wall_clock = use_wall_clock
 
-        string = 'd:%d:%s' % (self._pin_number, self._mode)
-        logger.debug(string)
 
 
     @property
@@ -134,9 +126,9 @@ class BaseControllerThread(Base, Root):
     def name(self):
         r"""
         Unique thread identifier
-        with format HARDWARE@PIN_NUMBER-i
+        with format HARDWARE-i
         """
-        return "%s@%s-%s" % (self._hardware, str(self._pin_number).zfill(3), self.index)
+        return "%s-%s" % (self._hardware, self.index)
 
     @property
     def duration(self):
@@ -247,26 +239,24 @@ class BaseControllerThread(Base, Root):
         # print("Hardware %s is running" % self._hardware)
 
 
-        logger.warning(
+        logger.debug(
             "%s (class %s) is starting to run",
             self.name, self.__class__.__name__
         )
 
         while self.last_t < self.start_seconds:
 
-            # if self._hardware == "LED_R_RIGHT":
-            #     print("Value in LED_R_RIGHT with id(%s) is %s" % (id(self), self.last_t))
-
             time.sleep(1 / self.sampling_rate)
+
             if self.stopped:
-                logger.info('%s: %s is stopping early', self.last_t, self.name)
+                logger.info('%s: %s is stopping before reaching the start barrier', self.last_t, self.name)
                 self.turn_off()
                 return
 
 
         # make sure all contemporaneous threads start as close to each other as possible
         # this call locks the thread until the contemporaneous threads reach the same state
-        logger.warning(
+        logger.debug(
             "%s: %s (class %s) reached the start barrier",
             self.last_t, self.name, self.__class__.__name__
         )
@@ -276,10 +266,9 @@ class BaseControllerThread(Base, Root):
         try:
             self._barriers["start"].wait()
         except (KeyError, BrokenBarrierError):
-            logger.info('%s: %s is stopping early', self.last_t, self.name)
+            logger.info('%s: %s is stopping before turning on', self.last_t, self.name)
             return None
 
-        # print("Hardware %s TURNS ON" % self._hardware)
         self.turn_on()
 
         # wait until you should turn off
@@ -289,7 +278,7 @@ class BaseControllerThread(Base, Root):
             while self.last_t < self.end_seconds:
                 time.sleep(1 / self.sampling_rate)
                 if self.stopped:
-                    logger.info('%s: %s is stopping early', self.last_t, self.name)
+                    logger.info('%s: %s is stopping before turning off', self.last_t, self.name)
                     self.turn_off()
                     return
 
@@ -298,7 +287,7 @@ class BaseControllerThread(Base, Root):
 
         # signal to other threads ending simultaneously
         # and those that should start right afterwards
-        logger.warning(
+        logger.debug(
             "%s: %s (class %s) reached the end barrier",
             self.last_t, self.name, self.__class__.__name__
         )
@@ -306,7 +295,7 @@ class BaseControllerThread(Base, Root):
         try:
             self._barriers["end"].wait()
         except (KeyError, BrokenBarrierError):
-            logger.info('%s: %s is stopping early', self.last_t, self.name)
+            logger.info('%s: The end barrier in %s was aborted', self.last_t, self.name)
             return
 
     def abort(self):
@@ -319,8 +308,11 @@ class BaseControllerThread(Base, Root):
             barrier.abort()
 
     def stop(self):
+        logger.debug("Stopping thread")
         super().stop()
+        logger.debug("Aborting barriers")
         self.abort()
+        logger.debug("Turning off")
         self.turn_off()
 
 class WaveBaseControllerThread(BaseControllerThread):
@@ -426,7 +418,6 @@ class ArduinoMixin():
     """
 
     # supplied in the classes where ArduinoMixin is mixed in
-    pin_number = None
     _value = 1
     mode = None
 
