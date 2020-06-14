@@ -120,5 +120,4 @@ LeMDT/logs/*
 **/pypylon
 **/swig*
 *bak
-
-
+*/scripts/*.csv

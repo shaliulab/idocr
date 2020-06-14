@@ -234,6 +234,7 @@ class Controller(DefaultInterface, Base, Root):
                 mode = row['mode']
                 pin_definition = '%s:%s:%s' % ('d', pin_number, mode)
                 pin = self._board.get_pin(pin_definition)
+                logger.warning(pin_definition)
                 self._pins[hardware] = pin
                 seen_hardware.append(hardware)
 
@@ -445,10 +446,7 @@ class Controller(DefaultInterface, Base, Root):
         super().stop()
 
         for thread in self._paradigm:
-            logger.warning("thread.stop")
             thread.stop()
-
-        logger.warning("done with the threads")
 
         for thread in self._paradigm:
             if thread.is_alive():

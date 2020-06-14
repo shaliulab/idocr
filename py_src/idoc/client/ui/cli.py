@@ -322,26 +322,27 @@ class CliUI():
         # TODO Ask functionality
         self._device.stop_experiment()
         return "root"
-        
+
     @staticmethod
     def get_run_id(experiment_folder):
 
         metadata_csv = glob.glob("%s/*_METADATA.csv" % experiment_folder)[0]
         metadata = pd.read_csv(metadata_csv)
-        start_datetime = metadata.loc[metadata['field'] == 'date_time', "value"]
-        machine_id = metadata.loc[metadata['field'] == 'run_id', "value"]
+        start_datetime = metadata.loc[metadata['field'] == 'date_time', "value"].values[0]
+        machine_id = metadata.loc[metadata['field'] == 'machine_id', "value"].values[0]
         run_id = "%s_%s" % (start_datetime, machine_id)
         return run_id
 
 
     def _export_summary_csv(self, experiment_folder, run_id):
         output_csv = os.path.join(experiment_folder, '%s_SUMMARY.csv' % run_id)
-        r_cmd =  "idocr::export_summary('%s', '%s')" % (experiment_folder, output_csv)
+        r_cmd = "idocr::export_summary('%s', '%s')" % (experiment_folder, output_csv)
         subprocess.call(["R", "-e", r_cmd])
 
     def _export_pi_data(self, experiment_folder, run_id):
-        pass
-    
+        output_csv = os.path.join(experiment_folder, '%s_PI.csv' % run_id)
+        r_cmd = "idocr::export_pi('%s', '%s')" % (experiment_folder, output_csv)
+        subprocess.call(["R", "-e", r_cmd])
 
     def export(self, answer):
         """
