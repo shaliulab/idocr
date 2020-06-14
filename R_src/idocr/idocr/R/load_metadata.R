@@ -1,4 +1,5 @@
 #' @importFrom data.table fread
+#'@export
 load_metadata <- function(experiment_folder) {
   
   csv_files <- list.files(path = experiment_folder, pattern = ".csv")

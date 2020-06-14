@@ -10,6 +10,8 @@
 #' @importFrom purrr map_dbl
 #' @import magrittr
 #' @import data.table
+#' @importFrom dplyr mutate case_when
+#' @export
 prepare_shape_data <- function(controller_data, hardware = "LED_R_LEFT") {
   
   print(hardware)
@@ -76,6 +78,7 @@ prepare_shape_data <- function(controller_data, hardware = "LED_R_LEFT") {
 #' and scales the shape accodingly
 #' 
 #' @importFrom purrr map
+#' @export
 scale_shape <- function(shape_data, limits, border) {
   
   # Expand to cover the whole chamber
@@ -89,7 +92,7 @@ scale_shape <- function(shape_data, limits, border) {
   
   # Clip the decision zone
   shape_data <- shape_data %>%
-    mutate(x = case_when(
+    dplyr::mutate(x = dplyr::case_when(
       x == 0 ~ side * border,
       x != 0 ~ x
     ))

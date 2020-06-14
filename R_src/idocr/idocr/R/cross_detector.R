@@ -1,4 +1,5 @@
 #' @importFrom tibble tibble
+#' @export
 cross_detector <- function(roi_data, border, side=1) {
   
   length_encoding <- rle((roi_data$x * side) > border)
@@ -25,6 +26,7 @@ cross_detector <- function(roi_data, border, side=1) {
 #' @importFrom purrr map
 #' @importFrom tibble as_tibble
 #' @import magrittr
+#' @export
 gather_cross_data <- function(cross_detector_FUN = cross_detector, roi_data, border, side) {
   
   # browser()

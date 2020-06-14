@@ -3,6 +3,7 @@
 #' 
 #' @import magrittr 
 #' @importFrom dplyr group_by summarise
+#' @export
 get_event_data <- function(controller_data) {
   controller_data$side <- parse_side(controller_data$hardware)
   

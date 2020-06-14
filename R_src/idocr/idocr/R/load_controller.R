@@ -1,6 +1,7 @@
 #' Load the CONTROLLER_EVENTS table into R
 #' 
 #' @importFrom data.table fread
+#' @export
 load_controller <- function(experiment_folder, set_t0 = TRUE) {
   
   csv_files <- list.files(path = experiment_folder, pattern = ".csv")

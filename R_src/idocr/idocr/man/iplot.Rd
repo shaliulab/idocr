@@ -5,7 +5,7 @@
 \title{Generate base IDOC plot upon which
 more annotation layers can be added}
 \usage{
-iplot(data)
+iplot(experiment_folder, data, limits, run_id = NULL)
 }
 \description{
 Generate base IDOC plot upon which

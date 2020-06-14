@@ -4,6 +4,7 @@
 #' @importFrom purrr imap map discard
 #' @importFrom tibble as_tibble
 #' @return tibble
+#' @export
 load_rois <- function(experiment_folder) {
   
   R_types <- NULL
@@ -22,6 +23,13 @@ load_rois <- function(experiment_folder) {
     purrr::discard(~ nrow(.x) < 10) %>%
     do.call(rbind, .) %>%
     as_tibble
+  
+  roi_data <- roi_data[
+    roi_data %>%
+    select(region_id, t) %>%
+    duplicated %>%
+    !.,
+  ]
   
   if(nrow(roi_data) < 10) {
     return(NULL)

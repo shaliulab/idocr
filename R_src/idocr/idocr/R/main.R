@@ -1,3 +1,4 @@
+#' @importFrom dplyr nest_by summarise
 #' @export
 main <- function(experiment_folder, hardware = c('LED_R_LEFT', 'LED_R_RIGHT'),  old_mapping = FALSE, plot_basename = NULL, border = 10, min_exits_required = 5) {
   
@@ -16,6 +17,7 @@ main <- function(experiment_folder, hardware = c('LED_R_LEFT', 'LED_R_RIGHT'),  
     geom_hline(yintercept = -border, linetype = "dashed"),
     geom_hline(yintercept = border, linetype = "dashed") 
   )
+  
   plot_decision_zone <- TRUE
   plot_preference_index <- TRUE
   
@@ -31,7 +33,7 @@ main <- function(experiment_folder, hardware = c('LED_R_LEFT', 'LED_R_RIGHT'),  
   
   controller_data <- load_controller(experiment_folder)
   
-  controller_data <- map(
+  controller_data <- purrr::map(
     hardware,
     ~prepare_shape_data(
         controller_data = controller_data,
@@ -39,28 +41,26 @@ main <- function(experiment_folder, hardware = c('LED_R_LEFT', 'LED_R_RIGHT'),  
     )
   ) %>%
     do.call(rbind, .) %>%
-    mutate(t_ms = t * 1000)
+    dplyr::mutate(t_ms = t * 1000)
   
   limits <- c(min(roi_data$x), max(roi_data$x))
   rects <- controller_data %>%
-    group_by(hardware) %>%
-    group_split() %>%
-    map(~scale_shape(., limits, rect_pad)) %>%
-    map(~add_polygon(., color = "red"))
+    dplyr::group_by(hardware) %>%
+    dplyr::group_split() %>%
+    purrr::map(~scale_shape(., limits, rect_pad)) %>%
+    purrr::map(~add_polygon(., color = "red"))
   
   roi_data_plot <- add_empty_roi(experiment_folder, roi_data)
   
-
-  
-  p <- iplot(
+  gg <- iplot(
     experiment_folder, roi_data_plot, limits,
     run_id = rev(unlist(strsplit(experiment_folder, split = '/')))[1]
   )
   
   for (rect in rects) {
-    p <- p + rect
+    gg <- gg + rect
   }
-  p <- p + scale_fill_identity(name = 'Hardware', breaks = 'red', labels = 'LED_R', guide = "legend") + guides(color = F)
+  gg <- gg + scale_fill_identity(name = 'Hardware', breaks = 'red', labels = 'LED_R', guide = "legend") + guides(color = F)
   
   cross_data <- rbind(
     gather_cross_data(cross_detector_FUN = cross_detector, roi_data, border = border, side = 1),
@@ -75,6 +75,7 @@ main <- function(experiment_folder, hardware = c('LED_R_LEFT', 'LED_R_RIGHT'),  
     cross_data[!cross_data$beyond,],
     event_data, type = "preference", mask_FUN = seconds_mask
   )
+  
   aversive <- overlap_cross_events(
     cross_data[!cross_data$beyond,],
     event_data, type = "aversive", mask_FUN = seconds_mask
@@ -92,23 +93,23 @@ main <- function(experiment_folder, hardware = c('LED_R_LEFT', 'LED_R_RIGHT'),  
   )
   
   pi_data <- overlap_data %>%
-    nest_by(region_id) %>%
-    summarise(preference_index = preference_index(data, min_exits_required = min_exits_required))
+    dplyr::nest_by(region_id) %>%
+    dplyr::summarise(preference_index = preference_index(data, min_exits_required = min_exits_required))
   
-  p <- p +
+  gg <- gg +
     geom_point(data = preference, aes(x = t, y = x), size = 1) +
     geom_point(data = aversive, aes(x = t, y = x), size = 1, color = "blue", shape = 4)
   
   
   if(plot_decision_zone == TRUE) {
     for (b_line in border_lines) {
-      p <- p + b_line
+      gg <- gg + b_line
     }
   }
   
   if(plot_preference_index == TRUE) {
   
-    p <- p +
+    gg <- gg +
       # ggnewscale::new_scale_fill() +
       geom_label(
         data = pi_data,
@@ -137,5 +138,5 @@ main <- function(experiment_folder, hardware = c('LED_R_LEFT', 'LED_R_RIGHT'),  
     ggplot2::ggsave(filename = file.path(experiment_folder, plot_filename))
   }
 
-  return(p)
+  return(list(gg = gg, pi = pi_data))
 }

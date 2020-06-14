@@ -4,7 +4,7 @@
 \alias{prepare_shape_data}
 \title{Reshape the controller data to be plotted in ggplot2}
 \usage{
-prepare_shape_data(controller_data, hardware = "LED_R_RIGHT")
+prepare_shape_data(controller_data, hardware = "LED_R_LEFT")
 }
 \description{
 Given a table containing when several hardware turned on/off

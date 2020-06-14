@@ -4,7 +4,7 @@
 \alias{load_controller}
 \title{Load the CONTROLLER_EVENTS table into R}
 \usage{
-load_controller(experiment_folder)
+load_controller(experiment_folder, set_t0 = TRUE)
 }
 \description{
 Load the CONTROLLER_EVENTS table into R

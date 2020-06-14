@@ -2,6 +2,7 @@
 #' more annotation layers can be added
 #' 
 #' @import ggplot2
+#' @export
 iplot <- function(experiment_folder, data, limits, run_id=NULL) {
   
   theme_set(theme_bw())
@@ -39,6 +40,7 @@ iplot <- function(experiment_folder, data, limits, run_id=NULL) {
 #' 
 #' @import ggplot2
 #' @importFrom ggforce geom_shape
+#' @export
 add_shape <- function(shape_data, color="red", border="black") {
   
   shape <- geom_shape(
@@ -58,6 +60,7 @@ add_shape <- function(shape_data, color="red", border="black") {
 #' 
 #' @import ggplot2
 #' @importFrom ggforce geom_shape
+#' @export
 add_polygon <- function(shape_data, color="red", border="black") {
   
   shape <- geom_polygon(

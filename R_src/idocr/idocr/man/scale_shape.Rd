@@ -7,7 +7,7 @@ using the x column of tracking data
 scale_shape fetches the width of the chambers
 and scales the shape accodingly}
 \usage{
-scale_shape(shape_data, roi_data)
+scale_shape(shape_data, limits, border)
 }
 \description{
 Scale the x axis of a shape data table

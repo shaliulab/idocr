@@ -1,10 +1,11 @@
 #' Export a single csv with all key data for analysis and plotting outside of R
 #' 
 #' @importFrom tidyr pivot_wider
-#' @importFrom dplyr select, mutate, arrange
+#' @importFrom dplyr select mutate arrange
 #' @importFrom zoo na.locf
 #' @importFrom tibble as_tibble
 #' @import magrittr
+#' @export
 export_summary <- function(experiment_folder, output_csv) {
   
   roi_data <- load_rois(experiment_folder = experiment_folder)
@@ -29,7 +30,7 @@ export_summary <- function(experiment_folder, output_csv) {
     apply(
       X = .,
       MARGIN = 2,
-      FUN = na.locf
+      FUN = zoo::na.locf
     ) %>%
     as_tibble
   

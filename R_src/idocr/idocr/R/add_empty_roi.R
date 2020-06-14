@@ -13,6 +13,7 @@ get_extra_columns <- function() {
 #' This is done to show an empty facet that however fits
 #' the expected 20 animals
 #' @importFrom tibble as_tibble
+#' @export
 add_empty_roi <- function(experiment_folder, roi_data) {
   
   var_map <- load_varmap(experiment_folder)
