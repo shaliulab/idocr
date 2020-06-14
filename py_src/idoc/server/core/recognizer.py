@@ -157,7 +157,7 @@ class Recognizer(Base, Root):
         self._settings['camera'] = self.camera.settings
 
     def _build(self):
-        r"""
+        """
         Build the ROIs used in the experiment
         If it fails, emit a warning and use the whole frame as the ROI
         """
@@ -297,11 +297,6 @@ class Recognizer(Base, Root):
     def run(self):
         """
         Runs the monitor indefinitely.
-
-        :param result_writer: A result writer used to control how data are saved. `None` means no results will be saved.
-        :type result_writer: :class:`~ethoscope.utils.io.ResultWriter`
-        :param drawer: A drawer to plot the data on frames, display frames and/or save videos. `None` means none of the aforementioned actions will performed.
-        :type drawer: :class:`~ethoscope.drawers.drawers.BaseDrawer`
         """
 
         if self.ready is not True:
@@ -315,10 +310,6 @@ class Recognizer(Base, Root):
             for items in enumerate(self.camera):
 
                 i, (t_ms, frame) = items
-
-                # if self._user_data["sync"]:
-                #     while t_ms > (self.elapsed_seconds * 1000):
-                #         time.sleep(0.1)
 
                 if self.result_writer is not None:
                     self.result_writer.last_t = self.last_t
@@ -345,7 +336,6 @@ class Recognizer(Base, Root):
 
                     abs_pos = track_u.get_last_positions(absolute=True)
 
-                    # if abs_pos is not None:
                     self._last_positions[track_u.roi.idx] = abs_pos
 
                     if self.result_writer is not None:

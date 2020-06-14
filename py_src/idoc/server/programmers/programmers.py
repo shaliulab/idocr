@@ -15,20 +15,12 @@ import numpy as np
 import pandas as pd
 
 from idoc.server.core.base import Root, Settings
-from idoc.server.controllers.threads import DefaultArduinoThread, WaveArduinoThread
-from idoc.server.controllers.threads import DefaultDummyThread, WaveDummyThread
+
 from idoc.configuration import IDOCConfiguration
 from idoc.debug import IDOCException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-
-THREADS = {
-    "ArduinoDummy": {"default": DefaultDummyThread, "wave": WaveDummyThread},
-    "ArduinoX": {"default": DefaultArduinoThread, "wave": WaveArduinoThread}
-    }
-
 
 class Programmer(Settings, Root):
     r"""
@@ -37,39 +29,23 @@ class Programmer(Settings, Root):
 
     table = None
     _paradigms_dir = None
+    _required_columns = ["hardware", "start", "end", "on", "off", "mode", "value"]
 
     def __init__(
-            self, result_writer, board_class, pin_state, sampling_rate, mapping, paradigm_path, *args,
-            use_wall_clock=True, arduino_port="/dev/ttyACM0", **kwargs
+            self, paradigm_path, *args, **kwargs
         ):
 
         super().__init__(*args, **kwargs)
 
-        self._use_wall_clock = use_wall_clock
-        self._result_writer = result_writer
         self._paradigms_dir = self._config.content["folders"]["paradigms"]["path"]
-        self._arduino_port = arduino_port
-        self._board_class = board_class
-        self._board = None
-        self._sampling_rate = sampling_rate
-        self._mapping = mapping
-        self.pin_state = pin_state
         self._barriers = {}
-        self._paradigm = []
         self.table = []
         self._submodules = {}
         self._settings.update({
             'paradigm_path': None,
         })
 
-        self._loaded = False
-        self._locked = False
         self.paradigm_path = paradigm_path
-
-
-    @property
-    def board(self):
-        return self._board
 
     def list(self, dict_format=True):
         r"""
@@ -83,16 +59,6 @@ class Programmer(Settings, Root):
             return {i: f for i, f in enumerate(files) if f[::-1][:4][::-1] == ".csv"}
         else:
             return files
-
-
-    @property
-    def paradigm(self):
-        return self._paradigm
-
-    @property
-    def ready(self):
-        return self._paradigm is not None
-
 
     @property
     def paradigm_name(self):
@@ -112,67 +78,12 @@ class Programmer(Settings, Root):
         and prepare the corresponding threads so the Controller
         can run them.
         """
-
-        # logger.warning("Updating paradigm_path")
-
-        if paradigm_path is None:
-            return
-
-        if paradigm_path == self._settings['paradigm_path']:
-            return
-
-        # if there already is an initialized board, close it
-        # so we can open it again
-        # a fresh board is always needed because otherwise a
-        # pyfirmata.pyfirmata.PinAlreadyTakenError is raised
-        # when the Thread classes attempt to retrieve their pin
-        self._loaded = False
-        if self._board is not None:
-            self._board.exit()
-
-        self._board = self._board_class(self._arduino_port)
-        self._settings['paradigm_path'] = paradigm_path
-
         # load the data in paradigm_path into Python
 
-        try:
-            self._load_table(paradigm_path)
-        except Exception as error:
-            logger.warning("Error reading your paradigm into IDOC")
-            logger.debug(error)
-            logger.debug(traceback.print_exc())
-            return
-
-        if self.table == []:
-            logger.warning("Error reading your paradigm into IDOC")
-            return
-
-        # actually generate the threads that this paradigm dictates
-        try:
-            self._prepare()
-            self._loaded = True
-        except Exception as error:
-            logger.warning("Error loading your paradigm into IDOC")
-            logger.debug(error)
-            logger.debug(traceback.print_exc())
-            return
-
-
-    @property
-    def duration(self):
-        r"""
-        Return maximum value of end stored in the table
-        used to generate the paradigm
-        This is considered as the duration of the paradigm
-        The value is returned in seconds, assumming the user input was in seconds
-        """
-        ends = [row["end"] for row in self.table]
-        try:
-            duration = max(ends)
-            return duration
-
-        except ValueError:
-            return None
+        if not self._load_table(paradigm_path):
+            raise IDOCException('The provided paradigm could not be loaded. See more details below')
+        
+        self._settings['paradigm_path'] = paradigm_path
 
     @property
     def absolute_paradigm_path(self):
@@ -188,180 +99,124 @@ class Programmer(Settings, Root):
 
         return absolute_path
 
+    def _validate_paradigm_df(self, df):
+        """
+        Check the data frame provided in the paradigm_path .csv file
+        fulfills the IDOC requirements
+
+        * It should contain the columns in self._required_columns
+        """
+        # TODO Add more checks
+
+        missing_columns = []
+        for column in self._required_columns:
+            if column not in df.columns:
+                missing_columns.append(column)
+
+        if len(missing_columns) != 0:
+            logger.warning("%s are missing in the paradigm. Please add them", ' '.join(missing_columns))
+            return False
+
+        return True
+
+    def _validate_paradigm_path(self, paradigm_path):
+        """
+        Check the paradigm path is valid. It should:
+        
+        * Not be None
+        * Be within the list of available paradigms
+        """
+        if paradigm_path is None:
+
+            self.table = None
+            self._paradigm.clear()
+            return False
+
+        elif paradigm_path not in self.list(dict_format=False):
+            self.table = None
+            self._paradigm .clear()
+            logger.warning("The passed paradigm does not exist!")
+            return False
+
+        else:
+            return True
+
     def _load_table(self, paradigm_path):
-        r"""
+        """
         Load a csv into python in list format
         Each row becomes a dictionary inside the list
         and the columns and their values are encoded
         as key-value pairs of the dictionary.
         """
 
-        # make sure the old table is removed, if any
-        self.table = []
+        # make sure the old table is reset, if populated at all
+        self.table.clear()
 
-        if paradigm_path is None:
-
-            self.table = None
-            self._paradigm = None
-            return
-
-        elif paradigm_path not in self.list(dict_format=False):
-            self.table = None
-            self._paradigm = None
-            logger.warning("The passed paradigm does not exist!")
-            return
+        # series of checks to make sure the provided paradigm is valid
+        if not self._validate_paradigm_path(paradigm_path):
+            logger.warning("Error reading your paradigm into IDOC. Paradigm path is invalid")
+            return False
 
         table_df = pd.read_csv(self.absolute_paradigm_path)
-
-        required_columns = ["start", "end", "on"]
-        missing_index = [not e in table_df.columns for e in required_columns]
-
-        if "off" not in table_df.columns:
-
-            if "hertz" in table_df.columns:
-                off = (1000  - table_df["on"] * table_df["hertz"]) / table_df["hertz"]
-                table_df["off"] = off
-                table_df.drop(["hertz"], axis=1)
-
-            else:
-                missing_index.append(True)
-
-
-        missing_columns = list(compress(required_columns, missing_index))
-        synonym_available = sum([e in table_df.columns for e in ["hardware", "pin_id"]])
-
-        if len(missing_columns) != 0:
-            logger.warning("Provided paradigm is not valid. Please provide columns %s", ' '.join(missing_columns))
-            return
-
-        if synonym_available != 1:
-            logger.warning("Please provide a column called hardware on your paradigm")
-            return
-
-        if synonym_available == 2:
-            table_df.drop(["pin_id"], index=1)
+        if not self._validate_paradigm_df(df):
+            logger.warning("Error reading your paradigm into IDOC. Paradigm is invalid")
+            return False
 
         # convert on and off from ms to seconds
+        # we assume the user enters this in ms because its more convenient for him/her
+        table_df["start"] *= 60
+        table_df["end"] *= 60
         table_df["on"] /= 1000
         table_df["off"] /= 1000
 
+        # coerce to a dictionary
         for row_tuple in table_df.iterrows():
             row = row_tuple[1].to_dict()
             self.table.append(row)
 
+        if self.table == []:
+            logger.warning("Error reading your paradigm into IDOC. Table is empty")
+            return False
+            
         logger.debug(self.table)
+        return True
 
-
-    def _parse(self, row, i):
-        r"""
+    @staticmethod
+    def parse(row, i):
+        """
         Process the content of the row inside prepare() and return a
         kwargs dictionary that can be unpacked upon BaseControllerThead
         initializations.
         """
 
-        # XOR (signals invalid user input in the loaded paradigm)
-        if np.isnan(row['on']) ^ np.isnan(row['off']):
-            logger.warning(
-                "Row number %d in paradigm %s is malformed",
-                i+1, self._settings['paradigm_path']
-            )
-            logger.warning("You have defined either on or off but not the other")
-            logger.warning("Ignoring row")
-            return {}
-
-
         kwargs = {
-            "start": row["start"], "end": row["end"],
-            "board": self._board,
-            "sampling_rate": self._sampling_rate,
-            "pin_state": self.pin_state
+            "i": str(i).zfill(3),
+            "hardware": row['hardware'],
+            "start": row["start"],
+            "end": row["end"],
+            "value": float(row['value']),
+            "mode": row['mode']
         }
 
-        # get the hardware name
-        try:
-            # expect column with hardware name to be called hardware
-            # but accept pin_id too
-            hardware = row["hardware"]
-        except KeyError:
-            hardware = row["pin_id"]
-            logger.debug(hardware)
-        finally:
-            # handle US-UK spelling
-            hardware = hardware.replace("ODOUR", "ODOR")
-
-        # get the pin number from the mapping using the hardware name
-        try:
-            pin_number = self._mapping[hardware]
-        except KeyError:
-            raise Exception("%s is not available in the mapping" % hardware)
-
-        # Deduce a mode and a value from user input and the config file
-        value = None
-        mode = None
-
-        # if a mode is provided in the user input, use that
-        # otherwise set mode to undefined
-        if "mode" in row:
-            mode = row["mode"]
-
-
-        # if the hardware is listed in the config as using pwm
-        # and mode is p or undefined (i.e. not provided)
-        # assume pwm and use the value from the config
-        if hardware in self._config.content["controller"]['pwm']:
-            if mode == "p" or mode is None:
-                mode = "p"
-                value = self._config.content["controller"]['pwm'][hardware]
-            # if it is listed but the user provided a defined mode
-            # and is not pwm, then use it and set the value to 1
-            else:
-                value = 1
-
-        # otherwise, if the hardware is not listed in the config as pwm
-        # but the user provided a value and the mode is p
-        # just take that value
-        elif mode == "p":
-            if "value" in row:
-                value = row["value"]
-            else:
-                logger.warning(
-                    'User requested %s in p mode but a pwm value is not available in the config or the input',
-                    hardware
-                )
-                mode = "o"
-        else:
-            mode = "o"
-            value = 1
-
-        try:
-            assert mode is not None and value is not None
-        except AssertionError:
-            template = "%s has invalid configuration: mode %s and value %s"
-            message = template % (hardware, mode, value)
-            logger.warning(message)
-            raise IDOCException
-
-
-        # push these 3 values to kwargs
-        kwargs.update({
-            "hardware": hardware,
-            "pin_number": pin_number,
-            "value": float(value),
-            "mode": mode
-        })
-
-        # check if on AND off times are NOT defined (is.nan)
-        # in that case do nothing
+        # Decide here which thread to use
+        # Either a thread that leaves the pin on constitutively
         if np.isnan(row['on']) and np.isnan(row['off']):
-            pass
+            thread = "DEFAULT"
 
-        # otherwise add them (a XOR above was already checked above)
+        # or a thread that implements a duty cycle with some frequency
+        # and phase given by on and off
+        elif not np.isnan(row['on']) and not np.isnan(row['off']):
+            thread = "WAVE"
+            kwargs["seconds_on"] = row["on"]
+            kwargs["seconds_off"] = row["off"]
+
         else:
-            kwargs.update({"seconds_on": row["on"], "seconds_off": row["off"]})
+            raise IDOCException('Row %d: one of on or off is defined, but not both. Please fix this', i)
 
-        return kwargs
+        return thread, kwargs
 
-    def _make_barriers(self):
+    @staticmethod
+    def make_barriers(table):
         r"""
         Generate barriers for perfect on-off alternation between threads
         using the start and stop times of the threads in the paradigm
@@ -375,28 +230,28 @@ class Programmer(Settings, Root):
         or starting right after (the end barrier is the same as the start barrier of those).
         """
 
-        self._barriers = {}
+        barriers = {}
 
         switch_times = {
-            "start": Counter([e["start"] for e in self.table]),
-            "end": Counter([e["end"] for e in self.table]),
-            "total": Counter([v[e] for e in ["start", "end"] for v in self.table])
+            "start": Counter([e["start"] for e in table]),
+            "end": Counter([e["end"] for e in table]),
+            "total": Counter([v[e] for e in ["start", "end"] for v in table])
         }
 
-        self._barriers = {k: Barrier(v) for k, v in switch_times["total"].items()}
+        barriers = {k: Barrier(v) for k, v in switch_times["total"].items()}
 
-        for switch_time in self._barriers:
+        for switch_time in barriers:
             logger.debug(
                 "Barrier at time %d with id %s will wait for %d parties",
                 switch_time,
-                id(self._barriers[switch_time]),
-                self._barriers[switch_time].parties
+                id(barriers[switch_time]),
+                barriers[switch_time].parties
             )
 
-        return self._barriers
+        return barriers
 
-
-    def _add_barriers(self, paradigm):
+    @staticmethod
+    def add_barriers(paradigm, barriers):
         r"""
         Add the barriers to the threads in the right position.
         """
@@ -405,51 +260,13 @@ class Programmer(Settings, Root):
         # at the expense of slightly increased waiting times
         for thread in paradigm:
 
-            start_barrier = self._barriers[thread.start_seconds]
+            start_barrier = barriers[thread.start_seconds]
             thread.add_barrier(start_barrier, "start")
 
-            end_barrier = self._barriers[thread.end_seconds]
+            end_barrier = barriers[thread.end_seconds]
             thread.add_barrier(end_barrier, "end")
 
-    def _prepare(self):
-        r"""
-        Given a paradigm_table, parse it
-        to produce a paradigm by storing instances of
-        ControllerThread in the self._paradigm list.
-        A paradigm is a list of ControllerThread instances
-        """
+        return paradigm
 
-        if self._locked:
-            return
-
-        self._paradigm.clear()
-        logger.warning("Clearing paradigm")
-
-        for i, row in enumerate(self.table):
-
-            kwargs = {"i": str(i).zfill(3)}
-            # import ipdb; ipdb.set_trace()
-            extra_kwargs = self._parse(row, i)
-            kwargs.update(extra_kwargs)
-            kwargs["result_writer"] = self._result_writer
-            kwargs["use_wall_clock"] = self._use_wall_clock
-            logger.debug(kwargs)
-
-
-            board_name = kwargs["board"].board_compatible
-
-            if all([e in kwargs for e in ["seconds_on", "seconds_off"]]):
-                ThreadClass = THREADS[board_name]["wave"] # pylint: disable=invalid-name
-            else:
-                ThreadClass = THREADS[board_name]["default"] # pylint: disable=invalid-name
-
-            logger.debug("Selecting %s", ThreadClass.__name__)
-            thread = ThreadClass(
-                **kwargs
-            )
-
-            self._paradigm.append(thread)
-
-        self._make_barriers()
-        self._add_barriers(self._paradigm)
-        logger.debug(self._paradigm)
+    def lock(self):
+        self._locked = True

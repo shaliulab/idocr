@@ -25,11 +25,10 @@ class BaseControllerThread(Base, Root):
     """
 
     _modes = {"output": "o", "pwm": "p"}
-    _board = None
     pin_state = None
 
     def __init__(
-            self, i: int, hardware: str, board, pin_state: dict, pin_number: int, mode: str, start, end, value: float, *args,
+            self, i: int, hardware: str, pin, pin_state: dict, pin_number: int, mode: str, start, end, value: float, *args,
             sampling_rate=10.0, result_writer=None, use_wall_clock=False, **kwargs
         ):
         """
@@ -42,11 +41,6 @@ class BaseControllerThread(Base, Root):
         Not used in the code other than for logging. The variable that tells an instance which pin
         to control is pin_number.
         :type hardware: ``str`
-
-        :param board:
-        An object of type pyfirmata board that is shared across threads
-        and contains handlers for the physical board pins.
-        It needs to provide get_pin and write methods.
 
         :param pin_state:
         A dictionary storing pairs of pin numbers and their corresponding state
@@ -97,7 +91,7 @@ class BaseControllerThread(Base, Root):
 
         self.index = i
         self._hardware = hardware
-        self._board = board
+        self._pin = pin
         self.pin_state = pin_state
         self._barriers = {}
         self._result_writer = result_writer
@@ -118,7 +112,6 @@ class BaseControllerThread(Base, Root):
 
         string = 'd:%d:%s' % (self._pin_number, self._mode)
         logger.debug(string)
-        self._pin = self._board.get_pin(string)
 
 
     @property
@@ -433,7 +426,6 @@ class ArduinoMixin():
     """
 
     # supplied in the classes where ArduinoMixin is mixed in
-    _board = None
     pin_number = None
     _value = 1
     mode = None

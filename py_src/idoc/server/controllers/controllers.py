@@ -9,6 +9,10 @@ from idoc.server.hardware.interfaces.interfaces import DefaultInterface
 from idoc.server.programmers.programmers import Programmer
 from idoc.server.core.base import Base, Root
 from idoc.helpers import hours_minutes_seconds, iso_format, MachineDatetime
+from idoc.server.controllers.threads import DefaultArduinoThread, WaveArduinoThread
+from idoc.server.controllers.threads import DefaultDummyThread, WaveDummyThread
+
+
 
 # Tell pylint everything here is abstract classes
 # pylint: disable=undefined-loop-variable
@@ -26,6 +30,11 @@ class Controller(DefaultInterface, Base, Root):
     _programmerClass = Programmer
     valid_actions = ["start", "stop", "reset"]
     _always_on_hardware = ["TARGETS", "MAIN_VALVE", "VACUUM", "IRLED"]
+    _threads = {
+    "ArduinoDummy": {"DEFAULT": DefaultDummyThread, "WAVE": WaveDummyThread},
+    "ArduinoX": {"DEFAULT": DefaultArduinoThread, "WAVE": WaveArduinoThread}
+    }
+
 
     def __init__(
             self, mapping_path, paradigm_path, result_writer, board_class, *args,
@@ -54,7 +63,7 @@ class Controller(DefaultInterface, Base, Root):
 
         DefaultInterface.__init__(self)
 
-        use_wall_clock = kwargs.pop("use_wall_clock")
+        self._use_wall_clock = kwargs.pop("use_wall_clock")
         super().__init__(*args, **kwargs)
 
         self._mapping_path = mapping_path or self._config.content["controller"]["mapping_path"]
@@ -67,27 +76,28 @@ class Controller(DefaultInterface, Base, Root):
 
         # Board instance compatible with the threads classes
         self._board_class = board_class
-        self._arduino_port = arduino_port
         self._result_writer = result_writer
+        self._sampling_rate = sampling_rate
         self.adaptation_offset = 0
+        self._arduino_port = arduino_port
+        self._board = None
+        self._pins = {}
 
         # Programmer instance that processes user input
         # into a 'program', an organized sequence of events
         # that turn on and off the pins in the board
 
         self._submodules['programmer'] = self._programmerClass(
-            result_writer,
-            self._board_class, self._pin_state, sampling_rate,
-            self._mapping, *args,
-            use_wall_clock=use_wall_clock,
-            paradigm_path=self._paradigm_path,
-            arduino_port=self._arduino_port
+            *args, paradigm_path=self._paradigm_path
         )
 
         self._settings['programmer'] = self._submodules['programmer'].settings
         self._progress = 0
         self._last_t = 0
-        self._pins = {}
+        self._paradigm = []
+        self._loaded = False
+        self._locked = False
+
 
     @property
     def last_t(self):
@@ -100,7 +110,7 @@ class Controller(DefaultInterface, Base, Root):
     def toggle(self, hardware, value):
 
         try:
-            for thread in self.programmer.paradigm:
+            for thread in self._paradigm:
                 if thread.hardware == hardware:
 
                     if value == 0:
@@ -122,6 +132,24 @@ class Controller(DefaultInterface, Base, Root):
     @property
     def programmer(self):
         return self._submodules["programmer"]
+
+
+    @property
+    def duration(self):
+        """
+        Return maximum value of end stored in the table
+        used to generate the paradigm
+        This is considered as the duration of the paradigm
+        The value is returned in seconds, assumming the user input was in seconds
+        """
+        ends = [row["end"] for row in self.programmer.table]
+        try:
+            duration = max(ends)
+            return duration
+
+        except ValueError:
+            return None
+    
 
     @property
     def progress(self):
@@ -183,8 +211,57 @@ class Controller(DefaultInterface, Base, Root):
 
         return self._info
 
-    def load(self, paradigm_path):
-        self.programmer.paradigm_path = paradigm_path
+
+    def populate_pins(self, table):
+        """
+        Take a table produced by programmer._load_table
+        (a list of dicts with keys equal to the arguments
+        of the thread classes init functions)
+        Read which mode is used in each pin and get them from the
+        board with the right mode.
+        Save these pins under the dictionary self._pins with keys
+        equal to the name of the hardware connected to that pin
+        """
+
+        seen_hardware = []
+        for row in table:
+            hardware = row['hardware']
+            if hardware not in seen_hardware:
+                pin_number = self._mapping[hardware]
+                mode = row['mode']
+                pin_definition = '%s:%s:%s' % ('d', pin_number, mode)
+                pin = self._board.get_pin(pin_definition)
+                self._pins[hardware] = pin
+
+            else:
+                pass   
+
+    @property
+    def paradigm_path(self):
+        return self._paradigm_path
+
+    @paradigm_path.setter
+    def paradigm_path(self, paradigm_path):
+
+        # don't load again if the program has the same filename
+        # this is done to avoid a superfluous update resetting the self.paradigm object
+        if paradigm_path != self.programmer.paradigm_path:
+ 
+
+            # if there already is an initialized board, close it
+            # so we can open it again
+            # a fresh board is always needed because otherwise a
+            # pyfirmata.pyfirmata.PinAlreadyTakenError is raised
+            # when the Thread classes attempt to retrieve their pin
+            self._loaded = False
+            if self._board is not None:
+                self._board.exit()
+
+            self._board = self._board_class(self._arduino_port)
+            self.programmer.paradigm_path = paradigm_path
+            self.populate_pins(self.programmer.table)
+            self._prepare()
+
 
     @property
     def pin_state(self):
@@ -204,41 +281,22 @@ class Controller(DefaultInterface, Base, Root):
         physically wired to.
         """
         mapping_df = pd.read_csv(mapping_path, comment='#')
-        required_columns = ['pin_id', 'pin_number']
+        required_columns = ['hardware', 'pin_number']
 
         if not all([e in mapping_df.columns for e in required_columns]):
             logger.warning("Provided mapping is not valid")
             logger.warning("mapping_path: %s", mapping_path)
             logger.warning("Required columns %s", ' '.join(required_columns))
             logger.warning("Provided columns %s", ' '.join(mapping_df.columns))
-
-
             return
 
         mapping = {}
-        logger.debug("mapping_df")
-        logger.debug(mapping_df)
-
         for row_tuple in mapping_df.iterrows():
             row = row_tuple[1].to_dict()
-            mapping[row["pin_id"]] = row["pin_number"]
+            mapping[row["hardware"]] = row["pin_number"]
 
-        logger.debug("mapping")
-        logger.debug(mapping)
-
-        # catch columns called odour_x and make sure they are called odor_x
-        # and make all keys the same length by padding spaces
-        mapping_formatted = {}
-        for k in mapping:
-            k_american = k.replace("ODOUR", "ODOR")
-            # k_american = k_american.ljust(16)
-            mapping_formatted[k_american] = mapping[k]
-
-        logger.debug("list of keys in mapping_formatted")
-        logger.debug(list(mapping_formatted.keys()))
-
-        return mapping_formatted
         # TODO additional processing steps to guarantee standard mapping format
+        return mapping
 
     @property
     def columns(self):
@@ -259,7 +317,6 @@ class Controller(DefaultInterface, Base, Root):
     def ready(self, value): # pylint: disable=unused-argument
         return None
 
-
     @property
     def wait(self):
         return max(0, self.adaptation_offset - self.init_elapsed_seconds)
@@ -268,7 +325,6 @@ class Controller(DefaultInterface, Base, Root):
     def adaptation_left(self):
         return max(0, self.adaptation_offset - self.wait)
 
-
     def run_minimal(self):
         """
         Start executing the threads whose hardware matches the names listed in
@@ -276,13 +332,12 @@ class Controller(DefaultInterface, Base, Root):
         """
 
         for hardware in self._always_on_hardware:
-            for thread in self.programmer.paradigm:
+            for thread in self._paradigm:
                 if thread.hardware == hardware:
                     logger.info('Turning on %s', thread.hardware)
                     thread.pin.write(1)
                     # TODO what happens with the time_zero?
         time.sleep(2)
-
 
     def tick(self, last_t):
         """
@@ -292,9 +347,49 @@ class Controller(DefaultInterface, Base, Root):
         self.last_t = last_t
         if self.programmer._loaded:
             if self.running:
-                for thread in self.programmer.paradigm:
+                for thread in self._paradigm:
                     thread.last_t = self.last_t
 
+    def _prepare(self):
+        """
+        Given a paradigm_table, parse it
+        to produce a paradigm by storing instances of
+        ControllerThread in the self._paradigm list.
+        A paradigm is a list of ControllerThread instances
+        """
+
+        if self._locked:
+            return
+
+        self._paradigm.clear()
+        logger.warning("Clearing paradigm")
+
+        for i, row in enumerate(self.programmer.table):
+
+            thread, kwargs = self.programmer.parse(row, i)
+            kwargs["result_writer"] = self._result_writer
+            kwargs["sampling_rate"] = self._sampling_rate
+            kwargs["pin"] = self._pins[kwargs['hardware']]
+            
+            logger.debug(kwargs)
+
+            ThreadClass = self._threads[self._board_class.__name__][thread]
+
+            logger.debug("Selecting %s", ThreadClass.__name__)
+            thread = ThreadClass(
+                **kwargs
+            )
+
+            self._paradigm.append(thread)
+
+        barriers = self.programmer.make_barriers(self.programmer.table)
+        self._paradigm = self.programmer.add_barriers(self._paradigm, barriers)
+        logger.debug(self._paradigm)
+
+
+    def lock(self):
+        self.programmer.lock()
+        self._locked = True
 
     def run(self):
         r"""
@@ -307,15 +402,9 @@ class Controller(DefaultInterface, Base, Root):
             self._end_event.wait(0.1)
 
         self.ready = True
+        self.lock()
         super().run()
-
-        if not self._submodules['programmer'].ready:
-            logger.warning("Please load a program before recording")
-            logger.info(self._submodules['programmer'].list())
-            return
-
-        self._submodules['programmer']._locked = True
-        for thread in self._submodules['programmer'].paradigm:
+        for thread in self._paradigm:
             try:
                 thread.time_zero = self.time_zero
 
@@ -335,10 +424,10 @@ class Controller(DefaultInterface, Base, Root):
 
         super().stop()
 
-        for thread in self._submodules['programmer'].paradigm:
+        for thread in self._paradigm:
             thread.stop()
 
-        for thread in self._submodules['programmer'].paradigm:
+        for thread in self._paradigm:
             if thread.is_alive():
                 thread.join()
                 logger.debug("Joined %s", thread.name)

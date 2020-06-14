@@ -146,8 +146,6 @@ class ROI(object):
         """
         x,y,w,h = self._rectangle
 
-
-
         try:
             out = img[y : y + h, x : x +w]
         except:

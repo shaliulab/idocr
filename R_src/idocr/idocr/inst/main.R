@@ -1,4 +1,3 @@
-
 # main(experiment_folder ='/1TB/Cloud/Data/idoc_data/results/7eb8e224bdb944a68825986bc70de6b1/FLYSLEEPLAB_SETUP/2020-06-10_17-42-08', old_mapping = TRUE, plot_basename = '2020-06-10_17-42-08')
 # main(experiment_folder = '/1TB/Cloud/Data/idoc_data/results/7eb8e224bdb944a68825986bc70de6b1/FLYSLEEPLAB_SETUP/2020-06-10_17-48-53/', old_mapping = TRUE, plot_basename = '2020-06-10_17-48-53')
 p1 <- main(experiment_folder = '/1TB/Cloud/Data/idoc_data/results/FLYSLEEPLAB_SETUP/2020-06-12_13-27-08', border = 10, min_exits_required = 3)
