@@ -62,6 +62,11 @@ class BaseDrawer(Base, Root):
         self._annotated_video = None
 
 
+    @property
+    def frame_count(self):
+        return self._frame_count
+
+
     def framerate(self):
         return round(self._settings['framerate'])
 

@@ -63,7 +63,7 @@ class Recognizer(Base, Root):
         self._last_positions = {}
         self._last_time_stamp = 0
         self._last_tick = 0
-        self._period = 2
+        self._period = 1
         self._unit_trackers = []
         self._rois = rois
         self._frame_buffer = None
@@ -362,6 +362,7 @@ class Recognizer(Base, Root):
                     if tick > self._last_tick:
                         # logger.debug("Writing frame %d", i)
                         self.drawer.write_frames()
+                        self.result_writer.write_frames(frame, self.drawer.frame_count)
 
                     self._last_tick = tick
 

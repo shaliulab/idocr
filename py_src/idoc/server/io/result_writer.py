@@ -5,6 +5,7 @@ import os.path
 #import traceback
 
 # Third party imports
+import cv2
 import pandas as pd
 
 # Local application imports
@@ -23,6 +24,9 @@ class CSVResultWriter(Settings, Status, Root):
     Save results to csv files styled in the format:
     start_datetime + '_idoc_' + self._machine_id + _TABLENAME .csv
     """
+
+    _quality = cv2.IMWRITE_JPEG_QUALITY
+
     def __init__(self, *args, nrois=20, max_n_rows_to_insert=10, **kwargs):
 
         super().__init__(*args, **kwargs)
@@ -78,6 +82,20 @@ class CSVResultWriter(Settings, Status, Root):
             self._result_dir = ""
 
         return self._result_dir
+
+    @property
+    def img_snapshots(self):
+        return os.path.join(
+            self.result_dir,
+            "IMG_SNAPSHOTS"
+        )
+
+    @property
+    def snapshots_template(self):
+        return os.path.join(
+            self.img_snapshots,
+            "FRAME_%s.jpg"
+        )
 
     @property
     def output_csv(self):
@@ -167,11 +185,20 @@ class CSVResultWriter(Settings, Status, Root):
 
             if not self._var_map_initialised:
                 self.initialise_var_map(data_rows[0])
-                
+
             table_name = "ROI_%d" % roi.idx
             for row in data_rows:
                 data_points = {**{"id": 0}, **{v.header_name: v for v in row.values()}}
             self.process_row(data_points, table_name)
+
+
+    def write_frames(self, img, idx):
+
+        if not os.path.isdir(self.img_snapshots):
+            os.makedirs(self.img_snapshots)
+
+        cv2.imwrite(self.snapshots_template % str(idx).zfill(7), img, [int(self._quality), 50])
+
 
     def process_row(self, data, table_name):
         """
@@ -184,12 +211,12 @@ class CSVResultWriter(Settings, Status, Root):
             data.update({"t": self.last_t})
             data.update({"elapsed_seconds": self.elapsed_seconds})
 
-            # print(self.elapsed_seconds)
-            # print(self._time_zero)
+            self._cache[table_name].append(data)
 
+            # if table_name == "CONTROLLER_EVENTS":
+            #     print(self._cache[table_name])
             if len(self._cache[table_name]) >= self._max_n_rows_to_insert:
                 self.store_and_clear(table_name)
-            self._cache[table_name].append(data)
 
     def get_table_path(self, table_name):
         """
@@ -219,6 +246,8 @@ class CSVResultWriter(Settings, Status, Root):
             header = True
 
         # Write the cache to disk in a csv file
+        # if table_name == "CONTROLLER_EVENTS":
+        #     print(records)
         records.to_csv(table_path, mode=mode, header=header)
         # Once the cache has been written to disk,
         # clear it from RAM
