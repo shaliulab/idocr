@@ -1,4 +1,4 @@
-pin_id,pin_number
+hardware,pin_number
 IRLED,45
 LED_R_LEFT,3
 LED_R_RIGHT,2
