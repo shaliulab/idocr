@@ -154,7 +154,7 @@ class Programmer(Settings, Root):
             logger.warning("Error reading your paradigm into IDOC. Paradigm path is invalid")
             return False
 
-        table_df = pd.read_csv(self.absolute_paradigm_path)
+        table_df = pd.read_csv(self.absolute_paradigm_path, comment='#')
         if not self._validate_paradigm_df(table_df):
             logger.warning("Error reading your paradigm into IDOC. Paradigm is invalid")
             return False

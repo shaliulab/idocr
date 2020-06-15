@@ -325,6 +325,7 @@ class Controller(DefaultInterface, Base, Root):
 
     def load_paradigm(self, paradigm_path):
         if paradigm_path is not None:
+            logger.info('Loading paradigm: %s', paradigm_path)
             self.programmer.paradigm_path = paradigm_path
 
     @property
