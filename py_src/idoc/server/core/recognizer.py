@@ -3,8 +3,10 @@ Track flies, record their position and draw the incoming frames
 """
 import datetime
 import logging
+import os.path
 import time
 import traceback
+
 
 from idoc.server.core.tracking_unit import TrackingUnit
 from idoc.server.core.variables import FrameCountVariable
@@ -357,7 +359,12 @@ class Recognizer(Base, Root):
                 if self.drawer is not None:
                     annot = self.drawer.draw(frame, tracking_units=self._unit_trackers, positions=self._last_positions, metadata=metadata)
                     tick = int(round((t_ms / 1000.0) / self._period))
-                    self.drawer.write_videos(video_output=self._time_running)
+                    if self._time_running:
+                        video_root = os.path.join(
+                            self.result_writer.result_dir,
+                            "%s.avi" % self.result_writer.run_id_long
+                        )
+                        self.drawer.write_videos(video_root=video_root)
 
                     if tick > self._last_tick:
                         # logger.debug("Writing frame %d", i)

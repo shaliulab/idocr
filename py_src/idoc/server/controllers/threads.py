@@ -245,6 +245,7 @@ class BaseControllerThread(Base, Root):
         )
 
         while self.last_t < self.start_seconds:
+            # print("%s - %s", self._hardware, self.last_t)
 
             time.sleep(1 / self.sampling_rate)
 

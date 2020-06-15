@@ -61,9 +61,9 @@ class CliUI():
                 ('CLEAR', self.clear, "root"),
                 ('PROMPT', self.prompt, "root"),
                 ('EXPORT', self.export, "root"),
-                ('RESTART', self.restart, "root"),
+                ('RESTART', self.restart, "root")
                 # ('RESET', self.reset, "root"),
-                ('QUIT', self.quit, "root"),
+                # ('QUIT', self.close, "root"),
 
             ],
 
@@ -314,7 +314,11 @@ class CliUI():
         self._pick_menu()
         return "root"
 
-    def stop(self, answer, signo):
+    @staticmethod
+    def quit(signo):
+        self.stop(0)
+
+    def stop(self, answer):
         """
         "Ask the user if output should be saved
         and quit the program
@@ -366,7 +370,7 @@ class CliUI():
         self._device.reset_experiment()
         return "root"
 
-    def quit(self, answer):
+    def close(self, answer):
         print("Quitting IDOC")
         self._ds.stop()
         self.stopped = True
@@ -454,7 +458,7 @@ if __name__ == "__main__":
 
     signals = ('TERM', 'HUP', 'INT')
     for sig in signals:
-        signal.signal(getattr(signal, 'SIG' + sig), cli.stop)
+        signal.signal(getattr(signal, 'SIG' + sig), cli.quit)
 
 
     cli.run()

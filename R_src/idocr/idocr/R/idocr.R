@@ -1,18 +1,13 @@
 #' @importFrom dplyr nest_by summarise
 #' @export
-main <- function(experiment_folder, hardware = c('LED_R_LEFT', 'LED_R_RIGHT'),  old_mapping = FALSE, plot_basename = NULL, border = 10, min_exits_required = 5) {
+idocr <- function(experiment_folder, hardware = c('LED_R_LEFT', 'LED_R_RIGHT'),  old_mapping = FALSE, plot_basename = NULL, border_mm = 5, min_exits_required = 5) {
   
-  # experiment_folder <- "/learnmem_data/results/be979e46217f3a5ec0f254245eb68da5/ANTORTJIM-LAPTOP/2020-06-09_21-33-57/"
-  # experiment_folder <- "/1TB/Cloud/Data/idoc_data/results/7eb8e224bdb944a68825986bc70de6b1/FLYSLEEPLAB_SETUP/2020-06-10_19-56-36"
-  # experiment_folder <- "/1TB/Cloud/Data/idoc_data/results/be979e46217f3a5ec0f254245eb68da5/ANTORTJIM-LAPTOP/2020-06-10_11-53-34/"
-  
-  # border <- 10
+  # Convert human understandable mm
+  # to pixels that are easy to work with in R
+  pixel_to_mm_ratio <- 2.3
+  border <- border_mm * pixel_to_mm_ratio
   rect_pad <- 0
-  # min_exits_required <- 5
-  
-  # metadata <- load_metadata(experiment_folder)
-  # run_id <- metadata[field == "run_id", value]
-  
+
   border_lines <- list(
     geom_hline(yintercept = -border, linetype = "dashed"),
     geom_hline(yintercept = border, linetype = "dashed") 

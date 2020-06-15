@@ -40,7 +40,11 @@ load_rois <- function(experiment_folder) {
   
   # center the data around the median
   # i.e. estimate the center of the chamber using the median x
-  roi_data$x <- roi_data$x - median(roi_data$x)
+  # roi_data$x <- roi_data$x - median(roi_data$x)
+  x <- roi_data$x - min(roi_data$x)
+  x <- x - max(x) / 2
+  roi_data$x <- x
+  
   
   # keep only needed columns
   var_map <- load_varmap(experiment_folder)
