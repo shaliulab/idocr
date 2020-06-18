@@ -1,3 +1,8 @@
+#' The standard idocr workflow.
+#' 
+#' Load data from the experiment folder, possibly with some specific settings
+#' and return a data frame with the preference index of each fly
+#' and a plot visualizing the experiment
 #' @importFrom dplyr nest_by summarise
 #' @export
 idocr <- function(experiment_folder, hardware = c('LED_R_LEFT', 'LED_R_RIGHT'),  old_mapping = FALSE, plot_basename = NULL, border_mm = 5, min_exits_required = 5) {
