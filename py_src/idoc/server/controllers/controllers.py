@@ -1,5 +1,7 @@
 import datetime
 import logging
+import os.path
+from shutil import copyfile
 import time
 import traceback
 
@@ -326,7 +328,7 @@ class Controller(DefaultInterface, Base, Root):
     def load_paradigm(self, paradigm_path):
         if paradigm_path is not None:
             logger.info('Loading paradigm: %s', paradigm_path)
-            self.programmer.paradigm_path = paradigm_path
+            self.paradigm_path = paradigm_path
 
     @property
     def ready(self):
@@ -390,7 +392,8 @@ class Controller(DefaultInterface, Base, Root):
             kwargs["sampling_rate"] = self._sampling_rate
             kwargs["pin"] = self._pins[kwargs['hardware']]
 
-            logger.debug(kwargs)
+            logger.warning(kwargs)
+
 
             ThreadClass = self._threads[self._board_class.__name__][thread]
 
@@ -404,14 +407,27 @@ class Controller(DefaultInterface, Base, Root):
         barriers = self.programmer.make_barriers(self.programmer.table)
         self._paradigm = self.programmer.add_barriers(self._paradigm, barriers)
         logger.debug(self._paradigm)
-        print("self._paradigm")
-        print(self._paradigm)
+        # logger.warning("self._paradigm")
+        # logger.warning(self._paradigm)
         self._loaded = True
 
 
     def lock(self):
         self.programmer.lock()
         self._locked = True
+
+
+    def copy_paradigm(self):
+        """
+        Copy the passed paradigm to the result_dir
+        for the purpose of documenting the experiment.
+        """
+        src =  self.programmer.paradigm_path
+        filename = os.path.basename(src)
+
+        dst = self._result_writer.result_dir
+        copyfile(src, os.path.join(dst, filename))
+
 
     def run(self):
         r"""
@@ -426,6 +442,9 @@ class Controller(DefaultInterface, Base, Root):
         self.ready = True
         self.lock()
         super().run()
+        self.copy_paradigm()
+        # logger.warning('controller._paradigm')
+        # logger.warning(self._paradigm)
         for thread in self._paradigm:
             try:
                 thread.time_zero = self.time_zero

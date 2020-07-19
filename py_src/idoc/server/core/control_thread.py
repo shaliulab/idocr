@@ -152,7 +152,7 @@ class ControlThread(Base, Root):
 
     @adaptation_time.setter
     def adaptation_time(self, adaptation_time):
-        self._settings['adaptation_time'] = adaptation_time
+        self._settings['adaptation_time'] = adaptation_time * 60
 
     @property
     def adaptation_time_human(self):

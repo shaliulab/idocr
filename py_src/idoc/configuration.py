@@ -74,7 +74,7 @@ class IDOCConfiguration(object):
 
         'controller': {
             'mapping_path': '/1TB/Cloud/Lab/Gitlab/idoc/py_src/mappings/mega.csv',
-            'paradigm_path': 'unittest_long.csv',
+            'paradigm_path': 'warm_up.csv',
             'arduino_port': "/dev/ttyACM0",
             'pwm': {
             },
@@ -92,8 +92,8 @@ class IDOCConfiguration(object):
         },
 
         'experiment': {
-            'adaptation_time': 600,
-            "max_duration": 3600,
+            'adaptation_time': 5,
+            "max_duration": 18000,
             "location": None
         }
     }

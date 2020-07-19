@@ -72,9 +72,10 @@ class CSVResultWriter(Settings, Status, Root):
             logger.debug('Output will be saved in %s', self._result_dir)
 
             self._result_dir = os.path.join(
-                self._root_dir,
-                self._machine_id,
-                get_machine_name(),
+                # self._root_dir,
+                # self._machine_id,
+                # get_machine_name(),
+                "/tmp",
                 self.start_datetime
             )
 

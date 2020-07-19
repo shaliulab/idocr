@@ -103,49 +103,48 @@ class BaseDrawer(Base, Root):
         cv2.imwrite(self.last_drawn_path, self._last_raw_frame, [int(self._quality), 50])
         cv2.imwrite(self.last_annot_path, self._last_annot_frame, [int(self._quality), 50])
 
-    def write_videos(self, video_output=False):
+    def write_videos(self, video_root='video.avi'):
 
-        if video_output:
 
-            if len(self._video_writers) == 0:
+        if len(self._video_writers) == 0:
 
-                # TODO More elegant way of deriving the path
-                self._original_video = self.video_out.replace(".avi", "_ORIGINAL.avi")
-                self._annotated_video = self.video_out.replace(".avi", "_ANNOTATED.avi")
+            # TODO More elegant way of deriving the path
+            self._original_video = video_root.replace(".avi", "_ORIGINAL.avi")
+            self._annotated_video = video_root.replace(".avi", "_ANNOTATED.avi")
 
-                logger.info('Videos will be saved to:')
-                logger.info(self._original_video)
-                logger.info(self._annotated_video)
-                logger.info('With video framerate %s', self.framerate)
+            logger.info('Videos will be saved to:')
+            logger.info(self._original_video)
+            logger.info(self._annotated_video)
+            logger.info('With video framerate %s', self.framerate)
 
-                self._video_writers = {
+            self._video_writers = {
 
-                    "ORIGINAL": cv2.VideoWriter(
-                        # path to resulting video
-                        self._original_video,
-                        # codec
-                        VideoWriter_fourcc(*self._video_out_fourcc),
-                        # framerate
-                        self.framerate,
-                        # resolution (reverse of first two dims in shape)
-                        (self._last_raw_frame.shape[1], self._last_raw_frame.shape[0])
-                    ),
+                "ORIGINAL": cv2.VideoWriter(
+                    # path to resulting video
+                    self._original_video,
+                    # codec
+                    VideoWriter_fourcc(*self._video_out_fourcc),
+                    # framerate
+                    self.framerate,
+                    # resolution (reverse of first two dims in shape)
+                    (self._last_raw_frame.shape[1], self._last_raw_frame.shape[0])
+                ),
 
-                    "ANNOTATED": cv2.VideoWriter(
-                        # path to resulting video
-                        self._annotated_video,
-                        # codec
-                        VideoWriter_fourcc(*self._video_out_fourcc),
-                        # framerate
-                        self.framerate,
-                        # resolution (reverse of first two dims in shape)
-                        (self._last_annot_frame.shape[1], self._last_annot_frame.shape[0])
-                    )
-                }
+                "ANNOTATED": cv2.VideoWriter(
+                    # path to resulting video
+                    self._annotated_video,
+                    # codec
+                    VideoWriter_fourcc(*self._video_out_fourcc),
+                    # framerate
+                    self.framerate,
+                    # resolution (reverse of first two dims in shape)
+                    (self._last_annot_frame.shape[1], self._last_annot_frame.shape[0])
+                )
+            }
 
-            if len(self._video_writers) == 2:
-                self._video_writers["ORIGINAL"].write(self._last_raw_frame)
-                self._video_writers["ANNOTATED"].write(self._last_annot_frame)
+        if len(self._video_writers) == 2:
+            self._video_writers["ORIGINAL"].write(self._last_raw_frame)
+            self._video_writers["ANNOTATED"].write(self._last_annot_frame)
 
 
     def draw(self, img, tracking_units, positions, roi=True, metadata=None):

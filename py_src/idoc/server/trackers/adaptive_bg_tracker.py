@@ -448,9 +448,13 @@ class AdaptiveBGModel(BaseTracker, Root):
             self._old_pos = 0.0 +0.0j
             raise NoPositionError
 
+
+        # regeneration of the buffered foreground
+        # as the difference between the model of the background
+        # and the new grey image
+        # differences < 20 are ignored i.e. only keep changes > 20
         bg = self._bg_model.bg_img.astype(np.uint8)
         cv2.subtract(grey, bg, self._buff_fg)
-
         cv2.threshold(self._buff_fg, 20, 255, cv2.THRESH_TOZERO, dst=self._buff_fg)
 
         self._buff_fg_backup = np.copy(self._buff_fg)
