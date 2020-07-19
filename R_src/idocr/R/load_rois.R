@@ -22,7 +22,7 @@ load_rois <- function(experiment_folder) {
     purrr::imap(~cbind(.x, region_id = .y)) %>%
     purrr::discard(~ nrow(.x) < 10) %>%
     do.call(rbind, .) %>%
-    as_tibble
+    tibble::as_tibble(.)
   
   roi_data <- roi_data[
     roi_data %>%

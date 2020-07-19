@@ -14,6 +14,7 @@ cross_detector <- function(roi_data, border, side=1) {
   cross_data <- cross_data[, c("t", "beyond")]
   cross_data$border <- border
   cross_data$side <- side
+  cross_data$beyond <- ! cross_data$beyond
   
   return(cross_data)
 }

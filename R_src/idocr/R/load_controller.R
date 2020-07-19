@@ -17,5 +17,8 @@ load_controller <- function(experiment_folder, set_t0 = TRUE) {
     first_row <- copy(controller_data[1,]) * 0
     controller_data <- rbind(first_row, controller_data)
   }
+  
+  # rename(controller_data, "hardware", "hardware_")
+  
   return(controller_data)
 }
