@@ -1,0 +1,7 @@
+hardware,start,end,on,off,mode,value
+LED_R_LEFT,0,.1,NaN,NaN,p,.9
+LED_R_LEFT,.1,.2,NaN,NaN,p,.1
+LED_R_LEFT,.2,.3,NaN,NaN,p,.9
+LED_R_LEFT,.3,.4,NaN,NaN,p,.1
+LED_R_LEFT,.4,.5,NaN,NaN,p,.9
+LED_R_LEFT,.5,.6,NaN,NaN,p,.1
