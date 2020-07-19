@@ -1,0 +1,10 @@
+hardware,start,end,on,off,mode,value
+MAIN_VALVE,0,6,NaN,NaN,o,1
+VACUUM,0,6,NaN,NaN,o,1
+IRLED,0,6,NaN,NaN,o,1
+TARGETS,0,6,NaN,NaN,o,1
+ONBOARD_LED,0,6,1000,1000,o,1
+
+ODOR_A_LEFT,2,4,NaN,NaN,o,1
+ODOR_B_RIGHT,2,4,NaN,NaN,o,1
+VIBRATOR,1.45,1.5,NaN,NaN,o,1
