@@ -1,0 +1,16 @@
+hardware,start,end,on,off,mode,value
+MAIN_VALVE,0,20,NaN,NaN,o,1
+
+IRLED,0,1,NaN,NaN,o,1
+TARGETS,0,.2,NaN,NaN,o,1
+
+
+
+ONBOARD_LED,0,20,500,500,o,1
+
+ODOR_A_LEFT,0,10,NaN,NaN,o,1
+ODOR_A_RIGHT,0,10,NaN,NaN,o,1
+
+ODOR_B_LEFT,10,20,NaN,NaN,o,1
+ODOR_B_RIGHT,10,20,NaN,NaN,o,1
+
