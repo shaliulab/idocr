@@ -15,13 +15,20 @@ from idoc.server.controllers.threads import DefaultArduinoThread, WaveArduinoThr
 from idoc.server.controllers.threads import DefaultDummyThread, WaveDummyThread
 from idoc.debug import IDOCException
 
+controller_debug = logging.getLogger('controller.debug')
+formatter = logging.Formatter('%(message)s')
+sh = logging.StreamHandler()
 
+sh.setFormatter(formatter)
+controller_debug.addHandler(sh)
+controller_debug.setLevel(logging.DEBUG)
 
 # Tell pylint everything here is abstract classes
 # pylint: disable=undefined-loop-variable
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 class Controller(DefaultInterface, Base, Root):
     r"""
@@ -228,19 +235,17 @@ class Controller(DefaultInterface, Base, Root):
         """
 
         seen_hardware = []
-        logger.warning(table)
+        # logger.warning(table)
         # logger.debug(table)
         for i, row in enumerate(table):
-            logger.warning(i)
             hardware = row['hardware']
-            logger.warning(hardware)
             if hardware not in seen_hardware:
                 pin_number = self._mapping[hardware]
                 mode = row['mode']
                 pin_definition = '%s:%s:%s' % ('d', pin_number, mode)
-                logger.warning(pin_definition)
                 pin = self._board.get_pin(pin_definition)
-                logger.debug(pin_definition)
+                controller_debug.debug('Loading pin with definition %s', pin_definition)
+
                 self._pins[hardware] = pin
                 seen_hardware.append(hardware)
 
@@ -405,7 +410,7 @@ class Controller(DefaultInterface, Base, Root):
         logger.info("Old paradigm is cleared")
 
         for i, row in enumerate(self.programmer.table):
-            logger.info(i)
+            logger.debug(i)
 
             thread, kwargs = self.programmer.parse(row, i)
             kwargs["result_writer"] = self._result_writer

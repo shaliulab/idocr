@@ -146,6 +146,10 @@ class Device(Thread, HTTPMixin):
     def stop_experiment(self):
         url = self.get_api("controls/control_thread/stop_experiment")
         self._get_json(url)
+    
+        url = self.get_api("stop")
+        self._get_json(url)
+
 
     def reset_experiment(self):
         url = self.get_api("controls/control_thread/reset_experiment")
