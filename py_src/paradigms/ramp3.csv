@@ -1,7 +1,0 @@
-pin_id,start,end,on,hertz
-MAIN_VALVE,0,10,NaN,NaN
-VACUUM,0,10,NaN,NaN
-IRLED,0,10,NaN,NaN
-TARGETS,0,10,NaN,NaN
-LED_R_LEFT,0,5,8,40
-LED_R_RIGHT,5,10,8,40
