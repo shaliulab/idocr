@@ -5,7 +5,12 @@
 #' and a plot visualizing the experiment
 #' @importFrom dplyr nest_by summarise
 #' @export
+<<<<<<< HEAD:R_src/idocr/R/idocr.R
   idocr <- function(experiment_folder, hardware = c('TREATMENT_A_LEFT', 'TREATMENT_A_RIGHT'),  old_mapping = FALSE, plot_basename = NULL, border_mm = 5, min_exits_required = 5) {
+=======
+idocr <- function(experiment_folder, hardware = c("TREATMENT_A_LEFT",  "TREATMENT_A_RIGHT", "TREATMENT_B_LEFT",  "TREATMENT_B_RIGHT"),
+                  old_mapping = FALSE, plot_basename = NULL, border_mm = 5, min_exits_required = 5) {
+>>>>>>> 30292f50c07ba577d21d582115b1cc570e0bf146:R_src/idocr/R/idocr.R
   
   # Convert human understandable mm
   # to pixels that are easy to work with in R
@@ -23,7 +28,6 @@
   
   
   roi_data <- load_rois(experiment_folder)
-  colnames(roi_data)
   # To order the region_id s in the old way
   if (old_mapping) {
     mapper <- c(1,3,5,7,9,11,13,15,17,19,2,4,6,8,10,12,14,16,18,20)
@@ -43,12 +47,25 @@
     do.call(rbind, .) %>%
     dplyr::mutate(t_ms = t * 1000)
   
+  controller_data$hardware_small <- unlist(lapply(
+    strsplit(controller_data$hardware_, split = "_"),
+    function(x) {
+      paste(x[1:2], collapse = "_")
+    }))
+
   limits <- c(min(roi_data$x), max(roi_data$x))
+  
+  unique_hardware <- unique(controller_data$hardware_small)
+  colors <- c("red", "blue")[1:length(unique_hardware)]
+  names(colors) <- unique_hardware 
+  
   rects <- controller_data %>%
-    dplyr::group_by(hardware) %>%
+    dplyr::group_by(hardware_) %>%
     dplyr::group_split() %>%
-    purrr::map(~scale_shape(., limits, rect_pad)) %>%
-    purrr::map(~add_polygon(., color = "red"))
+    purrr::map(~scale_shape(., limits, rect_pad))
+  
+  rects <- rects %>%
+    purrr::map(~add_polygon(., color = colors[unique(.$hardware_small)]))
   
   roi_data_plot <- add_empty_roi(experiment_folder, roi_data)
   
@@ -60,8 +77,16 @@
   for (rect in rects) {
     gg <- gg + rect
   }
+<<<<<<< HEAD:R_src/idocr/R/idocr.R
   hardware_side_agnostic <- paste(unlist(strsplit(hardware[1], split = '_'))[1:2], collapse = '_')
   gg <- gg + scale_fill_identity(name = 'Hardware', breaks = 'red', labels = hardware_side_agnostic, guide = "legend") + guides(color = F)
+=======
+  
+  gg <- gg +
+    scale_fill_identity(name = 'Hardware', breaks = colors, labels = unique_hardware,
+                        guide = "legend") +
+    guides(color = F)
+>>>>>>> 30292f50c07ba577d21d582115b1cc570e0bf146:R_src/idocr/R/idocr.R
   
   cross_data <- rbind(
     gather_cross_data(cross_detector_FUN = cross_detector, roi_data, border = border, side = 1),
@@ -73,13 +98,15 @@
   # TODO Beyond should be TRUE when the cross is outside of the decision zone
   # However, it is opposite
   preference <- overlap_cross_events(
-    cross_data[!cross_data$beyond,],
-    event_data, type = "preference", mask_FUN = seconds_mask
+    cross_data[cross_data$beyond,],
+    event_data[event_data$hardware_small == "TREATMENT_A",],
+    type = "preference", mask_FUN = seconds_mask
   )
   
   aversive <- overlap_cross_events(
-    cross_data[!cross_data$beyond,],
-    event_data, type = "aversive", mask_FUN = seconds_mask
+    cross_data[cross_data$beyond,],
+    event_data[event_data$hardware_small == "TREATMENT_B",],
+    type = "aversive", mask_FUN = seconds_mask
   )
   
   overlap_data <- rbind(
@@ -98,8 +125,8 @@
     dplyr::summarise(preference_index = preference_index(data, min_exits_required = min_exits_required))
   
   gg <- gg +
-    geom_point(data = preference, aes(x = t, y = x), size = 1) +
-    geom_point(data = aversive, aes(x = t, y = x), size = 1, color = "blue", shape = 4)
+    geom_point(data = preference, aes(x = t, y = x), color = "black", size = 1) +
+    geom_point(data = aversive, aes(x = t, y = x), color = "black", size = 1, shape = 4)
   
   
   if(plot_decision_zone == TRUE) {

@@ -1,17 +1,21 @@
 #'
 #'  @export
-overlap_cross_events <- function(cross_data, event_data, type="preference", mask_FUN = NULL, ...) {
+overlap_cross_events <- function(cross_data, event_data, type="preference", mask_FUN = NULL, mirror=FALSE, ...) {
   overlaps <- cross_data[NULL,]
-  
-  if (type == "preference") {
-    operator <- `==`
-  } else if(type == "aversive") {
-    operator <- `!=`
+ 
+  if (mirror) { 
+    if (type == "preference") {
+      operator <- `==`
+    } else if(type == "aversive") {
+      operator <- `!=`
+    } else {
+      stop("Please pass a valid type. Either 'preference' or 'aversive'")
+    }
   } else {
-    stop("Please pass a valid type. Either 'preference' or 'aversive'")
+    operator <- `==`
   }
   
-  cross_data <- mask_FUN(cross_data, ...)
+  # cross_data <- mask_FUN(cross_data, ...)
   
   for(i in 1:nrow(cross_data)) {
     row <- cross_data[i,]

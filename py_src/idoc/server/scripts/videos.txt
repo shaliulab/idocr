@@ -1,0 +1,11 @@
+/home/vibflysleep/VIBFlySleep/LeMDT/lemdt_results/2020-06-10_17-42-08/2020-06-10_17-42-08_LeMDT_1_original.avi
+/home/vibflysleep/VIBFlySleep/LeMDT/lemdt_results/2020-06-10_17-48-53/2020-06-10_17-48-53_LeMDT_1_original.avi
+/home/vibflysleep/VIBFlySleep/LeMDT/lemdt_results/2020-06-10_18-00-10/2020-06-10_18-00-10_LeMDT_1_original.avi
+/home/vibflysleep/VIBFlySleep/LeMDT/lemdt_results/2020-06-10_18-09-27/2020-06-10_18-09-27_LeMDT_1_original.avi
+/home/vibflysleep/VIBFlySleep/LeMDT/lemdt_results/2020-06-10_18-22-08/2020-06-10_18-22-08_LeMDT_1_original.avi
+/home/vibflysleep/VIBFlySleep/LeMDT/lemdt_results/2020-06-10_18-31-22/2020-06-10_18-31-22_LeMDT_1_original.avi
+/home/vibflysleep/VIBFlySleep/LeMDT/lemdt_results/2020-06-10_19-07-18/2020-06-10_19-07-18_LeMDT_1_original.avi
+/home/vibflysleep/VIBFlySleep/LeMDT/lemdt_results/2020-06-10_19-32-28/2020-06-10_19-32-28_LeMDT_1_original.avi
+/home/vibflysleep/VIBFlySleep/LeMDT/lemdt_results/2020-06-10_20-07-27/2020-06-10_20-07-27_LeMDT_1_original.avi
+/home/vibflysleep/VIBFlySleep/LeMDT/lemdt_results/2020-06-10_20-15-24/2020-06-10_20-15-24_LeMDT_1_original.avi
+/home/vibflysleep/VIBFlySleep/LeMDT/lemdt_results/2020-06-10_20-30-40/2020-06-10_20-30-40_LeMDT_1_original.avi
