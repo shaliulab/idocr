@@ -52,8 +52,8 @@ class CliUI():
         self._menus = {
             "root": [
                 ('LOAD PARADIGM', None, "paradigms"),
-                ('CHANGE CONFIGURATION', None, "settings"),
                 ('WARM UP', self.warm_up, "root"),
+                ('CHANGE CONFIGURATION', None, "settings"),
                 ('CHECK', self.check, "root"),
                 ('START', self.start_experiment, "root"),
                 # ('ANALYZE', self.analyze, "root"),
@@ -263,7 +263,6 @@ class CliUI():
         """
         Receive an answer and post the corresponding paradigm_path to the device
         """
-
         paradigm_path = self.paradigms[answer - 1]
         data = {"paradigm_path": paradigm_path}
         self._device.post_paradigm(data)
@@ -447,6 +446,8 @@ class CliUI():
         # TODO Validation here
 
         return value
+
+
 
 if __name__ == "__main__":
 

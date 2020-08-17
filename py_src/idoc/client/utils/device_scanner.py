@@ -16,7 +16,7 @@ from idoc.debug import IDOCException, ScanException
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-
+requests_logger = logging.getLogger('idoc.client.utils.mixins')
 
 class Device(Thread, HTTPMixin):
     r"""
@@ -114,7 +114,10 @@ class Device(Thread, HTTPMixin):
         url = self.get_api("load_paradigm")
         # import ipdb; ipdb.set_trace()
         requests.post(url, data=paradigm_path)
-        # self._get_json(url, post_data={"paradigm_path": paradigm_path})
+        requests_logger.info(url)
+        requests_logger.info('DATA: %s', paradigm_path)
+
+        # self._get_json(url, post_data=paradigm_path)
 
     def post_settings(self, settings):
         """
@@ -159,7 +162,7 @@ class Device(Thread, HTTPMixin):
     def get_info(self):
         logging.debug('Getting self._info')
         url = self.get_api("info")
-        self._info = self._get_json(url)
+        self._info = self._get_json(url, log='debug')
         logging.debug('_get_json self._info')
         return self._info
 
@@ -188,7 +191,7 @@ class Device(Thread, HTTPMixin):
         """
         old_id = self._id
         try:
-            resp = self._get_json(self._id_url)
+            resp = self._get_json(self._id_url, log='debug')
         except ScanException:
             return self._id
 

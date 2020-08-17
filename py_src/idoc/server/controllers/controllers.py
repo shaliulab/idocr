@@ -2,9 +2,9 @@ import datetime
 import logging
 import os.path
 from shutil import copyfile
+import threading
 import time
 import traceback
-
 import pandas as pd
 
 from idoc.server.hardware.interfaces.interfaces import DefaultInterface
@@ -228,13 +228,17 @@ class Controller(DefaultInterface, Base, Root):
         """
 
         seen_hardware = []
+        logger.warning(table)
         # logger.debug(table)
-        for row in table:
+        for i, row in enumerate(table):
+            logger.warning(i)
             hardware = row['hardware']
+            logger.warning(hardware)
             if hardware not in seen_hardware:
                 pin_number = self._mapping[hardware]
                 mode = row['mode']
                 pin_definition = '%s:%s:%s' % ('d', pin_number, mode)
+                logger.warning(pin_definition)
                 pin = self._board.get_pin(pin_definition)
                 logger.debug(pin_definition)
                 self._pins[hardware] = pin
@@ -265,20 +269,22 @@ class Controller(DefaultInterface, Base, Root):
             if self._board is not None:
                 self._board.exit()
 
-            logger.info("Initalizing %s", self._board_class.__name__)
             self._board = self._board_class(self._arduino_port)
+            logger.info("Initialized %s", self._board_class.__name__)
             try:
                 self.programmer.paradigm_path = paradigm_path
             except IDOCException as error:
                 logger.warning(error)
                 self._paradigm.clear()
                 return
+            logger.info("Assigned paradigm %s", paradigm_path)
 
-            logger.debug("Loading pins")
+            logger.info("Loading pins")
             self.populate_pins(self.programmer.table)
-            logger.debug("Loaded pins: ")
+            logger.info("Loaded pins: ")
             logger.debug(self._pins)
             self._prepare()
+            logger.info("Paradigm %s loaded", paradigm_path)
 
 
     @property
@@ -345,11 +351,33 @@ class Controller(DefaultInterface, Base, Root):
     def adaptation_left(self):
         return max(0, self.adaptation_offset - self.wait)
 
+
+    def try_arduino(self):
+        """
+        A function that tries turning the on-board LED on
+        """
+        for thread in self._paradigm:
+            if thread.hardware == 'ONBOARD_LED':
+                thread.pin.write(1)
+                break
+
+
     def run_minimal(self):
         """
         Start executing the threads whose hardware matches the names listed in
         self._always_on_hardware.
         """
+
+        action_thread = threading.Thread(target=self.try_arduino)
+        try:
+            action_thread.start()
+            action_thread.join(timeout=5)
+        except Exception as error:
+            logger.warning('IDOC cannot communicate with Arduino')
+            logger.warning(error)
+            return
+
+
 
         for hardware in self._always_on_hardware:
             for thread in self._paradigm:
@@ -379,12 +407,14 @@ class Controller(DefaultInterface, Base, Root):
         """
 
         if self._locked:
+            logger.warning('{aradigm is locked. Cannot prepare')
             return
 
         self._paradigm.clear()
-        logger.info("Clearing paradigm")
+        logger.info("Old paradigm is cleared")
 
         for i, row in enumerate(self.programmer.table):
+            logger.info(i)
 
             thread, kwargs = self.programmer.parse(row, i)
             kwargs["result_writer"] = self._result_writer
