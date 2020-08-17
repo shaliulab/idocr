@@ -20,8 +20,5 @@ Encoding: UTF-8
 LazyData: true
 URL: https://gitlab.com/flysleeplab/learning-memory-feedback-and-tracking
 BugReports: https://gitlab.com/flysleeplab/learning-memory-feedback-and-tracking/issues
-<<<<<<< HEAD:R_src/idocr/DESCRIPTION
 RoxygenNote: 7.1.0
-=======
->>>>>>> 30292f50c07ba577d21d582115b1cc570e0bf146:R_src/idocr/DESCRIPTION
 Roxygen: list(markdown = TRUE)

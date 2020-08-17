@@ -5,19 +5,15 @@
 #' and a plot visualizing the experiment
 #' @importFrom dplyr nest_by summarise
 #' @export
-<<<<<<< HEAD:R_src/idocr/R/idocr.R
-  idocr <- function(experiment_folder, hardware = c('TREATMENT_A_LEFT', 'TREATMENT_A_RIGHT'),  old_mapping = FALSE, plot_basename = NULL, border_mm = 5, min_exits_required = 5) {
-=======
 idocr <- function(experiment_folder, hardware = c("TREATMENT_A_LEFT",  "TREATMENT_A_RIGHT", "TREATMENT_B_LEFT",  "TREATMENT_B_RIGHT"),
                   old_mapping = FALSE, plot_basename = NULL, border_mm = 5, min_exits_required = 5) {
->>>>>>> 30292f50c07ba577d21d582115b1cc570e0bf146:R_src/idocr/R/idocr.R
   
   # Convert human understandable mm
   # to pixels that are easy to work with in R
   pixel_to_mm_ratio <- 2.3
   border <- border_mm * pixel_to_mm_ratio
   rect_pad <- 0
-
+  
   border_lines <- list(
     geom_hline(yintercept = -border, linetype = "dashed"),
     geom_hline(yintercept = border, linetype = "dashed") 
@@ -40,8 +36,8 @@ idocr <- function(experiment_folder, hardware = c("TREATMENT_A_LEFT",  "TREATMEN
   controller_data <- purrr::map(
     hardware,
     ~prepare_shape_data(
-        controller_data = controller_data,
-        hardware = .
+      controller_data = controller_data,
+      hardware = .
     )
   ) %>%
     do.call(rbind, .) %>%
@@ -52,7 +48,7 @@ idocr <- function(experiment_folder, hardware = c("TREATMENT_A_LEFT",  "TREATMEN
     function(x) {
       paste(x[1:2], collapse = "_")
     }))
-
+  
   limits <- c(min(roi_data$x), max(roi_data$x))
   
   unique_hardware <- unique(controller_data$hardware_small)
@@ -77,16 +73,11 @@ idocr <- function(experiment_folder, hardware = c("TREATMENT_A_LEFT",  "TREATMEN
   for (rect in rects) {
     gg <- gg + rect
   }
-<<<<<<< HEAD:R_src/idocr/R/idocr.R
-  hardware_side_agnostic <- paste(unlist(strsplit(hardware[1], split = '_'))[1:2], collapse = '_')
-  gg <- gg + scale_fill_identity(name = 'Hardware', breaks = 'red', labels = hardware_side_agnostic, guide = "legend") + guides(color = F)
-=======
   
   gg <- gg +
     scale_fill_identity(name = 'Hardware', breaks = colors, labels = unique_hardware,
                         guide = "legend") +
     guides(color = F)
->>>>>>> 30292f50c07ba577d21d582115b1cc570e0bf146:R_src/idocr/R/idocr.R
   
   cross_data <- rbind(
     gather_cross_data(cross_detector_FUN = cross_detector, roi_data, border = border, side = 1),
@@ -136,7 +127,7 @@ idocr <- function(experiment_folder, hardware = c("TREATMENT_A_LEFT",  "TREATMEN
   }
   
   if(plot_preference_index == TRUE) {
-  
+    
     gg <- gg +
       # ggnewscale::new_scale_fill() +
       geom_label(
@@ -165,6 +156,6 @@ idocr <- function(experiment_folder, hardware = c("TREATMENT_A_LEFT",  "TREATMEN
     )
     ggplot2::ggsave(filename = file.path(experiment_folder, plot_filename))
   }
-
+  
   return(list(gg = gg, pi = pi_data))
 }

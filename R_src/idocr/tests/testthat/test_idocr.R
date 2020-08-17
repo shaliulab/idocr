@@ -6,4 +6,8 @@ testthat::test_that("idocr works", {
   res <- idocr(experiment_folder = experiment_folder)
   res$gg
   
+  experiment_folder <- system.file("2020-08-17_19-32-03", package = "idocr")
+  res <- idocr(experiment_folder = experiment_folder)
+  res$gg
+  
 })

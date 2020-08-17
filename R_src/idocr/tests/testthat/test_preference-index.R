@@ -17,6 +17,8 @@ testthat::test_that("preference_index works as expected", {
     )
   )
   
+  min_exits_required <- 5
+  
   pi_data <- overlap_data %>%
     dplyr::nest_by(region_id) %>%
     dplyr::summarise(preference_index = preference_index(data, min_exits_required = min_exits_required))
