@@ -57,13 +57,13 @@ class CliUI():
                 ('CHECK', self.check, "root"),
                 ('START', self.start_experiment, "root"),
                 # ('ANALYZE', self.analyze, "root"),
-                ('STOP', self.stop, "root"),
+                ('STOP (Experiment)', self.stop, "root"),
                 ('CLEAR', self.clear, "root"),
                 ('PROMPT', self.prompt, "root"),
                 ('EXPORT', self.export, "root"),
-                ('RESTART', self.restart, "root")
+                ('RESTART', self.restart, "root"),
                 # ('RESET', self.reset, "root"),
-                # ('QUIT', self.close, "root"),
+                ('QUIT (IDOC Cli)', self.close, "root"),
 
             ],
 
@@ -315,7 +315,8 @@ class CliUI():
         return "root"
 
     def quit(self, *args):
-        self.stop(0)
+        sys.exit(0)
+        # self.stop(0)
 
     def stop(self, answer):
         """
