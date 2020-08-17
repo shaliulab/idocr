@@ -446,6 +446,8 @@ def run(port):
 
 server_thread = Thread(target=run, name="bottle", args=(PORT,))
 
+@app.get('/stop/<id>')
+@wrong_id
 def stop(signo=None, _frame=None):
     r"""
     A function to bind the arrival of specific signals to an action.
