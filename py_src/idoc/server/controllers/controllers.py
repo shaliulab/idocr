@@ -251,7 +251,7 @@ class Controller(DefaultInterface, Base, Root):
 
     @property
     def paradigm_path(self):
-        return self._programmer.paradigm_path
+        return self.programmer.paradigm_path
 
     @paradigm_path.setter
     def paradigm_path(self, paradigm_path):
@@ -267,6 +267,7 @@ class Controller(DefaultInterface, Base, Root):
             # when the Thread classes attempt to retrieve their pin
             self._loaded = False
             if self._board is not None:
+                logger.info('Closing old instance of board')
                 self._board.exit()
 
             self._board = self._board_class(self._arduino_port)
@@ -352,23 +353,13 @@ class Controller(DefaultInterface, Base, Root):
         return max(0, self.adaptation_offset - self.wait)
 
 
-    def try_arduino(self):
-        """
-        A function that tries turning the on-board LED on
-        """
-        for thread in self._paradigm:
-            if thread.hardware == 'ONBOARD_LED':
-                thread.pin.write(1)
-                break
-
-
     def run_minimal(self):
         """
         Start executing the threads whose hardware matches the names listed in
         self._always_on_hardware.
         """
 
-        action_thread = threading.Thread(target=self.try_arduino)
+        action_thread = threading.Thread(target=self.warm_up)
         try:
             action_thread.start()
             action_thread.join(timeout=5)
@@ -494,6 +485,8 @@ class Controller(DefaultInterface, Base, Root):
         for thread in self._paradigm:
             thread.stop()
 
+        self._board.exit()
+
         for thread in self._paradigm:
             if thread.is_alive():
                 thread.join()
@@ -503,7 +496,13 @@ class Controller(DefaultInterface, Base, Root):
 
     # TODO Implement a warmup routine so th user can check the hardware
     def warm_up(self):
-        pass
+        """
+        A function that tries turning the on-board LED on
+        """
+        for thread in self._paradigm:
+            if thread.hardware == 'ONBOARD_LED':
+                thread.pin.write(1)
+                break
 
 
 if __name__ == "__main__":
