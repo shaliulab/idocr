@@ -371,7 +371,7 @@ class CliUI():
         return "root"
 
     def close(self, answer):
-        print("Quitting IDOC")
+        print("Quitting IDOC. Wait some seconds...")
         self._ds.stop()
         self.stopped = True
         time.sleep(1)
