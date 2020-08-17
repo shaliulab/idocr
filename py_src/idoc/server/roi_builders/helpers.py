@@ -159,8 +159,6 @@ def contour_mean_intensity(grey, cnt):
 
 def place_dots(grey, pts, color=255):
 
-    # logging.warning("Placement")
-    # logging.warning(pts)
     for pt in pts:
         pt = tuple([int(e) for e in pt])
         cv2.circle(grey, pt, 2, color, -1)

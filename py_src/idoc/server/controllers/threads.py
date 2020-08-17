@@ -204,7 +204,7 @@ class BaseControllerThread(Base, Root):
 
     def _notify(self, value):
         self.pin_state[self._hardware] = value
-        logger.warning("%s notifying %s", self.hardware, str(value))
+        logger.info("%s notifying %s", self.hardware, str(value))
 
         self._result_writer.process_row(
             self.pin_state,

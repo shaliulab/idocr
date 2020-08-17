@@ -314,8 +314,7 @@ class CliUI():
         self._pick_menu()
         return "root"
 
-    @staticmethod
-    def quit(signo):
+    def quit(self, *args):
         self.stop(0)
 
     def stop(self, answer):

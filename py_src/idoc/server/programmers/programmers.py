@@ -178,7 +178,7 @@ class Programmer(Settings, Root):
             logger.warning("Error reading your paradigm into IDOC. Table is empty")
             return False
 
-        print(self.table)
+        logger.debug(self.table)
 
         return True
 

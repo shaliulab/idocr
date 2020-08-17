@@ -77,7 +77,7 @@ class Settings(Root):
         # actually apply the changes
         self.update()
 
-        logger.warning("Module %s with settings %s", self.__class__.__name__, self._settings)
+        logger.debug("Module %s with settings %s", self.__class__.__name__, self._settings)
 
     @settings.getter
     def settings(self):
@@ -125,8 +125,8 @@ class Settings(Root):
             if submodule is None:
                 continue
 
-            logger.warning("%s sending to %s", self.__class__.__name__, submodule.__class__.__name__)
-            logger.warning(self._settings)
+            logger.debug("%s sending to %s", self.__class__.__name__, submodule.__class__.__name__)
+            logger.debug(self._settings)
             self.send_recursive(submodule, self._settings)
 
     def receive(self):

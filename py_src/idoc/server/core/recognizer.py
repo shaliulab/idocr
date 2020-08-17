@@ -316,8 +316,6 @@ class Recognizer(Base, Root):
                 if self.result_writer is not None:
                     self.result_writer.last_t = self.last_t
 
-                # logger.warning('Reading  frame at %d', t_ms)
-
                 if self.stopped:
                     logger.info("Recognizer object stopped from external request")
                     break
@@ -325,10 +323,6 @@ class Recognizer(Base, Root):
                 self.last_frame_idx = i
                 self.last_time_stamp = t_ms
                 self._frame_buffer = frame
-
-                # if quality_controller is not None:
-                #     qc = quality_controller.qc(frame)
-                #     quality_controller.write(t, qc)
 
                 for _, track_u in enumerate(self._unit_trackers):
                     data_rows = track_u.track(t_ms, frame)

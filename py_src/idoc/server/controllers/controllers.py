@@ -228,7 +228,7 @@ class Controller(DefaultInterface, Base, Root):
         """
 
         seen_hardware = []
-        print(table)
+        # logger.debug(table)
         for row in table:
             hardware = row['hardware']
             if hardware not in seen_hardware:
@@ -236,15 +236,14 @@ class Controller(DefaultInterface, Base, Root):
                 mode = row['mode']
                 pin_definition = '%s:%s:%s' % ('d', pin_number, mode)
                 pin = self._board.get_pin(pin_definition)
-                logger.warning(pin_definition)
+                logger.debug(pin_definition)
                 self._pins[hardware] = pin
                 seen_hardware.append(hardware)
 
             else:
                 pass
 
-        print("PINS")
-        print(self._pins)
+        # logger.debug(self._pins)
 
     @property
     def paradigm_path(self):
@@ -266,7 +265,7 @@ class Controller(DefaultInterface, Base, Root):
             if self._board is not None:
                 self._board.exit()
 
-            logger.warning("Initalizing %s", self._board_class.__name__)
+            logger.info("Initalizing %s", self._board_class.__name__)
             self._board = self._board_class(self._arduino_port)
             try:
                 self.programmer.paradigm_path = paradigm_path
@@ -275,10 +274,10 @@ class Controller(DefaultInterface, Base, Root):
                 self._paradigm.clear()
                 return
 
-            logger.warning("Loading pins")
+            logger.debug("Loading pins")
             self.populate_pins(self.programmer.table)
-            logger.warning("Loaded pins: ")
-            logger.warning(self._pins)
+            logger.debug("Loaded pins: ")
+            logger.debug(self._pins)
             self._prepare()
 
 
@@ -383,7 +382,7 @@ class Controller(DefaultInterface, Base, Root):
             return
 
         self._paradigm.clear()
-        logger.warning("Clearing paradigm")
+        logger.info("Clearing paradigm")
 
         for i, row in enumerate(self.programmer.table):
 
@@ -392,10 +391,11 @@ class Controller(DefaultInterface, Base, Root):
             kwargs["sampling_rate"] = self._sampling_rate
             kwargs["pin"] = self._pins[kwargs['hardware']]
 
-            logger.warning(kwargs)
-
 
             ThreadClass = self._threads[self._board_class.__name__][thread]
+
+            logger.debug('kwargs passed to the ThreadClass %s', ThreadClass.__name__)
+            logger.debug(kwargs)
 
             logger.debug("Selecting %s", ThreadClass.__name__)
             thread = ThreadClass(
@@ -407,8 +407,6 @@ class Controller(DefaultInterface, Base, Root):
         barriers = self.programmer.make_barriers(self.programmer.table)
         self._paradigm = self.programmer.add_barriers(self._paradigm, barriers)
         logger.debug(self._paradigm)
-        # logger.warning("self._paradigm")
-        # logger.warning(self._paradigm)
         self._loaded = True
 
 
@@ -443,8 +441,6 @@ class Controller(DefaultInterface, Base, Root):
         self.lock()
         super().run()
         self.copy_paradigm()
-        # logger.warning('controller._paradigm')
-        # logger.warning(self._paradigm)
         for thread in self._paradigm:
             try:
                 thread.time_zero = self.time_zero

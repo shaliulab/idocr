@@ -195,7 +195,7 @@ class Device(Thread, HTTPMixin):
         self._id = resp['id']
         if self._id != old_id:
             if old_id:
-                logging.warning("Device id changed at %s. %s ===> %s", self._ip, old_id, self._id)
+                logging.info("Device id changed at %s. %s ===> %s", self._ip, old_id, self._id)
             self._reset_info()
 
         # keep the ip
