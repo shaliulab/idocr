@@ -237,8 +237,8 @@ class Recognizer(Base, Root):
         Open the camera, build the ROIs and bind them to the trackers
         """
         loaded = self.load_camera()
-            if not loaded:
-                return False
+        if not loaded:
+            return False
         self.rois = self._build()
         self._load(*args, rois=self.rois, **kwargs)
         self.ready = True
