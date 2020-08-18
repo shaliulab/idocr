@@ -121,6 +121,7 @@ class Recognizer(Base, Root):
         os.system(script_path)
         os.system(script_path)
         os.system(script_path)
+        time.sleep(1)
 
 
     def load_camera(self):
@@ -132,10 +133,7 @@ class Recognizer(Base, Root):
         until this method is called in the recognizer.prepare method
         i.e. not at Recognizer.__init__.
         """
-
-
         self.detect_camera()
-
 
         camera_args = self._config.content['io']['camera']['args']
         camera_kwargs = self._config.content['io']['camera']['kwargs']
@@ -154,10 +152,6 @@ class Recognizer(Base, Root):
             camera_kwargs["use_wall_clock"] = user_data.pop("use_wall_clock")
         else:
             camera_kwargs["use_wall_clock"] = self._config.content['io']['camera']['kwargs']['use_wall_clock']
-
-
-        print("KWARGS")
-        print(camera_kwargs)
 
         try:
             self._submodules["camera"] = self._camera_class(
@@ -242,6 +236,7 @@ class Recognizer(Base, Root):
         self.rois = self._build()
         self._load(*args, rois=self.rois, **kwargs)
         self.ready = True
+        return True
 
     @property
     def camera(self):
