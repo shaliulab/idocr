@@ -12,6 +12,11 @@ fh = logging.FileHandler('requests.log')
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
+stream_logger = logging.getLogger('stream_logger')
+sh = logging.StreamHandler()
+sh.setFormatter(formatter)
+stream_logger.addHandler(sh)
+
 class HTTPMixin:
 
     @retry(ScanException, tries=3, delay=1, backoff=1)
@@ -30,6 +35,11 @@ class HTTPMixin:
             try:
                 file_handle = urllib.request.urlopen(req, timeout=timeout)
             except Exception as error:
+                if log == 'info':
+                    stream_logger.warning('Could not carry out operation')
+                    stream_logger.warning('URL: %s', url)
+                    stream_logger.warning('DATA: %s', post_data)
+                                    
                 logger.warning('Could not carry out operation')
                 logger.warning('URL: %s', url)
                 logger.warning('DATA: %s', post_data)

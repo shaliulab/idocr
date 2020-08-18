@@ -214,9 +214,9 @@ def control(submodule, action):
     Actions are available for the recognizer and controller modules
     as well as the control thread.
     """
-    if submodule == "control_thread" and action == "stop":
-        # exit the application completely
+    if submodule == "control_thread" and action in ["stop"]:
         stop()
+    # stop calls the same method control.command would if the if above is true
 
     return control.command(submodule, action)
 
@@ -447,7 +447,7 @@ def run(port):
 server_thread = Thread(target=run, name="bottle", args=(PORT,))
 
 @app.get('/stop/<id>')
-@wrong_id
+# @wrong_id
 def stop(signo=None, _frame=None):
     r"""
     A function to bind the arrival of specific signals to an action.
@@ -455,6 +455,7 @@ def stop(signo=None, _frame=None):
     logger.debug("Received signal %s", signo)
     try:
         control.stop()
+        control.join(timeout=10)
         logger.info('Quitting')
         os._exit(0) # pylint: disable=protected-access
         # sys.exit(0)

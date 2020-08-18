@@ -14,6 +14,7 @@ from idoc.helpers import hours_minutes_seconds, iso_format, MachineDatetime
 from idoc.server.controllers.threads import DefaultArduinoThread, WaveArduinoThread
 from idoc.server.controllers.threads import DefaultDummyThread, WaveDummyThread
 from idoc.debug import IDOCException
+from idoc.server.controllers.boards import ArduinoMegaBoard, ArduinoBoard
 
 controller_debug = logging.getLogger('controller.debug')
 formatter = logging.Formatter('%(message)s')
@@ -484,20 +485,33 @@ class Controller(DefaultInterface, Base, Root):
                 self.reset()
 
     def stop(self):
+        print('Stopping')
 
         super().stop()
 
         for thread in self._paradigm:
             thread.stop()
-
-        self._board.exit()
-
+ 
         for thread in self._paradigm:
             if thread.is_alive():
                 thread.join()
                 logger.debug("Joined %s", thread.name)
 
         logger.debug("Done joining!")
+
+        board_port = self._board.name
+        board_class = self._board.__class__.__name__
+        self._board.exit()
+        try:
+
+            board = eval(board_class)(board_port)
+            for p in board.digital[2:]:
+                p.write(0)
+
+            board.exit()
+        except Exception as error:
+            logging.warning(error)
+
 
     # TODO Implement a warmup routine so th user can check the hardware
     def warm_up(self):

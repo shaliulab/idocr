@@ -642,7 +642,7 @@ class ControlThread(Base, Root):
                     self.controller.stop()
 
             self.result_writer.clear()
-
+            time.sleep(10)
 
     def reset_experiment(self):
         self.stop_experiment(force=True)

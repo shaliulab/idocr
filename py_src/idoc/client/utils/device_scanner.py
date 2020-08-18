@@ -144,11 +144,12 @@ class Device(Thread, HTTPMixin):
         self._get_json(url)
 
     def stop_experiment(self):
-        url = self.get_api("controls/control_thread/stop_experiment")
+        # url = self.get_api("controls/control_thread/stop_experiment")
+        url = self.get_api("controls/control_thread/stop")
         self._get_json(url)
     
-        url = self.get_api("stop")
-        self._get_json(url)
+        # url = self.get_api("stop")
+        # self._get_json(url)
 
 
     def reset_experiment(self):
@@ -199,15 +200,18 @@ class Device(Thread, HTTPMixin):
         except ScanException:
             return self._id
 
-        self._id = resp['id']
-        if self._id != old_id:
-            if old_id:
-                logging.info("Device id changed at %s. %s ===> %s", self._ip, old_id, self._id)
-            self._reset_info()
+        try:
+            self._id = resp['id']
+            if self._id != old_id:
+                if old_id:
+                    logging.info("Device id changed at %s. %s ===> %s", self._ip, old_id, self._id)
+                self._reset_info()
 
-        # keep the ip
-        self._info["ip"] = self._ip
-        return self._id
+            # keep the ip
+            self._info["ip"] = self._ip
+            return self._id
+        except TypeError as error:
+            logger.warning('IDOC Server offline. Please make sure it is running and then start the CLI again')
 
     def ip(self):
         return self._ip

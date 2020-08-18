@@ -45,7 +45,14 @@ class WrongMachineID(Exception):
 
 def wrong_id(f):
     def wrapper(**kwargs):
+        if kwargs['id'] == "None":
+            kwargs.pop("id")
+            return f(**kwargs)
+
         if kwargs["id"] != id:
+            logger.warning('Received id %s', kwargs["id"])
+            logger.warning('Local id is %s', id)
+            
             raise WrongMachineID
         else:
             if "id" in f.__code__.co_varnames:
@@ -78,6 +85,7 @@ def warning_decorator(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
+            logging.error(e)
             logging.error(traceback.format_exc())
             return {'error': str(e)}
     return func_wrapper
