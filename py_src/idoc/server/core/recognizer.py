@@ -7,7 +7,7 @@ import os.path
 import time
 import traceback
 
-
+from idoc import __path__ as idoc_path
 from idoc.server.core.tracking_unit import TrackingUnit
 from idoc.server.core.variables import FrameCountVariable
 from idoc.server.core.base import Base, Root
@@ -102,6 +102,27 @@ class Recognizer(Base, Root):
         }
         return self._info
 
+
+    @staticmethod
+    def detect_camera():
+        """
+        Call the open_camera.sh before trying to load a Basler camera
+        with pypylon. This is a required step in case the camera
+        is not detectable in the network.
+        It is required after a reboot.
+        The function runs in the WARM_UP step.
+        """
+        
+        # open_camera.sh is a script that makes sure
+        # the camera is visible for Pylon and pypylon
+        script_path = os.path.join(idoc_path, '..', 'scripts', 'open_camera.sh')
+        logger.info('Executing %s', script_path)
+        # we need to run twice
+        os.system(script_path)
+        os.system(script_path)
+        os.system(script_path)
+
+
     def load_camera(self):
         r"""
         Instantiate a camera object
@@ -111,6 +132,11 @@ class Recognizer(Base, Root):
         until this method is called in the recognizer.prepare method
         i.e. not at Recognizer.__init__.
         """
+
+
+        self.detect_camera()
+
+
         camera_args = self._config.content['io']['camera']['args']
         camera_kwargs = self._config.content['io']['camera']['kwargs']
 
