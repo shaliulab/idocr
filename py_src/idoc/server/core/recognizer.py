@@ -115,7 +115,7 @@ class Recognizer(Base, Root):
         
         # open_camera.sh is a script that makes sure
         # the camera is visible for Pylon and pypylon
-        script_path = os.path.join(idoc_path, '..', 'scripts', 'open_camera.sh')
+        script_path = os.path.join(idoc_path[0], '..', 'scripts', 'open_camera.sh')
         logger.info('Executing %s', script_path)
         # we need to run twice
         os.system(script_path)
