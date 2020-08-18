@@ -133,7 +133,7 @@ class Recognizer(Base, Root):
         until this method is called in the recognizer.prepare method
         i.e. not at Recognizer.__init__.
         """
-        self.detect_camera()
+        # self.detect_camera()
 
         camera_args = self._config.content['io']['camera']['args']
         camera_kwargs = self._config.content['io']['camera']['kwargs']
