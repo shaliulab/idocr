@@ -555,7 +555,16 @@ class ControlThread(Base, Root):
         """
 
         self.controller.run_minimal()
-        self.recognizer.prepare()
+        loaded = self.recognizer.prepare()
+        if not loaded:
+            logger.warning(
+                """
+                Camera cannot be loaded. I will not try to start it.
+                This is an IDOC issue. For now all we can do is reboot the computer
+                and try again 
+                """)
+            return
+
         self.recognizer.start()
 
 

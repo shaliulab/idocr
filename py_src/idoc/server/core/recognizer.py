@@ -159,11 +159,19 @@ class Recognizer(Base, Root):
         print("KWARGS")
         print(camera_kwargs)
 
+        try:
+            self._submodules["camera"] = self._camera_class(
+                *camera_args,
+                **camera_kwargs
+            )
 
-        self._submodules["camera"] = self._camera_class(
-            *camera_args,
-            **camera_kwargs
-        )
+        except Exception as error:
+            # the camera is not loadable for whatever reason
+            logger.warning(error)
+            logger.warning(traceback.print_exc())
+            return False
+
+
 
         # Pass settings the user may have passed upon starting the program
         # kwargs that can be passed afterwards
@@ -183,6 +191,7 @@ class Recognizer(Base, Root):
                     # logger.debug("Not assigning ", setting, "to camera. Setting does not belong")
 
         self._settings['camera'] = self.camera.settings
+        return True
 
     def _build(self):
         """
@@ -227,7 +236,9 @@ class Recognizer(Base, Root):
         """
         Open the camera, build the ROIs and bind them to the trackers
         """
-        self.load_camera()
+        loaded = self.load_camera()
+            if not loaded:
+                return False
         self.rois = self._build()
         self._load(*args, rois=self.rois, **kwargs)
         self.ready = True
