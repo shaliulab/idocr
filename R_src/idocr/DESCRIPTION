@@ -14,11 +14,14 @@ Depends:
     R (>= 3.00),
     R6,
     zoo,
+    tibble,
+    gtools,
+    ggforce,
     stringr
 License: file LICENCE
 Encoding: UTF-8
 LazyData: true
 URL: https://gitlab.com/flysleeplab/learning-memory-feedback-and-tracking
 BugReports: https://gitlab.com/flysleeplab/learning-memory-feedback-and-tracking/issues
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1.9000
 Roxygen: list(markdown = TRUE)

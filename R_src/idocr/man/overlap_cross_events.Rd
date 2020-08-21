@@ -9,6 +9,7 @@ overlap_cross_events(
   event_data,
   type = "preference",
   mask_FUN = NULL,
+  mirror = FALSE,
   ...
 )
 }

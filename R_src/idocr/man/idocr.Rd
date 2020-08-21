@@ -6,11 +6,13 @@
 \usage{
 idocr(
   experiment_folder,
-  hardware = c("TREATMENT_A_LEFT", "TREATMENT_A_RIGHT"),
+  hardware = c("TREATMENT_A_LEFT", "TREATMENT_A_RIGHT", "TREATMENT_B_LEFT",
+    "TREATMENT_B_RIGHT"),
   old_mapping = FALSE,
   plot_basename = NULL,
   border_mm = 5,
-  min_exits_required = 5
+  min_exits_required = 5,
+  CSplus = "TREATMENT_A"
 )
 }
 \description{
