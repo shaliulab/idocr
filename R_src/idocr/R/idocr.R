@@ -3,10 +3,22 @@
 #' Load data from the experiment folder, possibly with some specific settings
 #' and return a data frame with the preference index of each fly
 #' and a plot visualizing the experiment
-#' @importFrom dplyr nest_by summarise
+#' @importFrom dplyr nest_by summarise group_by
+#' @import ggplot2
+#' @importFrom purrr map
 #' @export
 idocr <- function(experiment_folder, hardware = c("TREATMENT_A_LEFT",  "TREATMENT_A_RIGHT", "TREATMENT_B_LEFT",  "TREATMENT_B_RIGHT"),
-                  old_mapping = FALSE, plot_basename = NULL, border_mm = 5, min_exits_required = 5) {
+                  old_mapping = FALSE, plot_basename = NULL, border_mm = 5, min_exits_required = 5, CSplus="TREATMENT_A") {
+  
+  
+  marked_hardware <- unique(unlist(lapply(
+    strsplit(hardware, split = "_"),
+    function(x) {
+      paste(x[1:2], collapse = "_")
+    })))
+  
+  CSminus <- marked_hardware[marked_hardware != CSplus]
+
   
   # Convert human understandable mm
   # to pixels that are easy to work with in R
@@ -90,13 +102,13 @@ idocr <- function(experiment_folder, hardware = c("TREATMENT_A_LEFT",  "TREATMEN
   # However, it is opposite
   preference <- overlap_cross_events(
     cross_data[cross_data$beyond,],
-    event_data[event_data$hardware_small == "TREATMENT_A",],
+    event_data[event_data$hardware_small == CSplus,],
     type = "preference", mask_FUN = seconds_mask
   )
   
   aversive <- overlap_cross_events(
     cross_data[cross_data$beyond,],
-    event_data[event_data$hardware_small == "TREATMENT_B",],
+    event_data[event_data$hardware_small == CSminus,],
     type = "aversive", mask_FUN = seconds_mask
   )
   
