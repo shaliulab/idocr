@@ -8,7 +8,7 @@
 #' @importFrom purrr map
 #' @export
 idocr <- function(experiment_folder, hardware = c("TREATMENT_A_LEFT",  "TREATMENT_A_RIGHT", "TREATMENT_B_LEFT",  "TREATMENT_B_RIGHT"),
-                  old_mapping = FALSE, plot_basename = NULL, border_mm = 5, min_exits_required = 5, CSplus="TREATMENT_A") {
+                  old_mapping = FALSE, plot_basename = NULL, border_mm = 5, min_exits_required = 5, CSplus="TREATMENT_A", plot_preference_index=TRUE) {
   
   
   marked_hardware <- unique(unlist(lapply(
@@ -32,8 +32,6 @@ idocr <- function(experiment_folder, hardware = c("TREATMENT_A_LEFT",  "TREATMEN
   )
   
   plot_decision_zone <- TRUE
-  plot_preference_index <- TRUE
-  
   
   roi_data <- load_rois(experiment_folder)
   # To order the region_id s in the old way
@@ -67,29 +65,8 @@ idocr <- function(experiment_folder, hardware = c("TREATMENT_A_LEFT",  "TREATMEN
   colors <- c("red", "blue")[1:length(unique_hardware)]
   names(colors) <- unique_hardware 
   
-  rects <- controller_data %>%
-    dplyr::group_by(hardware_) %>%
-    dplyr::group_split() %>%
-    purrr::map(~scale_shape(., limits, rect_pad))
-  
-  rects <- rects %>%
-    purrr::map(~add_polygon(., color = colors[unique(.$hardware_small)]))
-  
   roi_data_plot <- add_empty_roi(experiment_folder, roi_data)
   
-  gg <- iplot(
-    experiment_folder, roi_data_plot, limits,
-    run_id = rev(unlist(strsplit(experiment_folder, split = '/')))[1]
-  )
-  
-  for (rect in rects) {
-    gg <- gg + rect
-  }
-  
-  gg <- gg +
-    scale_fill_identity(name = 'Hardware', breaks = colors, labels = unique_hardware,
-                        guide = "legend") +
-    guides(color = F)
   
   cross_data <- rbind(
     gather_cross_data(cross_detector_FUN = cross_detector, roi_data, border = border, side = 1),
@@ -127,10 +104,47 @@ idocr <- function(experiment_folder, hardware = c("TREATMENT_A_LEFT",  "TREATMEN
     dplyr::nest_by(region_id) %>%
     dplyr::summarise(preference_index = preference_index(data, min_exits_required = min_exits_required))
   
+  if (plot_preference_index) {
+    preference <- dplyr::left_join(preference, pi_data, by = "region_id")
+    preference$facet <- paste0("ROI_", preference$region_id, "\nPI: ", preference_index_labeller(preference$preference_index)) 
+    aversive <- dplyr::left_join(aversive, pi_data, by = "region_id")
+    aversive$facet <- paste0("ROI_", aversive$region_id, "\nPI: ", preference_index_labeller(aversive$preference_index))
+  } else {
+    aversive$facet <- paste0("ROI_", aversive$region_id)
+    preference$facet <- paste0("ROI_", preference$region_id)
+  }
+  aversive$facet <- factor(aversive$facet, levels = unique(aversive$facet))
+  preference$facet <- factor(preference$facet, levels = unique(preference$facet))
+  
+  
+  gg <- iplot(
+    experiment_folder, roi_data_plot, limits,
+    run_id = rev(unlist(strsplit(experiment_folder, split = '/')))[1],
+    pi = pi_data, plot_preference_index = plot_preference_index
+  )
+  
+  rects <- controller_data %>%
+    dplyr::group_by(hardware_) %>%
+    dplyr::group_split() %>%
+    purrr::map(~scale_shape(., limits, rect_pad))
+  
+  rects <- rects %>%
+    purrr::map(~add_polygon(., color = colors[unique(.$hardware_small)]))
+  
+  for (rect in rects) {
+    gg <- gg + rect
+  }
+  
+  gg <- gg +
+    scale_fill_identity(name = 'Hardware', breaks = colors, labels = unique_hardware,
+                        guide = "legend") +
+    guides(color = F)
+  
   gg <- gg +
     geom_point(data = preference, aes(x = t, y = x), color = "black", size = 1) +
     geom_point(data = aversive, aes(x = t, y = x), color = "black", size = 1, shape = 4)
   
+  gg
   
   if(plot_decision_zone == TRUE) {
     for (b_line in border_lines) {
@@ -138,18 +152,6 @@ idocr <- function(experiment_folder, hardware = c("TREATMENT_A_LEFT",  "TREATMEN
     }
   }
   
-  if(plot_preference_index == TRUE) {
-    
-    gg <- gg +
-      # ggnewscale::new_scale_fill() +
-      geom_label(
-        data = pi_data,
-        aes(
-          label = stringr::str_pad(string = round(preference_index, digits = 2), width = 3, pad = 0)
-        ),
-        fontface = 'bold', color = 'black', y = 0, x = 1, size = 5)
-    
-  }
   
   metadata <- load_metadata(experiment_folder)
   if (is.null(plot_basename)) {

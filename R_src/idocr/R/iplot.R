@@ -1,9 +1,16 @@
+preference_index_labeller <- function(x) {
+  pi_val <- round(x, digits = 2)
+  pi_val <- ifelse(is.na(pi_val), "NA", as.character(pi_val))
+  pi_val <- stringr::str_pad(string = pi_val, width = 2, side = "left", pad = 0)
+  pi_val
+}
+
 #' Generate base IDOC plot upon which
 #' more annotation layers can be added
 #' 
 #' @import ggplot2
 #' @export
-iplot <- function(experiment_folder, data, limits, run_id=NULL) {
+iplot <- function(experiment_folder, data, limits, pi, run_id=NULL, plot_preference_index=TRUE) {
   
   theme_set(theme_bw())
   
@@ -16,23 +23,36 @@ iplot <- function(experiment_folder, data, limits, run_id=NULL) {
     run_id <- metadata[field == "run_id", value]
   }
   
-  p <- ggplot() +
-    # coord_flip() +
+  data <- dplyr::full_join(data, pi, by="region_id")
+
+  data$PI <- preference_index_labeller(data$preference_index)
+  if (plot_preference_index) {
+    browser()
+    data$facet <- paste0("ROI_", data$region_id,"\nPI: ", data$PI)
+  } else {
+    data$facet <- paste0("ROI_", data$region_id)
+  }
+  data$facet <- factor(data$facet, levels = unique(data$facet))
+  
+  gg <- ggplot() +
     geom_line(
       data = data, mapping = aes(y = x, x = t),
       group = 1
     ) +
-    
     labs(y = "Chamber", x = "t (s)") +
-    scale_y_continuous(limits = limits, breaks = 0) +
-    facet_wrap(
-      ~region_id, nrow = 2, ncol = 10, drop = F,
-      labeller = as_labeller(function(value) paste0("ROI_", value))
-    ) +
-    coord_flip() +
-    ggtitle(label = run_id)
+    scale_y_continuous(limits = limits, breaks = 0)
   
-  return(p)
+
+  gg <- gg + facet_wrap(
+    . ~ facet,
+    drop = F,
+    nrow = 2, ncol = 10
+  )
+  
+  gg <- gg + coord_flip() +
+  ggtitle(label = run_id)
+  
+  return(gg)
 }
 
 #' Mark when a piece of IDOC hardware was active
