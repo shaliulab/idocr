@@ -4,9 +4,9 @@
 \alias{add_empty_roi}
 \title{Represent missing ROIs in the dataset with a single row}
 \usage{
-add_empty_roi(experiment_folder, roi_data)
+add_empty_roi(experiment_folder, roi_data, n = 20)
 }
 \description{
 This is done to show an empty facet that however fits
-the expected 20 animals
+the expected n animals
 }

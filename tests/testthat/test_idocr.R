@@ -2,11 +2,7 @@ context("idocr")
 
 testthat::test_that("idocr works", {
   
-  experiment_folder <- system.file("example", package = "idocr")
-  res <- idocr(experiment_folder = experiment_folder)
-  res$gg
-  
-  experiment_folder <- system.file("2020-08-17_19-32-03", package = "idocr")
+  experiment_folder <- system.file("2020-10-05_13-05-51", package = "idocr")
   res <- idocr(experiment_folder = experiment_folder)
   res$gg
   

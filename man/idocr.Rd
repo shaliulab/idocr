@@ -8,15 +8,16 @@ idocr(
   experiment_folder,
   hardware = c("TREATMENT_A_LEFT", "TREATMENT_A_RIGHT", "TREATMENT_B_LEFT",
     "TREATMENT_B_RIGHT"),
-  old_mapping = FALSE,
-  plot_basename = NULL,
   border_mm = 5,
   min_exits_required = 5,
-  CSplus = "TREATMENT_A"
+  CSplus = "TREATMENT_A",
+  delay = 0,
+  src_file = NULL,
+  ...
 )
 }
 \description{
 Load data from the experiment folder, possibly with some specific settings
-and return a data frame with the preference index of each fly
+and return a data frame with the apetitive index of each fly
 and a plot visualizing the experiment
 }

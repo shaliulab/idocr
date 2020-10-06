@@ -5,7 +5,7 @@ Version: 0.0.1
 Authors@R: c(
     person("Antonio", "Ortega", role = c("aut", "cre"), email = "antonio.ortega@kuleuven.vib.be")
     )
-Description: foo
+Description: Analyze traces created in the Individual Drosophila Optogenetics Conditioner (IDOC).
 Depends: 
     data.table,
     dplyr,
@@ -17,7 +17,8 @@ Depends:
     tibble,
     gtools,
     ggforce,
-    stringr
+    stringr,
+    tidyr
 License: file LICENCE
 Encoding: UTF-8
 LazyData: true

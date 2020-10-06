@@ -4,7 +4,7 @@
 \alias{export_summary}
 \title{Export a single csv with all key data for analysis and plotting outside of R}
 \usage{
-export_summary(experiment_folder, output_csv)
+export_summary(experiment_folder, delay = 0, output_csv = NULL)
 }
 \description{
 Export a single csv with all key data for analysis and plotting outside of R

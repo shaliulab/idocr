@@ -35,3 +35,34 @@ seconds_mask <- function(data, seconds_masked = 5) {
   mask <- data[data$dt > seconds_masked,]
   return(mask)
 }
+
+#' Wrapper around overlap_cross_events for both apetitive and aversive behavior
+compute_preference_data <-function(cross_data, event_data, CSplus, CSminus) {
+  # TODO Beyond should be TRUE when the cross is outside of the decision zone
+  # However, it is opposite
+  apetitive <- overlap_cross_events(
+    cross_data[cross_data$beyond,],
+    event_data[event_data$hardware_small == CSplus,],
+    type = "apetitive", mask_FUN = seconds_mask
+  )
+  
+  aversive <- overlap_cross_events(
+    cross_data[cross_data$beyond,],
+    event_data[event_data$hardware_small == CSminus,],
+    type = "aversive", mask_FUN = seconds_mask
+  )
+  
+  preference_data <- rbind(
+    cbind(
+      apetitive,
+      type = "apetitive"
+    ),
+    cbind(
+      aversive,
+      type = "aversive"
+    )
+  )
+  
+  return(preference_data)
+  
+}

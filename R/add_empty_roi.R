@@ -11,10 +11,10 @@ get_extra_columns <- function() {
 #' Represent missing ROIs in the dataset with a single row
 #' 
 #' This is done to show an empty facet that however fits
-#' the expected 20 animals
+#' the expected n animals
 #' @importFrom tibble as_tibble
 #' @export
-add_empty_roi <- function(experiment_folder, roi_data) {
+add_empty_roi <- function(experiment_folder, roi_data, n=20) {
   
   var_map <- load_varmap(experiment_folder)
   R_types <- list("SMALLINT" = integer, "BOOLEAN" = logical, "INT" = integer)
@@ -31,7 +31,7 @@ add_empty_roi <- function(experiment_folder, roi_data) {
   
   roi_data_template <- as_tibble(roi_data_template)
     
-  for (roi in 1:20) {
+  for (roi in 1:n) {
     if (!roi %in% unique(roi_data$region_id)) {
       message(sprintf("Animal %s is missing", roi))
       local_template <- copy(roi_data_template)

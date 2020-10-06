@@ -6,10 +6,10 @@
 #' @importFrom tibble as_tibble
 #' @import magrittr
 #' @export
-export_summary <- function(experiment_folder, output_csv) {
+export_summary <- function(experiment_folder, delay=0, output_csv=NULL) {
   
   roi_data <- load_rois(experiment_folder = experiment_folder)
-  controller_data <- load_controller(experiment_folder = experiment_folder, set_t0 = TRUE)
+  controller_data <- load_controller(experiment_folder = experiment_folder, set_t0 = TRUE, delay=delay)
   
   roi_summary <- roi_data %>%
     select(t, x, region_id) %>%
@@ -35,6 +35,11 @@ export_summary <- function(experiment_folder, output_csv) {
     as_tibble
   
   summary_data <- dplyr::full_join(roi_summary, controller_summary, on = "t")
+  
+  
+  if(is.null(output_csv)) {
+    output_csv <- output_path_maker(experiment_folder, "SUMMARY")
+  }
   fwrite(x = summary_data, file = output_csv, sep = ",", col.names = TRUE)
 }
   

@@ -47,3 +47,12 @@ gather_cross_data <- function(cross_detector_FUN = cross_detector, roi_data, bor
   
   return(cross_data)
 }
+
+#' Wrapper around gather_cross_data for left and right
+infer_decision_zone_exits <- function(roi_data,  border=border, cross_detector_FUN=cross_detector) {
+  cross_data <- rbind(
+    gather_cross_data(cross_detector_FUN = cross_detector, roi_data, border = border, side = 1),
+    gather_cross_data(cross_detector_FUN = cross_detector, roi_data, border = border, side = -1)
+  )
+  return(cross_data)
+}
