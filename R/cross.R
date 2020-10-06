@@ -17,7 +17,7 @@ overlap_cross_events <- function(cross_data, event_data, type="apetitive", mask_
   }
   
   cross_data <- mask_FUN(cross_data, ...)
-  
+  # browser()
   for (i in 1:nrow(cross_data)) {
     row <- cross_data[i,]
     event_hits <- (row[["t"]] * 1000) > event_data$t_start & (row[["t"]] * 1000) < event_data$t_end & operator(row[["side"]], event_data$side)
@@ -80,9 +80,19 @@ reshape_controller <- function(rectangle_data) {
 
 #' Dont count crosses happening within less than seconds_masked seconds
 #' since the previous one
-seconds_mask <- function(data, duration = 0) {
-  data$dt <- c(Inf, diff(data$t))
-  mask <- data[data$dt > duration,]
+seconds_mask <- function(cross_data, duration = 0) {
+
+  # browser()
+  cross_data_dt <- cross_data %>%
+    dplyr::arrange(region_id, t) %>%
+    dplyr::nest_by(region_id) %>%
+    # by choosing this default, the first dt is always equal to duration (x - (x - duration) = duration)
+    # this way the first exit is never discarded
+    dplyr::mutate(dt = list(data$t - lag(data$t, default = data$t[1] - duration))) %>%
+    tidyr::unnest(cols = c(data, dt)) %>%
+    dplyr::ungroup()
+  
+  mask <- cross_data_dt[cross_data_dt$dt >= duration,]
   return(mask)
 }
 
