@@ -55,7 +55,7 @@ base_plot <- function(experiment_folder, data, limits, pi, run_id=NULL, plot_pre
       data = data, mapping = aes(y = x, x = t),
       group = 1
     ) +
-    labs(y = "Chamber (mm)", x = "t (s)", title = run_id, subtitle = subtitle,
+    labs(y = "Chamber (mm)", x = "t (s)", title = run_id, subtitle = ,
          caption = glue::glue('Produced on {Sys.time()}')) +
     scale_y_continuous(limits = limits, breaks = c(limits[1], 0, limits[2]))
   ## DANGER! this plot is likely to break studio if rendered now
@@ -182,7 +182,7 @@ idoc_plot <- function(experiment_folder, roi_data, rectangle_data,
   }
   
   gg <- gg +
-    scale_fill_identity(name = 'Hardware', breaks = colors, labels = side_agnostic_hardware,
+    scale_fill_identity(name = 'Treatment', breaks = colors, labels = names(side_agnostic_hardware),
                         guide = "legend") +
     guides(color = F)
   

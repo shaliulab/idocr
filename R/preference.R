@@ -3,7 +3,7 @@
 #' @param rectangle_data A list of dataframes containing one rectangle each
 #' @param CSplus Name of the hardware associated to the apetitive stimulus
 #' @param CSminus Name of the hardware associated to the aversive stimulus
-compute_preference_data <- function(cross_data, rectangle_data, CSplus, CSminus) {
+compute_preference_data <- function(cross_data, rectangle_data, CSplus, CSminus, mask_duration=0.5) {
   # TODO Beyond should be TRUE when the cross is outside of the decision zone
   # However, it is opposite
   
@@ -12,13 +12,13 @@ compute_preference_data <- function(cross_data, rectangle_data, CSplus, CSminus)
   apetitive <- overlap_cross_events(
     cross_data[cross_data$beyond,],
     event_data[event_data$hardware_small == CSplus,],
-    type = "apetitive", mask_FUN = seconds_mask
+    type = "apetitive", mask_FUN = seconds_mask, duration = mask_duration
   )
   
   aversive <- overlap_cross_events(
     cross_data[cross_data$beyond,],
     event_data[event_data$hardware_small == CSminus,],
-    type = "aversive", mask_FUN = seconds_mask
+    type = "aversive", mask_FUN = seconds_mask, duration = mask_duration
   )
   
   preference_data <- rbind(

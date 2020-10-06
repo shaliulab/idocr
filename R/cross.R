@@ -80,9 +80,9 @@ reshape_controller <- function(rectangle_data) {
 
 #' Dont count crosses happening within less than seconds_masked seconds
 #' since the previous one
-seconds_mask <- function(data, seconds_masked = 5) {
+seconds_mask <- function(data, duration = 0) {
   data$dt <- c(Inf, diff(data$t))
-  mask <- data[data$dt > seconds_masked,]
+  mask <- data[data$dt > duration,]
   return(mask)
 }
 
