@@ -55,7 +55,7 @@ base_plot <- function(experiment_folder, data, limits, pi, run_id=NULL, plot_pre
       data = data, mapping = aes(y = x, x = t),
       group = 1
     ) +
-    labs(y = "Chamber (mm)", x = "t (s)", title = run_id, subtitle = ,
+    labs(y = "Chamber (mm)", x = "t (s)", title = run_id, subtitle = subtitle,
          caption = glue::glue('Produced on {Sys.time()}')) +
     scale_y_continuous(limits = limits, breaks = c(limits[1], 0, limits[2]))
   ## DANGER! this plot is likely to break studio if rendered now
