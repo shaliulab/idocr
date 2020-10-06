@@ -1,13 +1,14 @@
 Package: idocr
 Title: Analyze traces created in the Individual Drosophila Optogenetics Conditioner (IDOC).
 Date: 2019-08-30
-Version: 0.0.1
+Version: 1.0.0
 Authors@R: c(
     person("Antonio", "Ortega", role = c("aut", "cre"), email = "antonio.ortega@kuleuven.vib.be")
     )
 Description: Analyze traces created in the Individual Drosophila Optogenetics Conditioner (IDOC).
 Depends: 
     data.table,
+    purrr,
     dplyr,
     ggplot2,
     magrittr,

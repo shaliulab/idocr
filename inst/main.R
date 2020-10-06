@@ -46,6 +46,7 @@ border_mm <- 5
 # after the previous exit
 # to avoid counting the same exit 
 # as two exits happening within ridiculously little time  
+mask_duration <- 0.5
 
 ##################################################
 # CAUTION!! DONT CHANGE ANY CODE BELOW THIS LINE
