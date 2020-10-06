@@ -129,9 +129,10 @@ add_polygon <- function(shape_data, color="red", border="black") {
 
 
 #' @export
-idoc_plot <- function(experiment_folder, roi_data, controller_data,
+idoc_plot <- function(experiment_folder, roi_data, rectangle_data,
                       preference_data, pi_data,
-                      CSplus, CSminus, border,
+                      CSplus, CSminus, border, limits,
+                      side_agnostic_hardware = NULL,
                       plot_preference_index=TRUE,
                       plot_decision_zone=TRUE,
                       plot_basename = NULL,
@@ -149,7 +150,6 @@ idoc_plot <- function(experiment_folder, roi_data, controller_data,
   
   apetitive <- preference_data[preference_data$type == 'apetitive',]
   aversive <- preference_data[preference_data$type == 'aversive',]
-  rect_pad <- 0
   
   preference_data <- dplyr::left_join(preference_data, pi_data, by = "region_id")
   
@@ -164,31 +164,25 @@ idoc_plot <- function(experiment_folder, roi_data, controller_data,
   
   apetitive <- preference_data[preference_data$type == 'apetitive',]
   aversive <- preference_data[preference_data$type == 'aversive',]
-  limits <- c(min(roi_data$x), max(roi_data$x))
-  unique_hardware <- unique(controller_data$hardware_small)
-  colors <- c("red", "blue")[1:length(unique_hardware)]
-  names(colors) <- unique_hardware 
+  
+  colors <- c("red", "blue")[1:length(side_agnostic_hardware)]
+  names(colors) <- side_agnostic_hardware 
   
   gg <- base_plot(
     experiment_folder, roi_data, limits,
     run_id = rev(unlist(strsplit(experiment_folder, split = '/')))[1],
     pi = pi_data, plot_preference_index = plot_preference_index, subtitle = subtitle
   )
-  
-  rects <- controller_data %>%
-    dplyr::group_by(hardware_) %>%
-    dplyr::group_split() %>%
-    purrr::map(~scale_shape(., limits, rect_pad))
-  
-  rects <- rects %>%
+
+  rectangles <- rectangle_data %>%
     purrr::map(~add_polygon(., color = colors[unique(.$hardware_small)]))
   
-  for (rect in rects) {
+  for (rect in rectangles) {
     gg <- gg + rect
   }
   
   gg <- gg +
-    scale_fill_identity(name = 'Hardware', breaks = colors, labels = unique_hardware,
+    scale_fill_identity(name = 'Hardware', breaks = colors, labels = side_agnostic_hardware,
                         guide = "legend") +
     guides(color = F)
   
@@ -202,7 +196,7 @@ idoc_plot <- function(experiment_folder, roi_data, controller_data,
     geom_hline(yintercept = border, linetype = "dashed") 
   )
   
-  if(isTRUE(plot_decision_zone)) {
+  if (isTRUE(plot_decision_zone)) {
     for (b_line in border_lines) {
       gg <- gg + b_line
     }
@@ -228,3 +222,6 @@ idoc_plot <- function(experiment_folder, roi_data, controller_data,
   }
   return(gg)
 }
+
+
+

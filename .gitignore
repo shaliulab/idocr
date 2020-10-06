@@ -121,3 +121,5 @@ LeMDT/logs/*
 **/swig*
 *bak
 */scripts/*.csv
+*tmp
+*sync-conflict*

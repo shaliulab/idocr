@@ -11,7 +11,8 @@ base_plot(
   limits,
   pi,
   run_id = NULL,
-  plot_preference_index = TRUE
+  plot_preference_index = TRUE,
+  subtitle = ""
 )
 }
 \description{
