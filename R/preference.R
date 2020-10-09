@@ -21,16 +21,10 @@ compute_preference_data <- function(cross_data, rectangle_data, CSplus, CSminus,
     type = "aversive", mask_FUN = seconds_mask, duration = mask_duration
   )
   
-  preference_data <- rbind(
-    cbind(
-      apetitive,
-      type = "apetitive"
-    ),
-    cbind(
-      aversive,
-      type = "aversive"
-    )
-  )
+  apetitive$type <- "apetitive"
+  aversive$type <- "aversive"
+
+  preference_data <- rbind(cbind(apetitive), cbind(aversive))
   
   return(preference_data)
   
@@ -40,13 +34,20 @@ compute_preference_data <- function(cross_data, rectangle_data, CSplus, CSminus,
 #' @importFrom dplyr nest_by summarise group_by ungroup full_join
 compute_pi_data <- function(preference_data, min_exits_required = 5) {
   # Compute the preference index based on region-id indexed data
+  
   pi_data <- preference_data %>%
     dplyr::group_by(region_id, type) %>%
     dplyr::summarise(count = n()) %>%
     tidyr::pivot_wider(id_cols = "region_id",
                        names_from = "type",
                        values_from = "count")
-  pi_data[, c('apetitive', 'aversive')][is.na(pi_data[, c('apetitive', 'aversive')])] <- 0
+  
+  na <- FALSE
+  if(! "apetitive" %in% colnames(pi_data)) pi_data$apetitive <- 0; na <- TRUE
+  if(! "aversive" %in% colnames(pi_data)) pi_data$aversive <- 0; na <- TRUE
+    
+  
+  # pi_data[, c('apetitive', 'aversive')][is.na(pi_data[, c('apetitive', 'aversive')])] <- 0
   
   pi_data_summ <- pi_data %>%
     dplyr::ungroup() %>%
@@ -56,6 +57,8 @@ compute_pi_data <- function(preference_data, min_exits_required = 5) {
   
   # na should be 0 in this case
   pi_data <- dplyr::full_join(pi_data, pi_data_summ)
+  
+  if(na) pi_data$preference_index <- "NA"
   
   return(pi_data)
 }

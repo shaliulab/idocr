@@ -1,9 +1,16 @@
 #' @importFrom stringr str_pad
-preference_index_labeller <- function(x) {
-  pi_val <- round(x, digits = 2)
-  pi_val <- ifelse(is.na(pi_val), "NA", as.character(pi_val))
-  pi_val <- stringr::str_pad(string = pi_val, width = 2, side = "left", pad = 0)
-  pi_val
+preference_index_labeller <- function(xx) {
+  
+  # single values
+  labeller <- function(x) {
+    pi_val <- round(x, digits = 2)
+    pi_val <- ifelse(is.na(pi_val), "NA", as.character(pi_val))
+    pi_val <- stringr::str_pad(string = pi_val, width = 2, side = "left", pad = 0)
+    return(pi_val)
+  }
+  
+  pi_vals <- lapply(xx, function(x) {ifelse(is.character(x), x, as.character(labeller(x)))})
+  return(pi_vals)
 }
 
 #' @importFrom stringr str_match
@@ -146,7 +153,6 @@ idoc_plot <- function(experiment_folder, roi_data, rectangle_data,
     names(mapper) <- 1:20
     roi_data$region_id <- mapper[roi_data$region_id]
   }
-  
   
   apetitive <- preference_data[preference_data$type == 'apetitive',]
   aversive <- preference_data[preference_data$type == 'aversive',]
