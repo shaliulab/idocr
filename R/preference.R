@@ -46,6 +46,8 @@ compute_pi_data <- function(preference_data, min_exits_required = 5) {
   if(! "apetitive" %in% colnames(pi_data)) {pi_data$apetitive <- 0; na <- TRUE}
   if(! "aversive" %in% colnames(pi_data)) {pi_data$aversive <- 0; na <- TRUE}
     
+  pi_data[is.na(pi_data$apetitive), "apetitive"] <- 0
+  pi_data[is.na(pi_data$aversive), "aversive"] <- 0
   
   # pi_data[, c('apetitive', 'aversive')][is.na(pi_data[, c('apetitive', 'aversive')])] <- 0
   
