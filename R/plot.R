@@ -30,14 +30,10 @@ sort_roi_level <- function(roi_level) {
 #' @importFrom glue glue
 #' @importFrom dplyr full_join
 #' @export
-base_plot <- function(experiment_folder, data, limits, pi, run_id=NULL, plot_preference_index=TRUE, subtitle = "") {
+base_plot <- function(experiment_folder, data, limits, pi, run_id=NULL, plot_preference_index=TRUE, subtitle = "", downward=TRUE) {
   
   theme_set(theme_bw())
-  
-  # breaks_limits <- sign(limits) * (round(abs(limits)/10) * 10 - 10)
-  # breaks <- seq(from = breaks_limits[1], to = breaks_limits[2], by = 20)
-  
-  
+
   if (is.null(run_id)) {
     metadata <- load_metadata(experiment_folder)
     run_id <- metadata[field == "run_id", value]
@@ -52,32 +48,43 @@ base_plot <- function(experiment_folder, data, limits, pi, run_id=NULL, plot_pre
     data$facet <- paste0("ROI_", data$region_id)
   }
   
-  # browser()
-  
   levels <- sort_roi_level(data$facet)
   data$facet <- factor(data$facet, levels = levels)
   
+  breaks <- c(limits[1], 0, limits[2])
+  
   gg <- ggplot() +
     geom_line(
-      data = data, mapping = aes(y = x, x = t),
-      group = 1
+      data = data, mapping = aes(x = x, y = t, group = id),
+      orientation="y"
     ) +
-    labs(y = "Chamber (mm)", x = "t (s)", title = run_id, subtitle = subtitle,
+    labs(x = "Chamber (mm)", y = "t (s)", title = run_id, subtitle = subtitle,
          caption = glue::glue('Produced on {Sys.time()}')) +
-    scale_y_continuous(limits = limits, breaks = c(limits[1], 0, limits[2]))
-  ## DANGER! this plot is likely to break studio if rendered now
+    scale_x_continuous(limits = limits, breaks = breaks)
   
   time_limits <- c(min(data$t), max(data$t))
   time_limits <- c(floor(time_limits[1] / 60) * 60, ceiling(time_limits[2] / 60) * 60)
   
-  gg <- gg +
-    scale_x_continuous(limits = time_limits,
-                       breaks = seq(
-                         from = time_limits[1],
-                         to = time_limits[2],
-                         by = 60)
-                       )
-  
+  if (downward) {
+  gg <- gg + scale_y_continuous(
+    limits = rev(time_limits),
+    breaks = seq(
+      from = time_limits[2],
+      to = time_limits[1],
+      by = -60
+    ),
+    trans = scales::reverse_trans()
+  )
+  } else {
+    gg <- gg + scale_y_continuous(
+      limits = time_limits,
+      breaks = seq(
+        from = time_limits[1],
+        to = time_limits[2],
+        by = 60
+      )
+    )
+  }
   
   gg <- gg + facet_wrap(
     . ~ facet,
@@ -85,7 +92,7 @@ base_plot <- function(experiment_folder, data, limits, pi, run_id=NULL, plot_pre
     nrow = 2, ncol = 10
   ) + theme(panel.spacing = unit(1, "lines"))
   
-  gg <- gg + coord_flip() + theme(text = element_text(size = 20))
+  gg <- gg + theme(text = element_text(size = 20))
   # it is ok to render now as the coords have been flipped
   
   return(gg)
@@ -101,7 +108,7 @@ add_shape <- function(shape_data, color="red", border="black") {
   
   shape <- geom_shape(
     data = shape_data,
-    mapping = aes(y = x, x = t, group = group),
+    mapping = aes(y = t, x = x, group = group),
     #   # expand = unit(1, 'cm'),
     radius = unit(0.15, 'cm'),
     fill = color, alpha = 0.4, color = border
@@ -122,7 +129,7 @@ add_polygon <- function(shape_data, color="red", border="black") {
   shape <- geom_polygon(
     data = shape_data,
     mapping = aes(
-      y = x, x = t, group = group,
+      y = t, x = x, group = group,
       fill = color, color = border
     ), alpha = 0.4
     
@@ -193,8 +200,8 @@ idoc_plot <- function(experiment_folder, roi_data, rectangle_data,
     guides(color = F)
   
   gg <- gg +
-    geom_point(data = apetitive, aes(x = t, y = x), color = "black", size = 5) +
-    geom_point(data = aversive, aes(x = t, y = x), color = "black", size = 5, shape = 4)
+    geom_point(data = apetitive, aes(x = x, y = t), color = "black", size = 2) +
+    geom_point(data = aversive, aes(x = x, y = t), color = "black", size = 2, shape = 4)
   
   
   border_lines <- list(

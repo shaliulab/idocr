@@ -16,7 +16,7 @@ idocr <- function(experiment_folder, treatments, hardware = c("TREATMENT_A_LEFT"
   
   document_script(src_file, experiment_folder)
 
-
+  
   # Convert human understandable mm
   # to pixels that are easy to work with in R
   pixel_to_mm_ratio <- 2.3
@@ -31,12 +31,13 @@ idocr <- function(experiment_folder, treatments, hardware = c("TREATMENT_A_LEFT"
   ## An extra column called t tells the time in seconds
   controller_data <- load_controller(experiment_folder, delay = delay)
   limits <- c(min(roi_data$x), max(roi_data$x))
+  
   rectangle_data <- define_rectangles(controller_data, hardware, limits)
   cross_data <- infer_decision_zone_exits(roi_data, border = border)
 
   side_agnostic_hardware <- sapply(
     hardware, function(x) strsplit(x, split = "_") %>%
-      sapply(., function(y) paste0(y[1], "_", y[2]))) %>%
+      sapply(., function(y) paste0(y[1], "_", y[2]))) %>% 
     unique
   
   stopifnot(length(treatments[side_agnostic_hardware]) == length(side_agnostic_hardware))
@@ -49,7 +50,7 @@ idocr <- function(experiment_folder, treatments, hardware = c("TREATMENT_A_LEFT"
   # one row per fly with count of apetitive and aversive exits
   # as well as the computed preference index
   pi_data <- compute_pi_data(preference_data, min_exits_required = min_exits_required)
-  
+
   gg <- idoc_plot(experiment_folder, roi_data, rectangle_data,
                   preference_data, pi_data,
                   CSplus = CSplus, CSminus = CSminus, border = border, limits = limits,
