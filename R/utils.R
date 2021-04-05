@@ -11,3 +11,14 @@ output_path_maker <- function(experiment_folder, suffix, extension='.csv') {
     )
   )
 }
+
+
+eucl_dist <- function(p1, p2) {
+  sqrt(sum((p1 - p2)**2))
+}
+
+
+wrap_quotes <- function(x) {
+  stopifnot(class(x) == "character")
+  paste0('"', x, '"')
+}

@@ -4,7 +4,10 @@
 \alias{parse_side}
 \title{Parse side from the hardware name}
 \usage{
-parse_side(hardware)
+parse_side(stimulus)
+}
+\arguments{
+\item{stimulus}{Name of stimulus to be parsed}
 }
 \description{
 Return -1 for left and 1 for right

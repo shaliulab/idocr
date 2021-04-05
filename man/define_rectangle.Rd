@@ -4,7 +4,7 @@
 \alias{define_rectangle}
 \title{Reshape the controller data to be plotted in ggplot2}
 \usage{
-define_rectangle(controller_data, hardware = "LED_R_LEFT")
+define_rectangle(controller_data, stimulus)
 }
 \description{
 Given a table containing when several hardware turned on/off

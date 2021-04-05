@@ -4,13 +4,10 @@
 \alias{define_rectangles}
 \title{Wrapper around define_rectangle for several hardware}
 \usage{
-define_rectangles(controller_data, hardware)
+define_rectangles(dataset)
 }
 \arguments{
-\item{controller_data}{A wide data.frame of hardware and a t column}
-
-\item{hardware}{A character vector consisting of a subset of the columns in controller_data
-for which rectangles describing the period when the hardware was on, should be built}
+\item{dataset}{A wide data.frame of hardware and a t column}
 }
 \description{
 Wrapper around define_rectangle for several hardware

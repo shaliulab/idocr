@@ -4,12 +4,12 @@
 #' @importFrom dplyr select mutate arrange
 #' @importFrom zoo na.locf
 #' @importFrom tibble as_tibble
-#' @import magrittr
+#' @importFrom magrittr `%>%`
 #' @export
 export_summary <- function(experiment_folder, delay=0, output_csv=NULL) {
   
   roi_data <- load_rois(experiment_folder = experiment_folder)
-  controller_data <- load_controller(experiment_folder = experiment_folder, set_t0 = TRUE, delay=delay)
+  controller_data <- load_controller(experiment_folder = experiment_folder, delay=delay)
   
   roi_summary <- roi_data %>%
     select(t, x, region_id) %>%

@@ -6,18 +6,43 @@
 \usage{
 idocr(
   experiment_folder,
-  hardware = c("TREATMENT_A_LEFT", "TREATMENT_A_RIGHT", "TREATMENT_B_LEFT",
-    "TREATMENT_B_RIGHT"),
+  treatments,
   border_mm = 5,
   min_exits_required = 5,
   CSplus = "TREATMENT_A",
   delay = 0,
   src_file = NULL,
+  mask_duration = 0.5,
   ...
 )
 }
+\arguments{
+\item{experiment_folder}{Path to folder containing IDOC results .csv files}
+
+\item{treatments}{Named vector where names should match hardware (without side annotation) and value is a meaningful name for a treatment
+example: c(TREATMENT_A = "OCT")}
+
+\item{border_mm}{Distance between arena center
+and one border of the decision zone (mm)}
+
+\item{min_exits_required}{Minimal number of exits
+to be considered for significance}
+
+\item{CSplus}{Name of treatment associated to appetitive conditioning}
+
+\item{delay}{Seconds to shift the representation of the treatments
+on the plot to account for a latency or lag between treatment
+delivery start and arrival to behavioral arena}
+
+\item{src_file}{Path of file to be copied.
+If NULL, take current file (works on RStudio)}
+
+\item{mask_duration}{Seconds of behavior to be ignored after last cross,
+so the same cross is not counted more than once due to noise in
+the border cross}
+}
 \description{
 Load data from the experiment folder, possibly with some specific settings
-and return a data frame with the apetitive index of each fly
+and return a data frame with the appetitive index of each fly
 and a plot visualizing the experiment
 }
