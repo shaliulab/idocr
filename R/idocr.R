@@ -31,6 +31,7 @@ idocr <- function(experiment_folder,
                   delay = 0,
                   src_file = NULL,
                   mask_duration = 0.5,
+                  analysis_mask = NULL,
                   ...) {
   
   document_script(src_file, experiment_folder)
@@ -49,11 +50,12 @@ idocr <- function(experiment_folder,
   analysis <- analyse_dataset(
     dataset,
     min_exits_required=min_exits_required,
-    min_time=mask_duration
+    min_time=mask_duration,
+    analysis_mask=analysis_mask
   )
 
   message("Plotting dataset -> ", experiment_folder)
-  gg <- plot_dataset(experiment_folder, dataset, analysis, ...)
+  gg <- plot_dataset(experiment_folder, dataset, analysis, analysis_mask=analysis_mask, ...)
   
   message("Exporting results -> ", experiment_folder)
   export_dataset(experiment_folder = experiment_folder,

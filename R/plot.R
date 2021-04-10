@@ -165,7 +165,6 @@ make_rectangle <- function(shape_data, color="red", border="black", alpha=0.4) {
 #' put into the facet label
 annotate_facet <- function(data, plot_preference_index=TRUE) {
   
-  browser()
   region_id <- paste0("ROI_", data$region_id)
 
   if (plot_preference_index) {
@@ -276,6 +275,7 @@ plot_dataset <- function(experiment_folder,
                            "TREATMENT_A" = "TREATMENT_A",
                            "TREATMENT_B" = "TREATMENT_B"
                          ),
+                         analysis_mask = NULL,
                          ...
                          ) {
   
@@ -301,6 +301,11 @@ plot_dataset <- function(experiment_folder,
   message("Marking controller events")
   gg <- mark_stimuli(gg, rectangles, colors, labels)
   
+
+  if (!is.null(analysis_mask)) {
+    message("Marking analysis mask")
+    gg <- mark_analysis_mask(gg, analysis_mask)
+  }
   # delineate the decision zone
   message("Marking decision zone")
   if (plot_decision_zone) gg <- mark_decision_zone(gg, border)
@@ -318,6 +323,26 @@ plot_dataset <- function(experiment_folder,
   save_plot(gg, experiment_folder, ...)
   
   return(gg)
+}
+
+mark_analysis_mask <- function(gg, analysis_mask) {
+
+  limits <- gg$scales$scales[[2]]$limits
+  
+  mask_coords <- data.frame(
+    x = rep(limits, times=2),
+    y = rep(analysis_mask, each=2)
+  )
+  mask_coords <- mask_coords[c(1,2,4,3),]
+  
+  
+  
+  gg <- gg + geom_polygon(data = mask_coords,
+                    mapping = aes(x=x,y=y),
+                    color="yellow", alpha=0.5, fill=NA,
+                    limetype="dashed")
+  return(gg)
+  
 }
 
 #' Annotate experiment metadata on plot for documentation

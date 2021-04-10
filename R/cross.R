@@ -105,7 +105,14 @@ cross_detector <- function(tracker_data, border, side=c(-1, 1)) {
 find_exits <- function(tracker_data, border, side=c(-1, 1),
                        cross_detector_FUN = cross_detector,
                        mask_FUN = seconds_mask,
+                       analysis_mask=NULL,
                        ...) {
+  
+  
+  if (!is.null(analysis_mask))
+    tracker_data <- tracker_data %>%
+      dplyr::filter(t >= analysis_mask[1]) %>%
+      dplyr::filter(t <= analysis_mask[2])
   
   cross_data <- tracker_data %>%
     # get a clean of populated ids

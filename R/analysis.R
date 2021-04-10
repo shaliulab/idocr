@@ -1,12 +1,12 @@
 #' Analyse an IDOC dataset
 #' 
 #' Take an IDOC dataset
-#' @eva document_dataset()
+#' @eval document_dataset()
 #' @inherit compute_preference_index
-#' @param ... Additional arguments to annotate_cross
+#' @param ... Extra arguments to find_exits_all
 #' @seealso annotate_cross
 #' @seealso annotate_cross
-analyse_dataset <- function(dataset, min_exits_required, min_time=0, ...) {
+analyse_dataset <- function(dataset, min_exits_required=5, ...) {
   
   tracker_data <- dataset$tracker
   controller_data <- dataset$controller
@@ -21,7 +21,8 @@ analyse_dataset <- function(dataset, min_exits_required, min_time=0, ...) {
   message("Detecting decision zone exits i.e. crosses")
   cross_data <- find_exits_all(
     tracker_data = tracker_data,
-    border = dataset$border, min_time = min_time
+    border = dataset$border,
+    ...
   )
 
   # one row per exit
