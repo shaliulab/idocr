@@ -22,6 +22,8 @@ center_around_median <- function(tracker_data) {
   return(tracker_data)
 }
 
+
+#' @importFrom stringr str_pad
 construct_animal_id <- function(experiment_folder, tracker_data) {
   metadata <- load_metadata(experiment_folder)
   run_id <- metadata[field == "run_id", value]
@@ -65,7 +67,7 @@ clean_dups <- function(tracker_data) {
 
 keep_needed_columns_only <- function(experiment_folder, tracker_data) {
   var_map <- load_varmap(experiment_folder)
-  tracker_data <- tracker_data[, c(var_map$var_name, names(get_extra_columns()))]  
+  tracker_data <- tracker_data[, c(var_map$var_name, names(get_extra_columns())), with=F]  
 }
 
 
@@ -175,15 +177,30 @@ load_systematic_rois <- function(..., n=20) {
 
 
 #' Undo the effect of add_empty_roi
+#' 
+#' Useful to remove dummy rois or rois with noise
+#' Works only if not testing. During testing
+#' we may want to pass small (noise-like) datasets
 #' @importFrom purrr keep
 #' @importFrom dplyr group_by group_split
 #' @importFrom magrittr `%>%`
-clean_empty_roi <- function(tracker_data) {
-  tracker_data <- tracker_data %>%
-    dplyr::group_by(id) %>%
-    dplyr::group_split(.) %>%
-    purrr::keep(~nrow(.) > 100) %>%
-    do.call(rbind, .)
+clean_empty_roi <- function(tracker_data, minimum=100) {
+
+  # check whether this is running in a testing environment
+  # if testthat cannot be loaded, assume we are not testing
+  testing <- tryCatch(
+    testthat::is_testing(),
+    error = function(e) {
+      FALSE
+    })
+  
+  if (!testing) {
+    tracker_data <- tracker_data %>%
+      dplyr::group_by(id) %>%
+      dplyr::group_split(.) %>%
+      purrr::keep(~nrow(.) > minimum) %>%
+      do.call(rbind, .)    
+  }
   
   return(tracker_data)
 }

@@ -1,12 +1,18 @@
 #' Wrapper around define_rectangle for several hardware
 #' 
-#' @param dataset A wide data.frame of hardware and a t column
+#' @eval document_dataset() 
 #' @importFrom purrr map
 #' @importFrom dplyr mutate group_by group_split
+#' @importFrom magrittr `%>%`
 define_rectangles <- function(dataset) {
   
-  rect_pad <- 0
+  stopifnot(!is.null(dataset$controller))
+  stopifnot(!is.null(dataset$stimuli))
+  stopifnot(!is.null(dataset$limits))
+  
+  
   controller_data <- dataset$controller
+  rect_pad <- 0
 
   ## Reformat the wide table
   ### We get one row for every corner of the rectangles shown on the plot
@@ -17,23 +23,21 @@ define_rectangles <- function(dataset) {
   ### * side -> the side where the rectangle is (-1 if on the left and 1 if on the right)
   ### * hardware -> name of the hardware item
   ### * t_ms -> time in milliseconds
-  
+
   controller_data <- purrr::map(
-    dataset$treatment
-    ~define_rectangle(
-      controller_data = controller_data,
-      stimulus = .
-    )
-  ) %>%
+    dataset$stimuli,
+    function(x) {
+      define_rectangle(
+        controller_data = controller_data,
+        stimulus = x
+      )
+    }) %>%
     do.call(rbind, .) %>%
     dplyr::mutate(t_ms = t * 1000)
   
-  
   controller_data$treatment <- unlist(lapply(
-    strsplit(controller_data$stimulus, split = "_"),
-    function(x) {
-      paste(x[1:2], collapse = "_")
-    }))
+    controller_data$stimulus, remove_side
+  ))
   
   rectangle_data <- controller_data %>%
     dplyr::group_by(stimulus) %>%

@@ -4,7 +4,7 @@
 \alias{load_dataset}
 \title{Load an IDOC .csv dataset}
 \usage{
-load_dataset(experiment_folder, ...)
+load_dataset(experiment_folder)
 }
 \arguments{
 \item{experiment_folder}{Path to folder containing IDOC results .csv files}

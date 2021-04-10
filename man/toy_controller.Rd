@@ -2,7 +2,7 @@
 % Please edit documentation in R/toy_data.R
 \name{toy_controller}
 \alias{toy_controller}
-\title{Generate a toy controller dataset}
+\title{Generate a toy controller dataset based on a paradigm}
 \usage{
 toy_controller(paradigm = NULL)
 }
@@ -15,5 +15,5 @@ and one row per sampling timepoint. The value of the i,j cell
 states whether the ith hardware was on at time j
 }
 \description{
-Generate a toy controller dataset
+Generate a toy controller dataset based on a paradigm
 }

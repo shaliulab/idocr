@@ -6,6 +6,12 @@
 \usage{
 find_exits_all(...)
 }
+\arguments{
+\item{...}{Extra arguments to find_exits}
+}
 \description{
 Wrapper around find_exit_decisions for left and right
+}
+\seealso{
+find_exits
 }

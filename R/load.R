@@ -28,7 +28,11 @@ load_metadata <- function(experiment_folder) {
 #' @inherit preprocess_tracker
 #' @inherit preprocess_controller
 #' @export
-preprocess_dataset <- function(experiment_folder, dataset, delay=0) {
+preprocess_dataset <- function(
+  experiment_folder, dataset,
+  treatments = c("TREATMENT_A", "TREATMENT_B"),
+  delay=0, border_mm=5, CSplus_idx=1
+  ) {
   
   # Preprocess
   dataset$tracker <- preprocess_tracker(experiment_folder, dataset$tracker)
@@ -38,7 +42,15 @@ preprocess_dataset <- function(experiment_folder, dataset, delay=0) {
     min(dataset$tracker$x),
     max(dataset$tracker$x)
   )
-
+  
+  pixel_to_mm_ratio <- 2.3
+  border <- border_mm * pixel_to_mm_ratio
+  dataset$border <- border
+  dataset$CSplus <- treatments[1]
+  dataset$CSminus <- treatments[treatments != dataset$CSplus]
+  dataset$treatments <- treatments
+  dataset$stimuli <- paste0(rep(treatments, each=2), c("_LEFT", "_RIGHT"))
+  
   return(dataset)
 }
 
@@ -49,7 +61,7 @@ preprocess_dataset <- function(experiment_folder, dataset, delay=0) {
 #' @param ... Arguments to preprocess_dataset
 #' @seealso [preprocess_dataset()]
 #' @export
-load_dataset <- function(experiment_folder, ...) {
+load_dataset <- function(experiment_folder) {
   # Load tracking data (ROI - Region of Interest)
   tracker_data <- load_systematic_rois(experiment_folder)
   
@@ -59,7 +71,5 @@ load_dataset <- function(experiment_folder, ...) {
   controller_data <- load_controller(experiment_folder)
     
   dataset <- list(tracker=tracker_data, controller=controller_data)
-  dataset <- preprocess_dataset(dataset, ...)
-  
   return(dataset)
 }

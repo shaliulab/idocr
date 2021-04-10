@@ -26,9 +26,11 @@ beta_walk <- function(x, minn=0, maxx=200, scaler=2) {
   scaler * (rbeta(n = 1, shape1 = 5 * (maxx-x-minn) / (maxx-minn), shape2 = 5 * (x-minn) / (maxx - minn)) - 0.5)
 }
 
+
 random_walk <- function(sd_x) {
   rnorm(n = 1, mean = 0, sd = sd_x)
 }
+
 
 #' Brownian motion on the 2d space
 #' 
@@ -54,6 +56,7 @@ walk <- function(start_pos, quiescent=FALSE, sd_y=0.5) {
   
   return(next_pos)
 }
+
 
 #' Generate a toy fly movement dataset
 #' 
@@ -95,11 +98,13 @@ toy_roi <- function(steps=100, p=0.2, ...) {
   return(data.table::as.data.table(roi_data[,cols]))
 }
 
+
 #' Generate a multi animal dataset
 #' 
 #' Call toy_roi as many times as channels are passed
 #' @param channels Number of animals to simulate
-#' @seealso toy_roi
+#' @param ... Extra arguments to [toy_roi()]
+#' @seealso [toy_roi()]
 toy_roi_all <- function(channels=20, ...) {
   
   rois <- lapply(1:channels, function(i) {message("ROI_", i); toy_roi(...)})
@@ -108,7 +113,7 @@ toy_roi_all <- function(channels=20, ...) {
 }
   
 
-#' Generate a toy controller dataset
+#' Generate a toy controller dataset based on a paradigm
 #' 
 #' @importFrom janitor row_to_names
 #' @importFrom dplyr do
@@ -184,8 +189,6 @@ get_roi_map <- function(channels=20) {
 }
 
 
-
-
 #' Save a dataset to a .csv database
 #' A .csv database is a collection of .csv files under the same folder
 #' where every .csv file has a common prefix and a differential key
@@ -231,7 +234,6 @@ write_dataset <- function(dataset, dest) {
     row.names = T, quote = F
   )
 }
-
 
 
 #' Generate a toy dataset
@@ -280,4 +282,123 @@ generate_toy_dataset <- function(dest=NULL, paradigm=NULL, ...) {
   dataset$roi_data <- NULL
   
   return(dataset)
+}
+
+
+toy_tracker_small <- function() {
+  tracker_data <- data.table::data.table(
+    id = rep(c("toy|01", "toy|02"), each = 20),
+    region_id = rep(c(1, 2), each=20),
+    x = c(
+      #roi1
+      0, 0, 0, 0,
+      # cross left
+      -3, -5, -3, -5, -7,
+      # cross in
+      0,
+      # cross right
+      3,
+      # cross in
+      0,
+      # cross right
+      4,
+      # cross in
+      0,
+      # cross left
+      -5, 
+      # cross in
+      0,
+      # cross right
+      5, 3,
+      #roi2
+      0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ),
+    t  = c(1:20, 1:20)
+  )
+}
+
+
+toy_controller_small <- function() {
+  controller_data <- data.table::data.table(
+    TREATMENT_A_LEFT = c(0, 1, 1, 0, 0, 0),
+    TREATMENT_B_RIGHT = c(0, 1, 1, 0, 0, 0),
+    TREATMENT_A_RIGHT = c(0, 0, 0, 1, 1, 0),
+    TREATMENT_B_LEFT = c(0, 0, 0, 1, 1, 0),
+    t = 0:5
+  )
+}
+
+
+toy_dataset_small <- function() {
+  dataset <- list(
+    tracker = toy_tracker_small(),
+    controller = toy_controller_small(),
+    limits = c(-100, 0, 100), border = 5,
+    treatments = LETTERS[1:2],
+    stimuli = paste0(rep(c("TREATMENT_A", "TREATMENT_B"), each=2), c("_LEFT", "_RIGHT")),
+    CSplus = "TREATMENT_A", CSminus = "TREATMENT_B"
+  )
+  return(dataset)
+}
+
+
+toy_cross_data <- function() {
+  rbind(
+    tibble::tibble(
+      id = "toy|01", region_id=1, t=c(2, 5), side = 1
+    ),
+    tibble::tibble(
+      id = "toy|01", region_id=1, t=c(6, 7, 8), side = -1
+    )
+  )
+}
+
+
+toy_event_data <- function() {
+  tibble::tibble(
+    stimulus = "TREATMENT_A_LEFT", t_start = 1000, t_end = 3000, 
+    side = 1, idx=0, treatment="TREATMENT_A"
+  )
+}
+
+
+toy_annotation_data <- function() {
+  annotation_data <- tibble::tibble(
+    id = "toy|01", region_id = 1, t = 1:10, idx = 0, 
+    side = c(1,1,1,-1,-1,1,1,1,1,1)
+  )
+  
+  annotation_data$type <- c("appetitive", "aversive")[
+    ifelse(annotation_data$side > 0, annotation_data$side, annotation_data$side+3)
+  ]
+  annotation_data
+}
+
+toy_rectangle_data <- function() {
+  
+  crossing_data <- toy_annotation_data()
+  tracking_data <- toy_tracker_small()
+  controller_data <- toy_controller_small()
+  
+  dataset <- list(
+    controller = controller_data,
+    stimuli = colnames(controller_data)[1:4],
+    limits = c(-100, 100),
+    tracking = NA
+  )
+  
+  rectangles <- define_rectangles(dataset)
+  return(rectangles)
+}
+
+toy_pi_data <- function() {
+  set.seed(2021)
+  pi <- data.frame(
+    region_id=1:20,
+    appetitive=round(runif(20,0,5), digits = 0),
+    aversive=round(runif(20,0,5), digits = 0),
+    preference_index = runif(20, min=-1, max=1)
+  )
+  return(pi)
 }

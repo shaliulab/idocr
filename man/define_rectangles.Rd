@@ -7,7 +7,13 @@
 define_rectangles(dataset)
 }
 \arguments{
-\item{dataset}{A wide data.frame of hardware and a t column}
+\item{dataset}{List of raw data including:
+\itemize{
+\item roi: every row records the position of one animal at one point in time
+\item controller: every row records the status of all IDOC hardware at one point in time
+\item limits
+\item border
+}}
 }
 \description{
 Wrapper around define_rectangle for several hardware

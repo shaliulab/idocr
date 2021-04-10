@@ -4,14 +4,7 @@
 \alias{annotate_cross}
 \title{Annotate registered corsses with either appetitive or aversive behavior}
 \usage{
-annotate_cross(
-  cross_data,
-  event_data,
-  treatment,
-  type = "appetitive",
-  mask_FUN = seconds_mask,
-  ...
-)
+annotate_cross(cross_data, event_data, treatment, type = "appetitive")
 }
 \arguments{
 \item{cross_data}{dataframe where each row is an exit, defined by region_id, t and side}

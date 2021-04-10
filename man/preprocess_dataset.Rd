@@ -4,10 +4,20 @@
 \alias{preprocess_dataset}
 \title{Preprocess a RAW idoc dataset}
 \usage{
-preprocess_dataset(experiment_folder, dataset, delay = 0)
+preprocess_dataset(
+  experiment_folder,
+  dataset,
+  treatments = c("TREATMENT_A", "TREATMENT_B"),
+  delay = 0,
+  border_mm = 5,
+  CSplus_idx = 1
+)
 }
 \arguments{
 \item{experiment_folder}{Path to folder containing IDOC results .csv files}
+}
+\value{
+tracker_data
 }
 \description{
 \enumerate{

@@ -2,8 +2,8 @@
 % Please edit documentation in R/paths.R
 \name{build_filename}
 \alias{build_filename}
-\title{Moduke to infer names of .csv files based on metadata+key or experiment_folder+key
-#' Build a filename based on the metadata and a key}
+\title{Module to infer names of .csv files based on metadata+key or experiment_folder+key
+Build a filename based on the metadata and a key}
 \usage{
 build_filename(metadata, key)
 }
@@ -18,6 +18,6 @@ Filename with systematic metainformation and key to differentiate
 it from other files from the same experiment
 }
 \description{
-Moduke to infer names of .csv files based on metadata+key or experiment_folder+key
-#' Build a filename based on the metadata and a key
+Module to infer names of .csv files based on metadata+key or experiment_folder+key
+Build a filename based on the metadata and a key
 }

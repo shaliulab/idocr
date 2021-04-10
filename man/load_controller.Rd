@@ -9,8 +9,9 @@ load_controller(experiment_folder, ...)
 \arguments{
 \item{experiment_folder}{Path to a folder with IDOC results}
 
-\item{delay}{Shift this amount of seconds the onset of the stimuli forward in time
-to account for delays in the arrival of the stimuli (stimuli delivery is not immediate)}
+\item{delay}{Seconds to shift the representation of the treatments
+on the plot to account for a latency or lag between treatment
+delivery start and arrival to behavioral arena}
 }
 \description{
 Load a CONTROLLER_EVENTS .csv table into R

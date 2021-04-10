@@ -11,6 +11,12 @@
 \usage{
 preprocess_tracker(experiment_folder, tracker_data)
 }
+\arguments{
+\item{experiment_folder}{Path to folder containing IDOC results .csv files}
+}
+\value{
+tracker_data
+}
 \description{
 Preprocess raw tracker data
 \itemize{

@@ -10,6 +10,7 @@ plot_dataset(
   analysis,
   plot_preference_index = TRUE,
   plot_decision_zone = TRUE,
+  plot_crosses = TRUE,
   subtitle = "",
   colors = c(TREATMENT_A = "red", TREATMENT_B = "blue"),
   ...
@@ -37,6 +38,8 @@ value
 with the region id on the facet label (TRUE), or just the region id (FALSE)}
 
 \item{plot_decision_zone}{Whether to display the decision zone (TRUE) or not.}
+
+\item{plot_crosses}{Whether to display the decision zone crosses (TRUE) or not.}
 
 \item{subtitle}{Character to write on the plot subtitles}
 

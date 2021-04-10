@@ -4,8 +4,10 @@
 \alias{clean_empty_roi}
 \title{Undo the effect of add_empty_roi}
 \usage{
-clean_empty_roi(tracker_data)
+clean_empty_roi(tracker_data, minimum = 100)
 }
 \description{
-Undo the effect of add_empty_roi
+Useful to remove dummy rois or rois with noise
+Works only if not testing. During testing
+we may want to pass small (noise-like) datasets
 }

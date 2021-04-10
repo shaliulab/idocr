@@ -21,6 +21,10 @@ document_roi_data <- function() {
   "@param roi_data IDOC tracking dataset where every row captures the position of one animal at one timepoint"
 }
 
+document_controller_data <- function() {
+  
+}
+
 document_analysis <- function() {
   "@param analysis List of processed data including:
   * annotation: every row is a decision zone exit and its appetitive / aversive
@@ -48,4 +52,16 @@ document_shape_data <- function() {
    x and y show where on the plot the corner is
   The color and transparency is provided by the other function arguments.
   "
+}
+
+document_border <- function() {
+  "@param border Number of pixels from center to decision zone edge"
+}
+
+document_delay <- function() {
+  "@param delay Seconds to shift the representation of the treatments
+   on the plot to account for a latency or lag between treatment
+  delivery start and arrival to behavioral arena
+  "
+  
 }

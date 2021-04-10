@@ -7,7 +7,8 @@
 parse_side(stimulus)
 }
 \arguments{
-\item{stimulus}{Name of stimulus to be parsed}
+\item{stimulus}{Name of stimulus to be parsed.
+Must contain LEFT or RIGHT on its name}
 }
 \description{
 Return -1 for left and 1 for right

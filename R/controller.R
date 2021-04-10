@@ -29,8 +29,7 @@ preprocess_controller <- function(controller_data, delay = 0) {
 #' 
 #' @importFrom data.table fread
 #' @param experiment_folder Path to a folder with IDOC results
-#' @param delay Shift this amount of seconds the onset of the stimuli forward in time
-#' to account for delays in the arrival of the stimuli (stimuli delivery is not immediate)
+#' @eval document_delay()
 #' @export
 load_controller <- function(experiment_folder, ...) {
   
@@ -41,9 +40,36 @@ load_controller <- function(experiment_folder, ...) {
   return(controller_data)
 }
 
+#' Reshape controller data to a format where it is
+#' easy to merge with cross_data
+#' 
+#' Enter a dataframe with one row per corner
+#' get a new dataframe with one row per event (1/4 of the rows)
+#' @importFrom magrittr `%>%` 
+#' @importFrom dplyr group_by summarise select mutate
+#' @export
+reshape_controller <- function(rectangle_data) {
+  
+  event_data <- rectangle_data %>% dplyr::group_by(stimulus, group) %>%
+    dplyr::summarise(t_start = min(t_ms), t_end = max(t_ms), side = unique(side)) %>%
+    dplyr::mutate(idx = group) %>% dplyr::select(-group)
+  
+  event_data$treatment <- unlist(lapply(
+    event_data$stimulus, function(x) {
+      treatm <- gsub(pattern = "_LEFT", replacement = "", x = x)
+      treatm <- gsub(pattern = "_RIGHT", replacement = "", x = treatm)
+    }))
+  return(event_data)
+}
 
 
+#' TODO
+#' @param controller_data
+#' @return event_data
 get_event_data <- function(dataset) {
+  
+  . <- NULL
+  
   # one row per corner
   rectangle_data <- define_rectangles(dataset)
   # one row per event
@@ -51,15 +77,31 @@ get_event_data <- function(dataset) {
   return(event_data)
 }
 
-# get_unsigned_hardware <- function(hardware) {
-#   
-#   unsigned_hardware <- sapply(
-#     hardware, function(x) strsplit(x, split = "_") %>%
-#       sapply(., function(y) paste0(y[1], "_", y[2]))) %>% 
-#     unique
-#   
-#   stopifnot(length(treatments[unsigned_hardware]) == length(unsigned_hardware))
-#   names(unsigned_hardware) <- treatments[unsigned_hardware]
-#   return(unsigned_hardware)
-#   
-# }
+
+#' Interpolate controller recordings
+#' Interpolate the recordings registered in the controller data
+#' by adding new interpolated ones, one for each new timepoint in index
+#' The interpolation is done by carrying forward the last observation
+#' @importFrom dplyr arrange full_join
+#' @importFrom zoo na.locf
+#' @importFrom tibble as_tibble
+#' @importFrom magrittr `%>%`
+#' @eval document_controller_data()
+#' @param index data.frame with a column named t containing timepoints
+#' not available in controller_data (but contained within its min-max interval) 
+interpolate_controller <- function(controller_data, index) {
+  
+  controller_summary <- controller_data %>%
+    dplyr::full_join(index, ., on = "t") %>%
+    dplyr::arrange(t)
+  
+  # carry forward the last observation
+  controller_summary <- controller_summary %>%
+    apply(
+      X = .,
+      MARGIN = 2,
+      FUN = zoo::na.locf
+    ) %>%
+    tibble::as_tibble(.)    
+}
+

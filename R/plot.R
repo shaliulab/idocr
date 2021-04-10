@@ -179,6 +179,59 @@ annotate_facet <- function(data, plot_preference_index=TRUE) {
   return(data)
 }
 
+#' Validate data passed to plot_dataset
+#' @eval document_dataset()
+#' @eval document_analysis()
+validate_inputs <- function(dataset, analysis) {
+  expected_pi_columns <- c(
+    "region_id", "appetitive",
+    "aversive", "preference_index"
+  )
+  
+  if (is.null(dataset$tracker))
+    stop("Provided data frame under dataset$tracker slot is NULL.
+         Please correct that by passing a non NULL data frame")
+  if (!"data.frame" %in% class(dataset$tracker))
+    stop("Provided a non data frame variable under dataset$tracker.
+         Please correct that by passing a data frame")
+  if (!all(expected_pi_columns == colnames(analysis$pi)))
+    stop(sprintf(
+      "Provided a non valid preference index computation.
+       You should provide a dataframe with columns: %s under analysis$pi",
+       paste0(expected_pi_columns, collapse=" ")
+    ))
+  
+  if (is.null(dataset$limits) || length(dataset$limits) != 2)
+    stop("Provided limits under dataset$limits are NULL.
+         Please provide a numeric vector of length 2 where you specify the minimum
+         and maximum mm from the center of the chamber")
+
+  
+}
+
+#' Distill the dataset and analysis performed in the idocr workflow
+#' to the datasets required for plotting
+#' 
+#' A tracking dataset where every record represents the position
+#' of one animal in one timepoint is required to plot the trace
+#' 
+#' A corssing dataset where every record represents a decision zone
+#' exit of one animal is required to show the exits in the plot
+#' @importFrom dplyr left_join
+combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE) {
+  
+  tracking_data <- dplyr::left_join(dataset$tracker, analysis$pi, by = "region_id")
+  crossing_data <- dplyr::left_join(analysis$annotation, analysis$pi, by = "region_id")
+  
+  message("Generating facet labels")
+  tracking_data <- annotate_facet(tracking_data, plot_preference_index)
+  crossing_data <- annotate_facet(crossing_data, plot_preference_index)
+
+  return(list(
+    tracking = tracking_data,
+    crossing = crossing_data
+  ))
+}
 #' Generate  an IDOC plot 
 #'
 #' Take a dataset and its analysis,
@@ -190,62 +243,95 @@ annotate_facet <- function(data, plot_preference_index=TRUE) {
 #' @param plot_preference_index Whether to show the scored preference index
 #' with the region id on the facet label (TRUE), or just the region id (FALSE)
 #' @param plot_decision_zone Whether to display the decision zone (TRUE) or not.
+#' @param plot_crosses Whether to display the decision zone crosses (TRUE) or not.
 #' @param subtitle Character to write on the plot subtitles
 #' @param colors Named vector of colors. Values should be colors
 #' and names need to map to controller events
 #' @param ... Extra arguments for save_plot
-#' @importFrom dplyr left_join
 #' @seealso [mark_stimuli()]
 #' @seealso [mark_decision_zone()]
 #' @seealso [mark_crosses()]
 #' @seealso [save_plot()] 
 #' @export
-plot_dataset <- function(experiment_folder, dataset, analysis,
-                         plot_preference_index=TRUE,
-                         plot_decision_zone=TRUE,
+plot_dataset <- function(experiment_folder,
+                         dataset, analysis,
+                         plot_preference_index = TRUE,
+                         plot_decision_zone = TRUE,
+                         plot_crosses = TRUE,
                          subtitle = "",
-                         colors = c("TREATMENT_A" = "red", "TREATMENT_B" = "blue"),
+                         colors = c(
+                           "TREATMENT_A" = "red",
+                           "TREATMENT_B" = "blue"
+                          ),
                          ...
                          ) {
   
-  data <- dplyr::left_join(dataset$roi, analysis$pi, by = "region_id")
-  data <- annotate_facet(data, plot_preference_index)
+  message("Validating passed data")
+  validate_inputs(dataset, analysis)
+  data <- combine_inputs(dataset, analysis, plot_preference_index)
+  tracking_data <- data$tracking
+  crossing_data <- data$crossing
+  border <- dataset$border
+  limits <- dataset$limits
+  rectangles <- analysis$rectangles
   
-  # initialize the plot by creating a tracking trace for each animal
-  # separately
+  # initialize the plot by creating a tracking trace
+  # for each animal separately
   message("Generating base plot")
-  gg <- base_plot(data, dataset$limits)
+  gg <- base_plot(tracking_data, limits)
   
-  message("Refinning axis ticks")
-  # customize the x axis (chamber width)
-  # we want to mark where the 0 is
-
-  
-  message("Marking controller events")
   # add rectangular marks to sign the controller events
-  gg <- mark_stimuli(gg, analysis, colors)
+  message("Marking controller events")
+  gg <- mark_stimuli(gg, rectangles, colors)
   
-  message("Marking decision zone")
   # delineate the decision zone
-  if (plot_decision_zone) gg <- mark_decision_zone(gg, dataset$border)
+  message("Marking decision zone")
+  if (plot_decision_zone) gg <- mark_decision_zone(gg, border)
   
-  message("Marking decision zone crosses")
   # add points whenever an exit (decision zone cross) happens
-  gg <- mark_crosses(gg, data, analysis)
+  message("Marking decision zone crosses")
+  if (plot_crosses) gg <- mark_crosses(gg, crossing_data)
   
-  message("Documenting plot")
   # add text on axis, title, ...
-  metadata <- load_metadata(experiment_folder)
-  run_id <- metadata[field == "run_id", value]
+  message("Documenting plot")
+  gg <- document_plot(gg, experiment_folder, subtitle) 
   
-  gg <- gg +
-    labs(x = "Chamber (mm)", y = "t (s)",
-         title = run_id, subtitle = subtitle,
-         caption = paste0("Produced on ", Sys.time()))
-  
-  message("Saving plot to ->", experiment_folder)
   # save the plot to the experiment's folder
+  message("Saving plot to ->", experiment_folder)
   save_plot(gg, experiment_folder, ...)
+  
+  return(gg)
+}
+
+#' Annotate experiment metadata on plot for documentation
+#' Users can write down particular features of their experiment
+#' in the subtitle (frequency, duty cycle, odours, paradigms, etc)
+#' A default title with the run id is generated if the experiment_folder is passed
+#' A default caption with the current timestamp is placed on the bottom right
+#' @eval document_gg()
+#' @eval document_experiment_folder()
+#' @param ... Extra arguments to ggplot2::labs
+#' @seealso [ggplot2::labs()]
+#' @return document_gg("return")
+document_plot <- function(gg, experiment_folder=NULL, ...) {
+  
+  if (!is.null(experiment_folder)) {
+    metadata <- load_metadata(experiment_folder)
+    run_id <- metadata[field == "run_id", value]
+  } else {
+    run_id <- ""
+  }
+  
+  # TODO Make the call smarter by passing title and caption
+  # only if the user did not provide them
+  # If a user provides them, use them!
+  gg <- gg +
+    labs(
+      x = "Chamber (mm)", y = "t (s)",
+      title = run_id,
+      caption = paste0("Produced on ", idocr_time()),
+      ...
+  )
   
   return(gg)
 }
@@ -253,18 +339,17 @@ plot_dataset <- function(experiment_folder, dataset, analysis,
 #' Mark stimuli / treatment action over time with rectangles on the plot 
 #'  
 #' @eval document_gg()
-#' @eval document_analysis()
+#' @param rectangles
 #' @param colors Named character vector where values are colors and names
 #' are treatments. It establishes the color used to represent the treatments
 #' on the plot
 #' @importFrom purrr map
 #' @import ggplot2
 #' @return ggplot2 object
-mark_stimuli <- function(gg, analysis, colors) {
+mark_stimuli <- function(gg, rectangles, colors) {
   
   treatments <- names(colors)
-  
-  rectangles <- analysis$rectangles %>%
+  rectangles <- rectangles %>%
     purrr::map(~make_rectangle(., color = colors[unique(.$treatment)]))
   
   for (rect in rectangles) {
@@ -281,20 +366,13 @@ mark_stimuli <- function(gg, analysis, colors) {
 #' Mark decision zone exit events (crosses)
 #'
 #' @eval document_gg()
-#' @eval document_data()
-#' @eval document_analysis()
+# TODO
 #' @importFrom dplyr select left_join
 #' @import ggplot2
-mark_crosses <- function(gg, data, analysis) {
+mark_crosses <- function(gg, crossing_data) {
   
-  analysis$annotation <- dplyr::left_join(
-    analysis$annotation,
-    dplyr::select(data, region_id, facet),
-    by = "region_id"
-  )
-  
-  appetitive <- analysis$annotation[analysis$annotation$type == 'appetitive',]
-  aversive <- analysis$annotation[analysis$annotation$type == 'aversive',]
+  appetitive <- crossing_data[crossing_data$type == 'appetitive',]
+  aversive <- crossing_data[crossing_data$type == 'aversive',]
   
   gg <- gg +
     geom_point(
@@ -328,12 +406,16 @@ mark_decision_zone <- function(gg, border) {
 #' @import ggplot2
 save_plot <- function(gg, experiment_folder, ...) {
   
-  metadata <- load_metadata(experiment_folder)
-  plot_basename <- sprintf(
-    "%s_%s",
-    metadata[field == "date_time", value],
-    metadata[field == "machine_id", value]
-  )
+  if (any(grep(x = list.files(experiment_folder), pattern = "METADATA"))) {
+    metadata <- load_metadata(experiment_folder)
+    plot_basename <- sprintf(
+      "%s_%s",
+      metadata[field == "date_time", value],
+      metadata[field == "machine_id", value]
+    )
+  } else {
+    plot_basename <- "DUMMY"
+  }
   
   # specify default width, height and dpi of plots
   ggsave_kwargs <- list(...)
