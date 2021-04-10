@@ -7,6 +7,9 @@ Paths are absolute}
 \usage{
 find_rois(experiment_folder)
 }
+\arguments{
+\item{experiment_folder}{Path to folder containing IDOC results .csv files}
+}
 \description{
 Return list of ROI .csv files in the passed experiment folder
 Paths are absolute

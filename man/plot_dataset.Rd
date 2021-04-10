@@ -13,6 +13,8 @@ plot_dataset(
   plot_crosses = TRUE,
   subtitle = "",
   colors = c(TREATMENT_A = "red", TREATMENT_B = "blue"),
+  labels = c(TREATMENT_A = "TREATMENT_A", TREATMENT_B = "TREATMENT_B"),
+  analysis_mask = NULL,
   ...
 )
 }
@@ -22,7 +24,7 @@ plot_dataset(
 \item{dataset}{List of raw data including:
 \itemize{
 \item roi: every row records the position of one animal at one point in time
-\item controller: every row records the status of all IDOC hardware at one point in time
+\item controller: every row records the status of all IDOC stimulus at one point in time
 \item limits
 \item border
 }}
@@ -46,7 +48,18 @@ with the region id on the facet label (TRUE), or just the region id (FALSE)}
 \item{colors}{Named vector of colors. Values should be colors
 and names need to map to controller events}
 
+\item{labels}{Character vector whose values become
+the name of the treatments as rendered in the plot's legend}
+
+\item{analysis_mask}{Numeric vector of length 2
+containing start and end timepoint of mask
+in seconds since the start of the experiment
+Every behavior outside of the mask is ignored}
+
 \item{...}{Extra arguments for save_plot}
+}
+\value{
+ggplot2 object
 }
 \description{
 Take a dataset and its analysis,

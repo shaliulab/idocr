@@ -4,10 +4,13 @@
 \alias{mark_crosses}
 \title{Mark decision zone exit events (crosses)}
 \usage{
-mark_crosses(gg, crossing_data)
+mark_crosses(gg, cross_data)
 }
 \arguments{
 \item{gg}{ggplot2 object}
+
+\item{cross_data}{data.frame where every row captures the position of one animal at one timepoint
+when the animal exits the decision zone. Must contain fields t, side, region_id}
 }
 \description{
 Mark decision zone exit events (crosses)

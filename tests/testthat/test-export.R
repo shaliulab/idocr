@@ -43,13 +43,14 @@ test_that("main summary matches expectation in the saved file", {
     mustWork = TRUE
   )
   
-  tracking_data <- toy_tracker_small()
+  tracker_data <- toy_tracker_small()
   controller_data <- toy_controller_small()
   
   summmary_data <- export_summary(
     experiment_folder = experiment_folder,
     output_csv = NULL,
-    tracking_data, controller_data
+    tracker_data = tracker_data,
+    controller_data = controller_data
   )
 
   local_edition(3)
@@ -66,13 +67,13 @@ test_that("export_dataset runs without issues", {
     mustWork = TRUE
   )
   
-  tracking_data <- toy_tracker_small()
+  tracker_data <- toy_tracker_small()
   controller_data <- toy_controller_small()
   pi_data <- toy_pi_data()
   
-  analysis <- list(pi=pi_data[pi_data$region_id %in% unique(tracking_data$region_id), ])
+  analysis <- list(pi=pi_data[pi_data$region_id %in% unique(tracker_data$region_id), ])
   dataset <- list(
-    tracker = tracking_data,
+    tracker = tracker_data,
     controller = controller_data
   )
   

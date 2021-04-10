@@ -3,15 +3,25 @@
 \name{scale_rectangle}
 \alias{scale_rectangle}
 \title{Scale the x axis of a rectangle data table
-using the x column of tracking data
+using the x column of tracker data
 scale_shape fetches the width of the chambers
 and scales the shape accodingly}
 \usage{
 scale_rectangle(shape_data, limits, border)
 }
+\arguments{
+\item{shape_data}{Data table where every row is a corner of a polygon
+The group field is the same for all corners of the same polygon
+x and y show where on the plot the corner is
+The color and transparency is provided by the other function arguments.}
+
+\item{limits}{Position of ticks in space axis}
+
+\item{border}{Number of pixels from center to decision zone edge}
+}
 \description{
 Scale the x axis of a rectangle data table
-using the x column of tracking data
+using the x column of tracker data
 scale_shape fetches the width of the chambers
 and scales the shape accodingly
 }

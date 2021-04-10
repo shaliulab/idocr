@@ -19,6 +19,8 @@ load_metadata <- function(experiment_folder) {
 }
 
 #' Check whether the user is running deprecated code
+#' 
+#' @eval document_treatments()
 check_api_version <- function(treatments) {
   
   treatment_in_name <- length(grep(pattern = "TREATMENT", x = names(treatments))) != 0
@@ -44,7 +46,11 @@ check_api_version <- function(treatments) {
 #' 2. Features expected by the analysis functions
 #' are only available after some minor computations in the raw data
 #' @eval document_experiment_folder()
-#' @param dataset
+#' @eval document_dataset()
+#' @eval document_treatments()
+#' @param border_mm mm from center of chamber to decision zone edge
+#' @param CSplus_idx Whether the first treatment (CSplus_idx=1) or the second
+#' (CSplus_idx=2) is associated with appetitive behavior
 #' @inherit preprocess_tracker
 #' @inherit preprocess_controller
 #' @export
@@ -84,8 +90,6 @@ preprocess_dataset <- function(
 #' 
 #' Load the .csv database available at the passed directory
 #' @eval document_experiment_folder()
-#' @param ... Arguments to preprocess_dataset
-#' @seealso [preprocess_dataset()]
 #' @export
 load_dataset <- function(experiment_folder) {
   # Load tracker data (ROI - Region of Interest)

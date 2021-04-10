@@ -1,9 +1,16 @@
-#' Annotate registered corsses with either appetitive or aversive behavior
+#' Annotate registered crosses with either appetitive or aversive behavior
 #'
-#' @param cross_data dataframe where each row is an exit, defined by region_id, t and side
-#' @param event_data dataframe where each row is an event, defined by stimulus, t_start t_end, side
-#' @return 
-annotate_cross <- function(cross_data, event_data, treatment, type="appetitive") {
+#' @param cross_data data.frame where each row is an exit, defined by region_id, t and side
+#' @param event_data data.frame where each row is an event, defined by stimulus, t_start t_end, side
+#' @param treatment Name of a treatment matching a treatment in the corresponding field of `event_data`
+#' @param type type of event. Either appetitive, which makes the PI increase
+#' when the fly exits the decision zone towards the event,
+#' and aversive, if the PI should decrease in that case
+#' @return data.frame of crosses happening during some event and with annotated type
+annotate_cross <- function(cross_data, event_data, treatment, type=c("appetitive", "aversive")) {
+  
+  if(!treatment %in% event_data$treatment)
+    warning("The passed treatment is not recorded in the events dataset!")
   
   event_data <- event_data[event_data$treatment == treatment,]
 
@@ -29,12 +36,14 @@ annotate_cross <- function(cross_data, event_data, treatment, type="appetitive")
 #' 
 #' Dont count crosses happening within less than seconds_masked seconds
 #' since the previous one
-#' @param cross_data Dataset of crosses
+#' @param cross_data data.frame of crosses
 #' @param min_time Minimum amount of seconds between crosses allowed
 #' @importFrom dplyr mutate nest_by arrange lag
 #' @importFrom tidyr unnest
 seconds_mask <- function(cross_data, min_time = 0) {
 
+  region_id <- data <- dt <- NULL
+  
   original_order <- colnames(cross_data)
   
   if ("dt" %in% colnames(cross_data)) {
@@ -66,7 +75,7 @@ seconds_mask <- function(cross_data, min_time = 0) {
 #' Report timepoints when the animal crossed on either direction
 #' (in/out) the decision zone on the passed `side`.
 #' The decision zone is `border` pixels far from the center
-#' @param tracker_data
+#' @eval document_tracker_data()
 #' @eval document_border()
 #' @param side Either LEFT (-1) or RIGHT (1)
 #' @importFrom tibble tibble
@@ -90,17 +99,23 @@ cross_detector <- function(tracker_data, border, side=c(-1, 1)) {
 }
 
 #' TODO Write documentation!
-#' @param tracker_data
+#' @eval document_tracker_data()
 #' @param border Distance in pixels from center to decision zone edge
 #' @param side Integer either -1 (left) or 1 (right)
 #' @param cross_detector_FUN Cross detector function
 #' @param mask_FUN Masking function to ignore certain crosses given some heuristic
+#' @param analysis_mask Numeric vector of length 2
+#' containing start and end timepoint of mask
+#' in seconds since the start of the experiment
+#' Every behavior outside of the mask is ignored
+#' @param ... Extra arguments to mask_FUN
 #' @importFrom purrr map
 #' @importFrom tibble as_tibble
 #' @importFrom dplyr filter
 #' @importFrom magrittr `%>%`
 #' @seealso seconds_mask
 #' @seealso cross_detector
+#' @seealso mark_analysis_mask
 #' @export
 find_exits <- function(tracker_data, border, side=c(-1, 1),
                        cross_detector_FUN = cross_detector,
@@ -108,6 +123,7 @@ find_exits <- function(tracker_data, border, side=c(-1, 1),
                        analysis_mask=NULL,
                        ...) {
   
+  . <- id <- out_of_zone <- NULL
   
   if (!is.null(analysis_mask))
     tracker_data <- tracker_data %>%
@@ -116,7 +132,7 @@ find_exits <- function(tracker_data, border, side=c(-1, 1),
   
   cross_data <- tracker_data %>%
     # get a clean of populated ids
-    clean_empty_roi(.) %>%
+    remove_empty_roi(.) %>%
     select(id) %>%
     unique %>%
     unlist %>%
@@ -152,10 +168,11 @@ find_exits_all <- function(...) {
 }
 
 #' Wrapper around annotate_cross for appetitive and aversive conditioning
-#' @param cross_data
-#' @param event_data
-#' @param CSplus
-#' @param CSminus
+#' @inherit annotate_cross
+#' @param CSplus Name of treatment associated to appetitive behavior
+#' (increases PI)
+#' @param CSminus Name of treatment associated to aversive behavior
+#' (decreases PI)
 annotate_cross_all <- function(cross_data, event_data, CSplus, CSminus) {
   rbind(
     annotate_cross(cross_data, event_data, CSplus, "appetitive"),

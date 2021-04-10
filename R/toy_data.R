@@ -23,12 +23,16 @@ walk_x <- function(x, minn, maxx, sd_x) {
 }
 
 beta_walk <- function(x, minn=0, maxx=200, scaler=2) {
-  scaler * (rbeta(n = 1, shape1 = 5 * (maxx-x-minn) / (maxx-minn), shape2 = 5 * (x-minn) / (maxx - minn)) - 0.5)
+  scaler * (stats::rbeta(
+    n = 1,
+    shape1 = 5 * (maxx-x-minn) / (maxx-minn),
+    shape2 = 5 * (x-minn) / (maxx - minn)) - 0.5
+  )
 }
 
 
 random_walk <- function(sd_x) {
-  rnorm(n = 1, mean = 0, sd = sd_x)
+  stats::rnorm(n = 1, mean = 0, sd = sd_x)
 }
 
 
@@ -44,7 +48,7 @@ walk <- function(start_pos, quiescent=FALSE, sd_y=0.5) {
   } else {
     movement <- c(
       walk_x(start_pos[1], 0, 200, 3),
-      rnorm(n = 1, mean = 0, sd = sd_y)
+      stats::rnorm(n = 1, mean = 0, sd = sd_y)
     )
   }
 
@@ -67,7 +71,7 @@ walk <- function(start_pos, quiescent=FALSE, sd_y=0.5) {
 #' @importFrom data.table as.data.table
 toy_roi <- function(steps=100, p=0.2, ...) {
   
-  if (runif(n = 1) < p) {
+  if (stats::runif(n = 1) < p) {
     quiescent <- TRUE
   } else {
     quiescent <- FALSE
@@ -124,6 +128,8 @@ toy_roi_all <- function(channels=20, ...) {
 #' states whether the ith stimulus was on at time j
 toy_controller <- function(paradigm=NULL) {
   
+  . <- NULL
+  
   get_status <- function(paradigm, t) {
     
     paradigm %>%
@@ -150,6 +156,9 @@ toy_controller <- function(paradigm=NULL) {
 #' Generate a toy metadata table
 #' @return data.table with a toy metadata
 get_metadata <- function() {
+  
+  field <- value <- . <- NULL
+  
   machine_id <- paste(rep(0, 32), collapse="")
   datetime <- "2021-01-01_01-01-01"
   machine_name <- "IDOC_001"
@@ -396,9 +405,9 @@ toy_pi_data <- function() {
   set.seed(2021)
   pi <- data.frame(
     region_id=1:20,
-    appetitive=round(runif(20,0,5), digits = 0),
-    aversive=round(runif(20,0,5), digits = 0),
-    preference_index = runif(20, min=-1, max=1)
+    appetitive=round(stats::runif(20,0,5), digits = 0),
+    aversive=round(stats::runif(20,0,5), digits = 0),
+    preference_index = stats::runif(20, min=-1, max=1)
   )
   return(pi)
 }

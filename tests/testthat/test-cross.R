@@ -78,6 +78,7 @@ test_that("that only crosses happening during the event are counted", {
 
 test_that("if the event is extended in time, the second cross is also considered", {
 
+  treatment_1 <- "TREATMENT_A"
   event_data <- toy_event_data()
   cross_data <- toy_cross_data()
 
@@ -94,9 +95,11 @@ test_that("if the event is extended in time, the second cross is also considered
 
 test_that("if the side of the event changes, other exits are considered", {
 
+  treatment_1 <- "TREATMENT_A"
   event_data <- toy_event_data()
   cross_data <- toy_cross_data()
-
+  
+  
   event_data$t_end <- 10000
   event_data$side <- -1
   
@@ -112,17 +115,23 @@ test_that("if the side of the event changes, other exits are considered", {
 
 test_that("if there is no treatment in the event data that matches the query, the result is null", {
   
+  treatment_1 <- "TREATMENT_A"
+  treatment_2 <- "TREATMENT_B"
+  
   event_data <- toy_event_data()
   cross_data <- toy_cross_data()
   
   event_data$treatment <- treatment_1
+
+  expect_warning({
+    annotation <- annotate_cross(
+      cross_data = cross_data,
+      event_data = event_data,
+      treatment = treatment_2,
+      type = "dummy"
+    )},
+    "")
   
-  annotation <- annotate_cross(
-    cross_data = cross_data,
-    event_data = event_data,
-    treatment = treatment_2,
-    type = "dummy"
-  )
   expect_equal(nrow(annotation), 0)  
 })
 

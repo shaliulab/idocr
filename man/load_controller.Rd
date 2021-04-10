@@ -4,14 +4,10 @@
 \alias{load_controller}
 \title{Load a CONTROLLER_EVENTS .csv table into R}
 \usage{
-load_controller(experiment_folder, ...)
+load_controller(experiment_folder)
 }
 \arguments{
 \item{experiment_folder}{Path to a folder with IDOC results}
-
-\item{delay}{Seconds to shift the representation of the treatments
-on the plot to account for a latency or lag between treatment
-delivery start and arrival to behavioral arena}
 }
 \description{
 Load a CONTROLLER_EVENTS .csv table into R

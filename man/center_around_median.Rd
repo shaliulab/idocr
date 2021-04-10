@@ -6,6 +6,9 @@
 \usage{
 center_around_median(tracker_data)
 }
+\arguments{
+\item{tracker_data}{IDOC tracker dataset where every row captures the position of one animal at one timepoint}
+}
 \description{
 Set the median x position to 0
 }

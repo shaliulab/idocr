@@ -11,7 +11,7 @@ preference_index(appetitive, aversive, min_exits_required = 5)
 
 \item{aversive}{Number of exits towards the CSminus stimulus}
 
-\item{min_exists_required}{An integer stating the minimal number
+\item{min_exits_required}{An integer stating the minimal number
 of cross events required for the data to be considered significant}
 }
 \description{

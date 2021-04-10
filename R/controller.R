@@ -15,9 +15,13 @@ pad_t0 <- function(data) {
 #' * Make sure the status at time 0 is present
 #' * Shift all the events to account for some delay in the arrival of the stimuli
 #' if the user passes a delay
+#' @eval document_controller_data()
+#' @eval document_delay()
 #' @import data.table
 #' @export
 preprocess_controller <- function(controller_data, delay = 0) {
+  
+  . <- t <- NULL
   
   keep_cols <- controller_data %>% apply(., 2, function(x) !all(is.na(x)))
   controller_data <- controller_data[, keep_cols, with=F]
@@ -34,9 +38,8 @@ preprocess_controller <- function(controller_data, delay = 0) {
 #' 
 #' @importFrom data.table fread
 #' @param experiment_folder Path to a folder with IDOC results
-#' @eval document_delay()
 #' @export
-load_controller <- function(experiment_folder, ...) {
+load_controller <- function(experiment_folder) {
   
   csv_files <- list.files(path = experiment_folder, pattern = ".csv")
   controller_filename <- grep(pattern = "CONTROLLER_EVENTS", x = csv_files, value = T)
@@ -52,25 +55,30 @@ load_controller <- function(experiment_folder, ...) {
 #' get a new dataframe with one row per event (1/4 of the rows)
 #' @importFrom magrittr `%>%` 
 #' @importFrom dplyr group_by summarise select mutate
+#' @param rectangle_data A dataframe where every row represetns a corner of a polygon
+#' The position along the time axis where the polygon should be rendered should be contained
+#' in a `t_ms` column. Corners belonging to the same polygon should have a unique value under `group`.
 #' @export
 reshape_controller <- function(rectangle_data) {
+  
+  stimulus <- group <- t_ms <- side <- NULL
+  
+  stopifnot("t_ms" %in% colnames(rectangle_data))
+  stopifnot("group" %in% colnames(rectangle_data))
+  
   
   event_data <- rectangle_data %>% dplyr::group_by(stimulus, group) %>%
     dplyr::summarise(t_start = min(t_ms), t_end = max(t_ms), side = unique(side)) %>%
     dplyr::mutate(idx = group) %>% dplyr::select(-group)
   
-  event_data$treatment <- unlist(lapply(
-    event_data$stimulus, function(x) {
-      treatm <- gsub(pattern = "_LEFT", replacement = "", x = x)
-      treatm <- gsub(pattern = "_RIGHT", replacement = "", x = treatm)
-    }))
+  event_data$treatment <- unlist(lapply(event_data$stimulus, remove_side))
   return(event_data)
 }
 
 
-#' TODO
-#' @param controller_data
-#' @return event_data
+#' Obtain a tidy data frame of events from a loaded dataset
+#' @eval document_dataset()
+#' @return data.frame where every row registers the activation of an IDOC stimulus
 get_event_data <- function(dataset) {
   
   . <- NULL
@@ -95,6 +103,8 @@ get_event_data <- function(dataset) {
 #' @param index data.frame with a column named t containing timepoints
 #' not available in controller_data (but contained within its min-max interval) 
 interpolate_controller <- function(controller_data, index) {
+  
+  . <- NULL
   
   controller_summary <- controller_data %>%
     dplyr::full_join(index, ., on = "t") %>%

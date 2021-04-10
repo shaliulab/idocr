@@ -4,14 +4,21 @@
 \alias{analyse_dataset}
 \title{Analyse an IDOC dataset}
 \usage{
-analyse_dataset(dataset, min_exits_required, min_time = 0, ...)
+analyse_dataset(dataset, min_exits_required = 5, ...)
 }
 \arguments{
-\item{min_exits_required}{Minimum number of exists required
-when computing the preference index. Animals not reaching this number of exits
-are not considered in the analysis}
+\item{dataset}{List of raw data including:
+\itemize{
+\item roi: every row records the position of one animal at one point in time
+\item controller: every row records the status of all IDOC stimulus at one point in time
+\item limits
+\item border
+}}
 
-\item{...}{Additional arguments to annotate_cross}
+\item{min_exits_required}{Minimal number of exits
+to be considered for significance}
+
+\item{...}{Extra arguments to find_exits_all}
 }
 \description{
 Take an IDOC dataset

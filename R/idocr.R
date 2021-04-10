@@ -4,24 +4,22 @@
 #' and return a data frame with the appetitive index of each fly
 #' and a plot visualizing the experiment
 #' @eval document_experiment_folder()
-#' @param treatments Vector of treatments. You are likely to always pass TREATMENT_A and TREATMENT_B
-#' @param border_mm Distance between arena center
-#' and one border of the decision zone (mm)
-#' @param min_exits_required Minimal number of exits
-#' to be considered for significance
-#' @param CSplus Name of treatment associated to appetitive conditioning
 #' @eval document_delay()
 #' @param mask_duration Seconds of behavior to be ignored after last cross,
 #' so the same cross is not counted more than once due to noise in
 #' the border cross
-#' @inheritParams document_script
-#' @inheritParams preprocess_controller
+#' @param ... Extra arguments to plot_dataset
+#' @inherit document_script
+#' @inherit preprocess_controller
+#' @inherit find_exits
+#' @inherit preprocess_dataset
+#' @inherit analyse_dataset
 #' @importFrom data.table fwrite
-#' @seealso load_dataset 
-#' @seealso preprocess_dataset
-#' @seealso analyse_dataset 
-#' @seealso plot_dataset 
-#' @seealso export_dataset
+#' @seealso [load_dataset()]
+#' @seealso [preprocess_dataset()]
+#' @seealso [analyse_dataset()] 
+#' @seealso [plot_dataset()]
+#' @seealso [export_dataset()]
 #' @export
 idocr <- function(experiment_folder,
                   treatments=paste0("TREATMENT_", c("A", "B")),

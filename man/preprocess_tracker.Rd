@@ -13,6 +13,8 @@ preprocess_tracker(experiment_folder, tracker_data)
 }
 \arguments{
 \item{experiment_folder}{Path to folder containing IDOC results .csv files}
+
+\item{tracker_data}{IDOC tracker dataset where every row captures the position of one animal at one timepoint}
 }
 \value{
 tracker_data

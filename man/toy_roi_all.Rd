@@ -8,10 +8,12 @@ toy_roi_all(channels = 20, ...)
 }
 \arguments{
 \item{channels}{Number of animals to simulate}
+
+\item{...}{Extra arguments to \code{\link[=toy_roi]{toy_roi()}}}
 }
 \description{
 Call toy_roi as many times as channels are passed
 }
 \seealso{
-toy_roi
+\code{\link[=toy_roi]{toy_roi()}}
 }

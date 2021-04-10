@@ -5,7 +5,14 @@
 \title{Given a dataset, find the timepoints
 where the stimulus changes state}
 \usage{
-validate_events(data, stimulus)
+validate_events(controller_data, stimulus)
+}
+\arguments{
+\item{controller_data}{data.frame with recordings of IDOC status at several timepoints,
+one timepoint per row. Wide format}
+
+\item{stimulus}{Namew of stimulus or event, which should match
+a column in the passed \code{controller_data}}
 }
 \description{
 Given a dataset, find the timepoints

@@ -6,6 +6,8 @@
 #' @importFrom magrittr `%>%`
 define_rectangle_all <- function(dataset) {
   
+  . <- stimulus <- NULL
+  
   stopifnot(!is.null(dataset$controller))
   stopifnot(!is.null(dataset$stimuli))
   stopifnot(!is.null(dataset$limits))
@@ -56,6 +58,8 @@ define_rectangle_all <- function(dataset) {
 #' This is given by its side (X axis) and the time when it was on (Y axis)
 #' If the stimulus was turned on/off n times, we get n rectangles and thus n*4 rows.#' 
 #' The x axis is assumed to go from -1 to 1. To scale it, see scale_shape
+#' @eval document_controller_data()
+#' @eval document_stimulus()
 #' @importFrom magrittr `%>%`
 #' @import data.table
 #' @export
@@ -92,8 +96,13 @@ define_rectangle <- function(controller_data, stimulus) {
 
 #' Given a dataset, find the timepoints
 #' where the stimulus changes state
-validate_events <- function(data, stimulus) {
-  stimulus_events <- data[[stimulus]] %>%
+#' @eval document_controller_data()
+#' @eval document_stimulus() 
+validate_events <- function(controller_data, stimulus) {
+  
+  . <- NULL
+  
+  stimulus_events <- controller_data[[stimulus]] %>%
     # detect differences
     diff %>%
     # add something at the beginning
@@ -109,7 +118,7 @@ validate_events <- function(data, stimulus) {
   }
   
   # Pick the time at which this differences occur
-  switches <- data[which(as.logical(abs(stimulus_events))), t]
+  switches <- controller_data[which(as.logical(abs(stimulus_events))), t]
   
   if (length(switches) %% 2 != 0) {
     stop(sprintf("Problem parsing an end timestamp for %s", stimulus))
@@ -124,9 +133,9 @@ validate_events <- function(data, stimulus) {
 #' scale_shape fetches the width of the chambers
 #' and scales the shape accodingly
 #' 
-#' @param shape_data
-#' @param limits
-#' @param border
+#' @eval document_shape_data()
+#' @eval document_limits()
+#' @eval document_border()
 #' @importFrom purrr map_dbl
 #' @importFrom dplyr mutate case_when
 scale_rectangle <- function(shape_data, limits, border) {

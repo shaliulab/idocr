@@ -36,6 +36,9 @@ parse_side <- function(stimulus) {
 
 #' @importFrom stringr str_remove
 remove_side <- function(stimulus) {
+  
+  . <- NULL
+  
   stopifnot(grep(pattern = "LEFT", x = stimulus) |  grep(pattern = "RIGHT", x = stimulus))
   treatment <- lapply(stimulus, 
                      function(x) {
@@ -48,6 +51,17 @@ remove_side <- function(stimulus) {
 #' Return system time unless testing
 idocr_time <- function() {
   
+  is_testing <- testthat_is_testing()
+  
+  if (is_testing) {
+    time <- as.POSIXct("2021-01-01 00:00:01 CEST")
+  } else {
+    time <- Sys.time()
+  }
+  return(time)
+}
+  
+testthat_is_testing <- function() {
   is_testing <- FALSE
   
   # is testing will be true only if
@@ -59,10 +73,5 @@ idocr_time <- function() {
     error = function(e) FALSE
   )
   
-  if (is_testing) {
-    time <- as.POSIXct("2021-01-01 00:00:01 CEST")
-  } else {
-    time <- Sys.time()
-  }
-  return(time)
+  return(is_testing)
 }

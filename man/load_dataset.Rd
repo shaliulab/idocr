@@ -8,12 +8,7 @@ load_dataset(experiment_folder)
 }
 \arguments{
 \item{experiment_folder}{Path to folder containing IDOC results .csv files}
-
-\item{...}{Arguments to preprocess_dataset}
 }
 \description{
 Load the .csv database available at the passed directory
-}
-\seealso{
-\code{\link[=preprocess_dataset]{preprocess_dataset()}}
 }

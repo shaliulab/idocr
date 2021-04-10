@@ -1,5 +1,5 @@
 #' Compute the preference index displayed by the animals in a dataset
-#' @param annotated_data
+#' @eval document_annotated_data()
 #' @param min_exits_required Minimum number of exists required
 #' when computing the preference index. Animals not reaching this number of exits
 #' are not considered in the analysis
@@ -7,7 +7,8 @@
 #' @importFrom tidyr pivot_wider
 #' @importFrom magrittr `%>%`
 compute_preference_index <- function(annotated_data, min_exits_required = 5) {
-  # Compute the preference index based on region-id indexed data
+  
+  region_id <- type <- data <- NULL
 
   pi_data <- annotated_data %>%
     dplyr::group_by(region_id, type) %>%
@@ -62,7 +63,7 @@ compute_preference_index <- function(annotated_data, min_exits_required = 5) {
 #' 
 #' @param appetitive Number of exits towards the CSplus simulus
 #' @param aversive Number of exits towards the CSminus stimulus
-#' @param min_exists_required An integer stating the minimal number
+#' @param min_exits_required An integer stating the minimal number
 #' of cross events required for the data to be considered significant
 #' @export
 preference_index <- function(appetitive, aversive, min_exits_required=5) {

@@ -7,12 +7,12 @@
 toy_controller(paradigm = NULL)
 }
 \arguments{
-\item{paradigm}{data.table with format hardware, start, off}
+\item{paradigm}{data.table with format stimulus, start, off}
 }
 \value{
-data.table with one column per hardware in paradigm
+data.table with one column per stimulus in paradigm
 and one row per sampling timepoint. The value of the i,j cell
-states whether the ith hardware was on at time j
+states whether the ith stimulus was on at time j
 }
 \description{
 Generate a toy controller dataset based on a paradigm

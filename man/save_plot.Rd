@@ -10,7 +10,12 @@ save_plot(gg, experiment_folder, ...)
 \item{gg}{ggplot2 plot}
 
 \item{experiment_folder}{Path to folder containing IDOC results .csv files}
+
+\item{...}{Extra arguments for ggsave}
 }
 \description{
 Save a ggplot2 plot in pdf and png format using consistent naming
+}
+\seealso{
+\code{\link[ggplot2:ggsave]{ggplot2::ggsave()}}
 }

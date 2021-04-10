@@ -13,22 +13,27 @@ idocr(
   delay = 0,
   src_file = NULL,
   mask_duration = 0.5,
+  analysis_mask = NULL,
   ...
 )
 }
 \arguments{
 \item{experiment_folder}{Path to folder containing IDOC results .csv files}
 
-\item{treatments}{Vector of treatments. You are likely to always pass TREATMENT_A and TREATMENT_B}
+\item{treatments}{Vector of treatments.
+If named and names contain the word treatment,
+it is likely that the user is running old API code}
 
 \item{min_exits_required}{Minimal number of exits
 to be considered for significance}
 
-\item{border_mm}{Distance between arena center
-and one border of the decision zone (mm)}
+\item{CSplus_idx}{Whether the first treatment (CSplus_idx=1) or the second
+(CSplus_idx=2) is associated with appetitive behavior}
+
+\item{border_mm}{mm from center of chamber to decision zone edge}
 
 \item{delay}{Seconds to shift the representation of the treatments
-on the plot to account for a latency or lag between treatment
+on the plot, to account for a latency or lag between treatment
 delivery start and arrival to behavioral arena}
 
 \item{src_file}{Path of file to be copied.
@@ -38,7 +43,15 @@ If NULL, take current file (works on RStudio)}
 so the same cross is not counted more than once due to noise in
 the border cross}
 
-\item{CSplus}{Name of treatment associated to appetitive conditioning}
+\item{analysis_mask}{Numeric vector of length 2
+containing start and end timepoint of mask
+in seconds since the start of the experiment
+Every behavior outside of the mask is ignored}
+
+\item{...}{Extra arguments to plot_dataset}
+}
+\value{
+tracker_data
 }
 \description{
 Load data from the experiment folder, possibly with some specific settings
@@ -46,13 +59,13 @@ and return a data frame with the appetitive index of each fly
 and a plot visualizing the experiment
 }
 \seealso{
-load_dataset
+\code{\link[=load_dataset]{load_dataset()}}
 
-preprocess_dataset
+\code{\link[=preprocess_dataset]{preprocess_dataset()}}
 
-analyse_dataset
+\code{\link[=analyse_dataset]{analyse_dataset()}}
 
-plot_dataset
+\code{\link[=plot_dataset]{plot_dataset()}}
 
-export_dataset
+\code{\link[=export_dataset]{export_dataset()}}
 }

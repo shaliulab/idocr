@@ -4,18 +4,18 @@ context("plot")
 
 test_that("base plot produces plot with correct axes and facet", {
   
-  tracking_data <- toy_tracker_small()
+  tracker_data <- toy_tracker_small()
   limits <- c(-100, 100)
-  tracking_data$facet <- paste0("ROI_", tracking_data$region_id)
-  gg <- base_plot(tracking_data, limits)
+  tracker_data$facet <- paste0("ROI_", tracker_data$region_id)
+  gg <- base_plot(tracker_data, limits)
   
   expect_equal(gg$scales$scales[[1]]$limits, c(-60, 0))
   expect_equal(gg$scales$scales[[2]]$limits, limits)
   vdiffr::expect_doppelganger("base-plot", gg)
   
   limits <- c(-50, 50)
-  tracking_data$facet <- paste0("ROI_", tracking_data$region_id)
-  gg <- base_plot(tracking_data, limits)
+  tracker_data$facet <- paste0("ROI_", tracker_data$region_id)
+  gg <- base_plot(tracker_data, limits)
   expect_equal(gg$scales$scales[[2]]$limits, limits)
   
 })

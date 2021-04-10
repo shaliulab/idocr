@@ -2,10 +2,10 @@
 #' 
 #' Take an IDOC dataset
 #' @eval document_dataset()
-#' @inherit compute_preference_index
+#' @param min_exits_required Minimal number of exits
+#' to be considered for significance
 #' @param ... Extra arguments to find_exits_all
-#' @seealso annotate_cross
-#' @seealso annotate_cross
+#' @seealso [annotate_cross()]
 analyse_dataset <- function(dataset, min_exits_required=5, ...) {
   
   tracker_data <- dataset$tracker

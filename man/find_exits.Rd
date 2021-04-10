@@ -10,10 +10,13 @@ find_exits(
   side = c(-1, 1),
   cross_detector_FUN = cross_detector,
   mask_FUN = seconds_mask,
+  analysis_mask = NULL,
   ...
 )
 }
 \arguments{
+\item{tracker_data}{IDOC tracker dataset where every row captures the position of one animal at one timepoint}
+
 \item{border}{Distance in pixels from center to decision zone edge}
 
 \item{side}{Integer either -1 (left) or 1 (right)}
@@ -21,6 +24,13 @@ find_exits(
 \item{cross_detector_FUN}{Cross detector function}
 
 \item{mask_FUN}{Masking function to ignore certain crosses given some heuristic}
+
+\item{analysis_mask}{Numeric vector of length 2
+containing start and end timepoint of mask
+in seconds since the start of the experiment
+Every behavior outside of the mask is ignored}
+
+\item{...}{Extra arguments to mask_FUN}
 }
 \description{
 TODO Write documentation!
@@ -29,4 +39,6 @@ TODO Write documentation!
 seconds_mask
 
 cross_detector
+
+mark_analysis_mask
 }

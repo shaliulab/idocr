@@ -15,6 +15,27 @@ preprocess_dataset(
 }
 \arguments{
 \item{experiment_folder}{Path to folder containing IDOC results .csv files}
+
+\item{dataset}{List of raw data including:
+\itemize{
+\item roi: every row records the position of one animal at one point in time
+\item controller: every row records the status of all IDOC stimulus at one point in time
+\item limits
+\item border
+}}
+
+\item{treatments}{Vector of treatments.
+If named and names contain the word treatment,
+it is likely that the user is running old API code}
+
+\item{delay}{Seconds to shift the representation of the treatments
+on the plot, to account for a latency or lag between treatment
+delivery start and arrival to behavioral arena}
+
+\item{border_mm}{mm from center of chamber to decision zone edge}
+
+\item{CSplus_idx}{Whether the first treatment (CSplus_idx=1) or the second
+(CSplus_idx=2) is associated with appetitive behavior}
 }
 \value{
 tracker_data

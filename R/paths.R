@@ -1,6 +1,7 @@
 #' Module to infer names of .csv files based on metadata+key or experiment_folder+key
 
 #' Build a filename based on the metadata and a key
+#' @eval document_experiment_folder()
 #' @param metadata data.table with all information about the experiment
 #' i.e. when it was done, etc
 #' @param key Name of a table in the resulting database

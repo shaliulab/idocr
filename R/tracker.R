@@ -1,5 +1,6 @@
 #' Return list of ROI .csv files in the passed experiment folder
 #' Paths are absolute
+#' @eval document_experiment_folder()
 #' @importFrom gtools mixedsort
 find_rois <- function(experiment_folder) {
   # keep the ROI_* files only and in numerical order i.e. 10 after 9 and not after 1
@@ -10,6 +11,7 @@ find_rois <- function(experiment_folder) {
 }
 
 #' Set the median x position to 0
+#' @eval document_tracker_data()
 center_around_median <- function(tracker_data) {
   # TODO Should we infer the min/max from the data
   # or rather hardcode them?
@@ -25,6 +27,8 @@ center_around_median <- function(tracker_data) {
 
 #' @importFrom stringr str_pad
 construct_animal_id <- function(experiment_folder, tracker_data) {
+ 
+  field <- value <- NULL
   metadata <- load_metadata(experiment_folder)
   run_id <- metadata[field == "run_id", value]
   tracker_data$id <- paste0(run_id, "|", stringr::str_pad(
@@ -38,6 +42,7 @@ construct_animal_id <- function(experiment_folder, tracker_data) {
 #' @importFrom stringr str_match
 #' @importFrom data.table fread
 #' @importFrom magrittr `%>%`
+#' @param file Path to a file in an IDOC .csv database
 read_roi <- function(file) {
   
   match <- stringr::str_match(file, pattern = ".*ROI_(\\d{1,2}).csv")
@@ -52,9 +57,12 @@ read_roi <- function(file) {
   }
 }
 
+
 #' @importFrom dplyr select
 #' @importFrom magrittr `%>%`
-clean_dups <- function(tracker_data) {
+remove_duplicates <- function(tracker_data) {
+  
+  region_id <- t <- . <- NULL
   tracker_data[
     tracker_data %>%
       dplyr::select(region_id, t) %>%
@@ -76,7 +84,7 @@ keep_needed_columns_only <- function(experiment_folder, tracker_data) {
 #' * Center the space coordinates around 0
 #' * Keep only the needed columns
 #' @eval document_experiment_folder()
-#' @param tracker_data
+#' @eval document_tracker_data()
 #' @return tracker_data
 preprocess_tracker <- function(experiment_folder, tracker_data) {
   # construct the id of the flies
@@ -102,6 +110,8 @@ preprocess_tracker <- function(experiment_folder, tracker_data) {
 #' @export
 load_rois <- function(experiment_folder) {
   
+  . <- NULL
+  
   # link .csv files
   roi_files <- find_rois(experiment_folder)
 
@@ -120,7 +130,7 @@ load_rois <- function(experiment_folder) {
   
   # remove data points with same region_id and t
   # TODO Do they happen?
-  tracker_data <- clean_dups(tracker_data)
+  tracker_data <- remove_duplicates(tracker_data)
   return(tracker_data)
 }
 
@@ -136,6 +146,8 @@ load_rois <- function(experiment_folder) {
 #' @importFrom tibble as_tibble
 #' @export
 add_empty_roi <- function(experiment_folder, tracker_data, n=20) {
+  
+  . <- sql_type <- NULL
 
   var_map <- load_varmap(experiment_folder)
   R_types <- list("SMALLINT" = integer, "BOOLEAN" = logical, "INT" = integer)
@@ -193,15 +205,16 @@ load_systematic_rois <- function(..., n=20) {
 #' @importFrom purrr keep
 #' @importFrom dplyr group_by group_split
 #' @importFrom magrittr `%>%`
-clean_empty_roi <- function(tracker_data, minimum=100) {
+#' @eval document_tracker_data()
+#' @param minimum Minimum number of datapoints in a row to be considered
+#' not sparse (not noise) and thus valid
+remove_empty_roi <- function(tracker_data, minimum=100) {
 
+  id <- . <- NULL
+  
   # check whether this is running in a testing environment
   # if testthat cannot be loaded, assume we are not testing
-  testing <- tryCatch(
-    testthat::is_testing(),
-    error = function(e) {
-      FALSE
-    })
+  testing <- testthat_is_testing()
   
   if (!testing) {
     tracker_data <- tracker_data %>%

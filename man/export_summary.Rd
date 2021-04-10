@@ -4,11 +4,19 @@
 \alias{export_summary}
 \title{Export a single csv with all key data for analysis and plotting outside of R}
 \usage{
-export_summary(experiment_folder, delay = 0, output_csv = NULL)
+export_summary(experiment_folder, output_csv = NULL, ...)
 }
-\value{
-data.table
+\arguments{
+\item{experiment_folder}{Path to folder containing IDOC results .csv files}
+
+\item{output_csv}{Path of csv output. If not provided,}
+
+\item{...}{Extra arguments to make_summary}
 }
 \description{
 Export a single csv with all key data for analysis and plotting outside of R
+}
+\seealso{
+\code{\link[=make_summary]{make_summary()}}
+a new file in the experiment folder with key SUMMARY is produced
 }

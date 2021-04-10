@@ -11,6 +11,14 @@ if the user passes a delay
 \usage{
 preprocess_controller(controller_data, delay = 0)
 }
+\arguments{
+\item{controller_data}{data.frame with recordings of IDOC status at several timepoints,
+one timepoint per row. Wide format}
+
+\item{delay}{Seconds to shift the representation of the treatments
+on the plot, to account for a latency or lag between treatment
+delivery start and arrival to behavioral arena}
+}
 \description{
 Preprocess controller
 \itemize{

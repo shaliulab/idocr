@@ -12,7 +12,7 @@ export_dataset(experiment_folder, dataset, analysis)
 \item{dataset}{List of raw data including:
 \itemize{
 \item roi: every row records the position of one animal at one point in time
-\item controller: every row records the status of all IDOC hardware at one point in time
+\item controller: every row records the status of all IDOC stimulus at one point in time
 \item limits
 \item border
 }}
@@ -25,6 +25,6 @@ value
 }}
 }
 \description{
-Geneate the preference index table
+Generate the preference index table
 Generate the summary table
 }

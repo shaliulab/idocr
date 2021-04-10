@@ -6,6 +6,9 @@
 \usage{
 read_roi(file)
 }
+\arguments{
+\item{file}{Path to a file in an IDOC .csv database}
+}
 \description{
 Read a single ROI csv file
 }

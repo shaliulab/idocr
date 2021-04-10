@@ -10,7 +10,7 @@ validate_inputs(dataset, analysis)
 \item{dataset}{List of raw data including:
 \itemize{
 \item roi: every row records the position of one animal at one point in time
-\item controller: every row records the status of all IDOC hardware at one point in time
+\item controller: every row records the status of all IDOC stimulus at one point in time
 \item limits
 \item border
 }}
@@ -22,6 +22,20 @@ value
 \item pi: preference index scored by each animal
 }}
 }
+\value{
+ggplot2 object
+}
 \description{
-Validate data passed to plot_dataset
+Take a dataset and its analysis,
+together with plotting parameters,
+to visualize an IDOC experiment
+}
+\seealso{
+\code{\link[=mark_stimuli]{mark_stimuli()}}
+
+\code{\link[=mark_decision_zone]{mark_decision_zone()}}
+
+\code{\link[=mark_crosses]{mark_crosses()}}
+
+\code{\link[=save_plot]{save_plot()}}
 }

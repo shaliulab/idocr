@@ -105,6 +105,8 @@ mark_space <- function(limits, gg, extra=c(0)) {
 #' @export
 base_plot <- function(data, limits) {
 
+  x <- id <- NULL
+
   theme_set(theme_bw() + theme(
     panel.spacing = unit(1, "lines"),
     text = element_text(size = 20))
@@ -134,35 +136,12 @@ base_plot <- function(data, limits) {
   return(gg)
 }
 
-#' Generate a rectangle object
-#' that will mark a piece of IDOC stimulus was active
-#' 
-#' @eval document_shape_data()
-#' @param color Rectangle fill color
-#' @param border Rectangle border color
-#' @param alpha Rectangle transparency
-#' @import ggplot2
-#' @return ggplot2 geom_polygon
-# TODO Not needed anymore
-#' @export
-make_rectangle <- function(shape_data, color="red", border="black", alpha=0.4) {
-  
-  shape <- geom_polygon(
-    data = shape_data,
-    mapping = aes(
-      y = t, x = x, group = group,
-    ),
-    alpha = alpha, fill = color, color = border
-  )
-  return(shape)
-}
-
 
 #' Customize the facet label
 #'
 #' @eval document_data()
-#' @param plot_preference_index If TRUE, the PI displayed by the animal is
-#' put into the facet label
+#' @param plot_preference_index Whether to show the scored preference index
+#' with the region id on the facet label (TRUE), or just the region id (FALSE)
 annotate_facet <- function(data, plot_preference_index=TRUE) {
   
   region_id <- paste0("ROI_", data$region_id)
@@ -188,8 +167,7 @@ annotate_facet <- function(data, plot_preference_index=TRUE) {
 }
 
 #' Validate data passed to plot_dataset
-#' @eval document_dataset()
-#' @eval document_analysis()
+#' @inherit plot_dataset
 validate_inputs <- function(dataset, analysis) {
   expected_pi_columns <- c(
     "region_id", "appetitive",
@@ -225,6 +203,9 @@ validate_inputs <- function(dataset, analysis) {
 #' 
 #' A corssing dataset where every record represents a decision zone
 #' exit of one animal is required to show the exits in the plot
+#' @eval document_dataset()
+#' @eval document_analysis()
+#' @inherit annotate_facet
 #' @importFrom dplyr left_join
 combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE) {
   
@@ -248,13 +229,14 @@ combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE) {
 #' @eval document_experiment_folder()
 #' @eval document_dataset()
 #' @eval document_analysis()
-#' @param plot_preference_index Whether to show the scored preference index
-#' with the region id on the facet label (TRUE), or just the region id (FALSE)
 #' @param plot_decision_zone Whether to display the decision zone (TRUE) or not.
-#' @param plot_crosses Whether to display the decision zone crosses (TRUE) or not.
 #' @param subtitle Character to write on the plot subtitles
 #' @param colors Named vector of colors. Values should be colors
 #' and names need to map to controller events
+#' @param plot_crosses Whether to display the decision zone crosses (TRUE) or not.
+#' @inherit mark_analysis_mask
+#' @inherit mark_stimuli
+#' @inherit annotate_facet
 #' @param ... Extra arguments for save_plot
 #' @seealso [mark_stimuli()]
 #' @seealso [mark_decision_zone()]
@@ -325,8 +307,17 @@ plot_dataset <- function(experiment_folder,
   return(gg)
 }
 
+#' Mark the analysis mask
+#' 
+#' Mark the time interval of the experiment for which
+#' the preference computation is performed
+#' This is shown with a yellow rectangle in the plot
+#' @eval document_gg()
+#' @inherit find_exits
 mark_analysis_mask <- function(gg, analysis_mask) {
 
+  x <- y <- NULL
+  
   limits <- gg$scales$scales[[2]]$limits
   
   mask_coords <- data.frame(
@@ -357,6 +348,8 @@ mark_analysis_mask <- function(gg, analysis_mask) {
 #' @return document_gg("return")
 document_plot <- function(gg, experiment_folder=NULL, ...) {
   
+  value <- field <- NULL
+  
   if (!is.null(experiment_folder)) {
     metadata <- load_metadata(experiment_folder)
     run_id <- metadata[field == "run_id", value]
@@ -381,14 +374,20 @@ document_plot <- function(gg, experiment_folder=NULL, ...) {
 #' Mark stimuli / treatment action over time with rectangles on the plot 
 #'  
 #' @eval document_gg()
-#' @param rectangles
+#' @param rectangles List of rectangle datasets where every dataset is a
+#' dataframe of 4 rows describing the 4 corners of a rectangle.
+#' They represent the occurrence of a stimulus each#' 
 #' @param colors Named character vector where values are colors and names
 #' are treatments. It establishes the color used to represent the treatments
 #' on the plot
+#' @param labels Character vector whose values become
+#' the name of the treatments as rendered in the plot's legend
 #' @importFrom purrr map
 #' @import ggplot2
 #' @return ggplot2 object
 mark_stimuli <- function(gg, rectangles, colors, labels) {
+  
+  . <- x <- t <- group <- treatment <- NULL
   
   treatments <- names(colors)
 
@@ -419,13 +418,15 @@ mark_stimuli <- function(gg, rectangles, colors, labels) {
 #' Mark decision zone exit events (crosses)
 #'
 #' @eval document_gg()
-# TODO
+#' @eval document_cross_data()
 #' @importFrom dplyr select left_join
 #' @import ggplot2
-mark_crosses <- function(gg, crossing_data) {
+mark_crosses <- function(gg, cross_data) {
   
-  appetitive <- crossing_data[crossing_data$type == 'appetitive',]
-  aversive <- crossing_data[crossing_data$type == 'aversive',]
+  x <- t <- NULL
+  
+  appetitive <- cross_data[cross_data$type == 'appetitive',]
+  aversive <- cross_data[cross_data$type == 'aversive',]
   
   gg <- gg +
     geom_point(
@@ -456,8 +457,12 @@ mark_decision_zone <- function(gg, border) {
 #' 
 #' @param gg ggplot2 plot
 #' @eval document_experiment_folder()
+#' @param ... Extra arguments for ggsave
+#' @seealso [ggplot2::ggsave()]
 #' @import ggplot2
 save_plot <- function(gg, experiment_folder, ...) {
+  
+  field <- value <- NULL
   
   if (any(grep(x = list.files(experiment_folder), pattern = "METADATA"))) {
     metadata <- load_metadata(experiment_folder)

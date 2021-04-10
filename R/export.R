@@ -1,14 +1,13 @@
+#' Put the most important data into a wide format table
+#' 
 #' @importFrom tidyr pivot_wider
 #' @importFrom magrittr `%>%`
 #' @importFrom data.table fwrite
 #' @importFrom dplyr select mutate
-#' @eval document_experiment_folder()
-#' @eval document_delay()
-#' @param output_csv Path to output file.
-#' If NULL (default), saved to experiment folder with key SUMMARY
+#' @eval document_controller_data()
+#' @eval document_tracker_data()
 #' @return data.table
 #' @export
-#'
 make_summary <- function(tracker_data, controller_data) {
   . <- region_id <- x <- NULL
 
@@ -38,7 +37,14 @@ make_summary <- function(tracker_data, controller_data) {
   return(summary_data)
   
 }
+
 #' Export a single csv with all key data for analysis and plotting outside of R
+#' 
+#' @eval document_experiment_folder()
+#' @param output_csv Path of csv output. If not provided,
+#' @param ... Extra arguments to make_summary
+#' @seealso [make_summary()]
+#' a new file in the experiment folder with key SUMMARY is produced
 export_summary <- function(experiment_folder, output_csv=NULL, ...) {
   
   summary_data <- make_summary(...)
@@ -60,7 +66,14 @@ export_summary <- function(experiment_folder, output_csv=NULL, ...) {
   return(summary_data)
 }
 
+#' Export the preference index to a csv file
+#' 
 #' @importFrom data.table fwrite
+#' @inherit export_summary
+#' @param pi Dataframe to be exported.
+#' Should contain a column named preference_index
+#' @param output_csv Path of csv output. If not provided,
+#' a new file in the experiment folder with key SUMMARY is produced
 export_pi_summary <- function(experiment_folder, pi, output_csv=NULL) {
   
   if(is.null(output_csv)) {

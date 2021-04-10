@@ -7,7 +7,7 @@
 seconds_mask(cross_data, min_time = 0)
 }
 \arguments{
-\item{cross_data}{Dataset of crosses}
+\item{cross_data}{data.frame of crosses}
 
 \item{min_time}{Minimum amount of seconds between crosses allowed}
 }

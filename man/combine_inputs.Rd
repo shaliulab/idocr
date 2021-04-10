@@ -7,8 +7,27 @@ to the datasets required for plotting}
 \usage{
 combine_inputs(dataset, analysis, plot_preference_index = TRUE)
 }
+\arguments{
+\item{dataset}{List of raw data including:
+\itemize{
+\item roi: every row records the position of one animal at one point in time
+\item controller: every row records the status of all IDOC stimulus at one point in time
+\item limits
+\item border
+}}
+
+\item{analysis}{List of processed data including:
+\itemize{
+\item annotation: every row is a decision zone exit and its appetitive / aversive
+value
+\item pi: preference index scored by each animal
+}}
+
+\item{plot_preference_index}{Whether to show the scored preference index
+with the region id on the facet label (TRUE), or just the region id (FALSE)}
+}
 \description{
-A tracking dataset where every record represents the position
+A tracker dataset where every record represents the position
 of one animal in one timepoint is required to plot the trace
 }
 \details{

@@ -5,13 +5,22 @@
 \title{Module to infer names of .csv files based on metadata+key or experiment_folder+key
 Build a filename based on the metadata and a key}
 \usage{
-build_filename(metadata, key)
+build_filename(
+  experiment_folder = NULL,
+  metadata = NULL,
+  key = NULL,
+  extension = ".csv"
+)
 }
 \arguments{
+\item{experiment_folder}{Path to folder containing IDOC results .csv files}
+
 \item{metadata}{data.table with all information about the experiment
 i.e. when it was done, etc}
 
 \item{key}{Name of a table in the resulting database}
+
+\item{extension}{Extension of file (.csv, ...)}
 }
 \value{
 Filename with systematic metainformation and key to differentiate

@@ -6,6 +6,20 @@
 \usage{
 annotate_cross_all(cross_data, event_data, CSplus, CSminus)
 }
+\arguments{
+\item{cross_data}{data.frame where each row is an exit, defined by region_id, t and side}
+
+\item{event_data}{data.frame where each row is an event, defined by stimulus, t_start t_end, side}
+
+\item{CSplus}{Name of treatment associated to appetitive behavior
+(increases PI)}
+
+\item{CSminus}{Name of treatment associated to aversive behavior
+(decreases PI)}
+}
+\value{
+data.frame of crosses happening during some event and with annotated type
+}
 \description{
 Wrapper around annotate_cross for appetitive and aversive conditioning
 }

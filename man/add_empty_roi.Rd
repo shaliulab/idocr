@@ -6,6 +6,13 @@
 \usage{
 add_empty_roi(experiment_folder, tracker_data, n = 20)
 }
+\arguments{
+\item{experiment_folder}{Path to folder containing IDOC results .csv files}
+
+\item{tracker_data}{IDOC tracker dataset where every row captures the position of one animal at one timepoint}
+
+\item{n}{Number of ROIS the output must have (empty or not)}
+}
 \description{
 This is necessary so the results are always for 20 channels
 regardless of whether the channel had an animal or not.

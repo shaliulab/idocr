@@ -2,13 +2,22 @@
 % Please edit documentation in R/controller.R
 \name{get_event_data}
 \alias{get_event_data}
-\title{TODO}
+\title{Obtain a tidy data frame of events from a loaded dataset}
 \usage{
 get_event_data(dataset)
 }
+\arguments{
+\item{dataset}{List of raw data including:
+\itemize{
+\item roi: every row records the position of one animal at one point in time
+\item controller: every row records the status of all IDOC stimulus at one point in time
+\item limits
+\item border
+}}
+}
 \value{
-event_data
+data.frame where every row registers the activation of an IDOC stimulus
 }
 \description{
-TODO
+Obtain a tidy data frame of events from a loaded dataset
 }

@@ -7,6 +7,11 @@ easy to merge with cross_data}
 \usage{
 reshape_controller(rectangle_data)
 }
+\arguments{
+\item{rectangle_data}{A dataframe where every row represetns a corner of a polygon
+The position along the time axis where the polygon should be rendered should be contained
+in a \code{t_ms} column. Corners belonging to the same polygon should have a unique value under \code{group}.}
+}
 \description{
 Enter a dataframe with one row per corner
 get a new dataframe with one row per event (1/4 of the rows)

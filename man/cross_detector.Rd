@@ -7,6 +7,8 @@
 cross_detector(tracker_data, border, side = c(-1, 1))
 }
 \arguments{
+\item{tracker_data}{IDOC tracker dataset where every row captures the position of one animal at one timepoint}
+
 \item{border}{Number of pixels from center to decision zone edge}
 
 \item{side}{Either LEFT (-1) or RIGHT (1)}
