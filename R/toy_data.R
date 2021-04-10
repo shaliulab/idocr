@@ -118,17 +118,17 @@ toy_roi_all <- function(channels=20, ...) {
 #' @importFrom janitor row_to_names
 #' @importFrom dplyr do
 #' @importFrom magrittr `%>%`
-#' @param paradigm data.table with format hardware, start, off
-#' @return data.table with one column per hardware in paradigm
+#' @param paradigm data.table with format stimulus, start, off
+#' @return data.table with one column per stimulus in paradigm
 #' and one row per sampling timepoint. The value of the i,j cell
-#' states whether the ith hardware was on at time j
+#' states whether the ith stimulus was on at time j
 toy_controller <- function(paradigm=NULL) {
   
   get_status <- function(paradigm, t) {
     
     paradigm %>%
       dplyr::do(
-        data.frame(hardware = .$hardware, status = ifelse(.$on < t & .$off > t, 1, 0))
+        data.frame(stimulus = .$stimulus, status = ifelse(.$on < t & .$off > t, 1, 0))
       ) %>%
       t %>%
       janitor::row_to_names(row_number = 1, .) %>%
@@ -388,7 +388,7 @@ toy_rectangle_data <- function() {
     tracking = NA
   )
   
-  rectangles <- define_rectangles(dataset)
+  rectangles <- define_rectangle_all(dataset)
   return(rectangles)
 }
 

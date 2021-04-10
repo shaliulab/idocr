@@ -36,7 +36,7 @@ test_that("pi_summary is exported and animals with less than minimum exists have
   )
 })
 
-test_that("main summary ", {
+test_that("main summary matches expectation in the saved file", {
   
   experiment_folder <- system.file(
     "extdata/toy", package = "idocr",
@@ -57,4 +57,40 @@ test_that("main summary ", {
     summmary_data, 
     style = "serialize", cran = FALSE
   )
+})
+
+test_that("export_dataset runs without issues", {
+  
+  experiment_folder <- system.file(
+    "extdata/toy", package = "idocr",
+    mustWork = TRUE
+  )
+  
+  tracking_data <- toy_tracker_small()
+  controller_data <- toy_controller_small()
+  pi_data <- toy_pi_data()
+  
+  analysis <- list(pi=pi_data[pi_data$region_id %in% unique(tracking_data$region_id), ])
+  dataset <- list(
+    tracker = tracking_data,
+    controller = controller_data
+  )
+  
+  all_exports <- export_dataset(experiment_folder = experiment_folder,
+                 dataset = dataset, analysis = analysis)
+  
+  expect_true(file.exists(
+      build_filename(experiment_folder = experiment_folder, key = "SUMMARY")
+  ))
+  expect_true(file.exists(
+    build_filename(experiment_folder = experiment_folder, key = "PI")
+  ))
+  
+  local_edition(3)
+  expect_snapshot_value(
+    all_exports, 
+    style = "serialize", cran = FALSE
+  )
+  
+  
 })

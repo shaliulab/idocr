@@ -1,27 +1,26 @@
-#' Wrapper around define_rectangle for several hardware
+#' Wrapper around define_rectangle for several stimulus
 #' 
 #' @eval document_dataset() 
 #' @importFrom purrr map
 #' @importFrom dplyr mutate group_by group_split
 #' @importFrom magrittr `%>%`
-define_rectangles <- function(dataset) {
+define_rectangle_all <- function(dataset) {
   
   stopifnot(!is.null(dataset$controller))
   stopifnot(!is.null(dataset$stimuli))
   stopifnot(!is.null(dataset$limits))
-  
   
   controller_data <- dataset$controller
   rect_pad <- 0
 
   ## Reformat the wide table
   ### We get one row for every corner of the rectangles shown on the plot
-  ### to represent when the hardware items listed in `hardware`
+  ### to represent when the stimulus items listed in `stimulus`
   ### are on
   ### The row states:
   ### * x -> the position (-1,0,1) of the corner
   ### * side -> the side where the rectangle is (-1 if on the left and 1 if on the right)
-  ### * hardware -> name of the hardware item
+  ### * stimulus -> name of the stimulus item
   ### * t_ms -> time in milliseconds
 
   controller_data <- purrr::map(
@@ -50,12 +49,12 @@ define_rectangles <- function(dataset) {
 
 #' Reshape the controller data to be plotted in ggplot2
 #'
-#' Given a table containing when several hardware turned on/off
-#' during an experiment, and a piece of hardware,
+#' Given a table containing when several stimulus turned on/off
+#' during an experiment, and a piece of stimulus,
 #' prepare_shape_data will generate a table with one row per corner in a rectangle
-#' encompassing all the area of the plot where the hardware is active
+#' encompassing all the area of the plot where the stimulus is active
 #' This is given by its side (X axis) and the time when it was on (Y axis)
-#' If the hardware was turned on/off n times, we get n rectangles and thus n*4 rows.#' 
+#' If the stimulus was turned on/off n times, we get n rectangles and thus n*4 rows.#' 
 #' The x axis is assumed to go from -1 to 1. To scale it, see scale_shape
 #' @importFrom magrittr `%>%`
 #' @import data.table
@@ -67,7 +66,7 @@ define_rectangle <- function(controller_data, stimulus) {
   x_values <- list("-1" = c(-1, 0), "1" = c(0, 1))
   x_vals <- x_values[[as.character(stimulus_side)]]
   
-  # keep just time and the column for the current hardware
+  # keep just time and the column for the current stimulus
   controller_data <- controller_data[, c("t", stimulus), with = F]
   # remove possible dups
   controller_data <- controller_data[!duplicated(controller_data), ]

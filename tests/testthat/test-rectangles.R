@@ -41,7 +41,7 @@ test_that("rectangles are inferred properly", {
     limits = c(-100, 100)
   )
   
-  rectangle_data <- define_rectangles(dataset)
+  rectangle_data <- define_rectangle_all(dataset)
   
   expect_equal(length(rectangle_data), 4)
   expect_equal(rectangle_data[[1]]$x, c(-100, 0, 0, -100))

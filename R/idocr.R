@@ -56,7 +56,8 @@ idocr <- function(experiment_folder,
   gg <- plot_dataset(experiment_folder, dataset, analysis, ...)
   
   message("Exporting results -> ", experiment_folder)
-  export_dataset(experiment_folder, dataset, analysis)
+  export_dataset(experiment_folder = experiment_folder,
+                 dataset = dataset, analysis = analysis)
   
   return(list(gg = gg, pi = analysis$pi))
 }

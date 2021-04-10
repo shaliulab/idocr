@@ -18,6 +18,11 @@ pad_t0 <- function(data) {
 #' @import data.table
 #' @export
 preprocess_controller <- function(controller_data, delay = 0) {
+  
+  keep_cols <- controller_data %>% apply(., 2, function(x) !all(is.na(x)))
+  controller_data <- controller_data[, keep_cols, with=F]
+  
+  
   controller_data <- pad_t0(controller_data)
   
   # delay the onset of the stimulus
@@ -71,7 +76,7 @@ get_event_data <- function(dataset) {
   . <- NULL
   
   # one row per corner
-  rectangle_data <- define_rectangles(dataset)
+  rectangle_data <- define_rectangle_all(dataset)
   # one row per event
   event_data <- lapply(rectangle_data, reshape_controller) %>% do.call(rbind, .)
   return(event_data)

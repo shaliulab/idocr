@@ -13,7 +13,7 @@ analyse_dataset <- function(dataset, min_exits_required, min_time=0, ...) {
   
   # get controller information
   message("Preparing controller data")
-  rectangle_data <- define_rectangles(dataset)
+  rectangle_data <- define_rectangle_all(dataset)
   event_data <- get_event_data(dataset)
 
   # get cross information by inferring

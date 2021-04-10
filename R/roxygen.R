@@ -36,7 +36,7 @@ document_analysis <- function() {
 document_dataset <- function() {
   "@param dataset List of raw data including:
   * roi: every row records the position of one animal at one point in time
-  * controller: every row records the status of all IDOC hardware at one point in time
+  * controller: every row records the status of all IDOC stimulus at one point in time
   * limits
   * border
   "

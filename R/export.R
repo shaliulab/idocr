@@ -25,8 +25,8 @@ make_summary <- function(tracking_data, controller_data) {
   # Interpolate the controller data by adding
   # one row for each frame that was analyzed
   controller_summary <- interpolate_controller(
-    controller_data,
-    tracking_summary[, "t"]
+    controller_data=controller_data,
+    index=tracking_summary[, "t"]
   )
   
   summary_data <- dplyr::full_join(
@@ -45,10 +45,13 @@ export_summary <- function(experiment_folder, output_csv=NULL, ...) {
   
   if(is.null(output_csv)) {
     output_csv <- build_filename(
+      experiment_folder = experiment_folder,
       metadata = load_metadata(experiment_folder),
       key = "SUMMARY"
     )
   }
+  
+  message("Saving SUMMARY -> ", output_csv)
   
   data.table::fwrite(x = summary_data,
                      file = output_csv,
@@ -62,10 +65,11 @@ export_pi_summary <- function(experiment_folder, pi, output_csv=NULL) {
   
   if(is.null(output_csv)) {
     output_csv <- build_filename(
+      experiment_folder = experiment_folder,
       metadata = load_metadata(experiment_folder), key = "PI"
     )
   }
-  
+  message("Saving PI -> ", output_csv)
   data.table::fwrite(x = pi,
                      file = output_csv,
                      sep = ",", na = "NA",
@@ -82,8 +86,12 @@ export_pi_summary <- function(experiment_folder, pi, output_csv=NULL) {
 #' @eval document_analysis()
 #' @importFrom data.table fwrite
 export_dataset <- function(experiment_folder, dataset, analysis) {
-  export_pi_summary(experiment_folder, analysis$pi)
-  summary_data <- export_summary(dataset$tracking, dataset$controller)
+  export_pi_summary(experiment_folder = experiment_folder, pi = analysis$pi)
+  summary_data <- export_summary(
+    experiment_folder = experiment_folder,
+    tracking_data = dataset$tracker,
+    controller_data = dataset$controller
+  )
   export_data <- list(summary=summary_data, pi = analysis$pi)
   return(export_data)
 }

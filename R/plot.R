@@ -135,7 +135,7 @@ base_plot <- function(data, limits) {
 }
 
 #' Generate a rectangle object
-#' that will mark a piece of IDOC hardware was active
+#' that will mark a piece of IDOC stimulus was active
 #' 
 #' @eval document_shape_data()
 #' @param color Rectangle fill color
@@ -143,6 +143,7 @@ base_plot <- function(data, limits) {
 #' @param alpha Rectangle transparency
 #' @import ggplot2
 #' @return ggplot2 geom_polygon
+# TODO Not needed anymore
 #' @export
 make_rectangle <- function(shape_data, color="red", border="black", alpha=0.4) {
   
@@ -263,6 +264,10 @@ plot_dataset <- function(experiment_folder,
                            "TREATMENT_A" = "red",
                            "TREATMENT_B" = "blue"
                           ),
+                         labels = c(
+                           "TREATMENT_A" = "TREATMENT_A",
+                           "TREATMENT_B" = "TREATMENT_B"
+                         ),
                          ...
                          ) {
   
@@ -275,6 +280,10 @@ plot_dataset <- function(experiment_folder,
   limits <- dataset$limits
   rectangles <- analysis$rectangles
   
+  if (!is.null(dataset$labels) & all(labels == c("TREATMENT_A", "TREATMENT_B"))) {
+    labels <- dataset$labels
+  }
+  
   # initialize the plot by creating a tracking trace
   # for each animal separately
   message("Generating base plot")
@@ -282,7 +291,7 @@ plot_dataset <- function(experiment_folder,
   
   # add rectangular marks to sign the controller events
   message("Marking controller events")
-  gg <- mark_stimuli(gg, rectangles, colors)
+  gg <- mark_stimuli(gg, rectangles, colors, labels)
   
   # delineate the decision zone
   message("Marking decision zone")
@@ -346,20 +355,31 @@ document_plot <- function(gg, experiment_folder=NULL, ...) {
 #' @importFrom purrr map
 #' @import ggplot2
 #' @return ggplot2 object
-mark_stimuli <- function(gg, rectangles, colors) {
+mark_stimuli <- function(gg, rectangles, colors, labels) {
   
   treatments <- names(colors)
-  rectangles <- rectangles %>%
-    purrr::map(~make_rectangle(., color = colors[unique(.$treatment)]))
+
+  rectangles_df <- lapply(1:length(rectangles), function(i) {
+    rectangles[[i]]$group <- i
+    rectangles[[i]]
+  }) %>%
+    do.call(rbind, .)
   
-  for (rect in rectangles) {
-    gg <- gg + rect
-  }
-  
-  gg <- gg +
-    scale_fill_identity(name = 'Treatment', breaks = colors,
-                        guide = "legend") +
-    guides(color = F)
+  gg <- gg + geom_polygon(
+    data = rectangles_df,
+    mapping = aes(
+      x = x, y=t,
+      group=group,
+      fill=treatment),
+    color = "black", alpha=0.4
+  ) +
+    scale_fill_manual(
+      name = 'Treatment',
+      values = unname(colors),
+      labels = labels,
+      guide = "legend"
+    )
+
   return(gg)
 }
 

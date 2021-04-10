@@ -1,5 +1,5 @@
 library(idocr)
-setwd('/1TB/Cloud/Data/idoc_data/results/7eb8e224bdb944a68825986bc70de6b1/IDOC_001')
+setwd('/home/antortjim/Downloads/')
 
 ##############################################
 # CHANGE CODE BELOW THIS LINE
@@ -9,8 +9,7 @@ setwd('/1TB/Cloud/Data/idoc_data/results/7eb8e224bdb944a68825986bc70de6b1/IDOC_0
 
 # Supply an experiment contained in the working directory
 # Press TAB to autocomplete
-experiment_folder <- "2020-10-05_13-05-51"
-
+experiment_folder <- "~/Downloads/2020-11-01_10-11-31/"
 
 # Change what treatment A and B are
 # to fit it to your needs

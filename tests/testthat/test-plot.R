@@ -26,7 +26,7 @@ test_that("mark stimuli renders stimuli as rectangles in the plot", {
   rectangles <- toy_rectangle_data()
   gg <- ggplot()# + theme_void()
   colors = c("TREATMENT_A" = "red", "TREATMENT_B" = "blue")
-  gg <- mark_stimuli(gg, rectangles, colors)
+  gg <- mark_stimuli(gg, rectangles, colors, names(colors))
   gg <- gg +
     scale_x_continuous(limits = c(-100, 100)) +
     scale_y_continuous(limits=c(10, 0), trans = scales::reverse_trans())

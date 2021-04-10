@@ -112,7 +112,7 @@ load_rois <- function(experiment_folder) {
     # rbind all the separate data.tables into a single one
     do.call(what = rbind, .) %>%
     # cast the one data.table into a tibble
-    tibble::as_tibble(x = .)
+    tibble::as_tibble(.)
 
   if (nrow(tracker_data) < 10) {
     return(NULL)
@@ -130,6 +130,9 @@ load_rois <- function(experiment_folder) {
 #' This is necessary so the results are always for 20 channels
 #' regardless of whether the channel had an animal or not.
 #' Doing so makes the results systematic and easily comparable across runs
+#' @eval document_experiment_folder()
+#' @eval document_tracker_data()
+#' @param n Number of ROIS the output must have (empty or not) 
 #' @importFrom tibble as_tibble
 #' @export
 add_empty_roi <- function(experiment_folder, tracker_data, n=20) {
@@ -148,6 +151,12 @@ add_empty_roi <- function(experiment_folder, tracker_data, n=20) {
   }
   
   tracker_data_template <- as_tibble(tracker_data_template)
+  
+  missing_columns  <- colnames(tracker_data)[!colnames(tracker_data) %in% colnames(tracker_data_template)]
+  for (mc in missing_columns) {
+    tracker_data_template[, mc] <- NA
+  }
+  missing_columns  <- colnames(tracker_data)[!colnames(tracker_data) %in% colnames(tracker_data_template)]
   
   for (roi in 1:n) {
     if (!roi %in% unique(tracker_data$region_id)) {

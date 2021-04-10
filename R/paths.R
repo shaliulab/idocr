@@ -11,8 +11,12 @@ build_filename <- function(experiment_folder=NULL, metadata=NULL, key=NULL, exte
   
   if (is.null(experiment_folder) & !is.null(metadata))
     experiment_folder <- "."
-  if (!is.null(experiment_folder) & is.null(metadata))
+  else if (!is.null(experiment_folder) & is.null(metadata))
     metadata <- load_metadata(experiment_folder)
+  else if(!is.null(experiment_folder) & !is.null(metadata)) {
+  }
+  else
+    stop("Please pass at least experiment_folder or metadata")
   
   stopifnot(!is.null(key))
   

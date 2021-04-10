@@ -18,6 +18,26 @@ load_metadata <- function(experiment_folder) {
   return(metadata)
 }
 
+#' Check whether the user is running deprecated code
+check_api_version <- function(treatments) {
+  
+  treatment_in_name <- length(grep(pattern = "TREATMENT", x = names(treatments))) != 0
+  # treatment_not_in_value <- length(grep(pattern = "TREATMENT", x = names(treatments))) != 0
+  
+  if (treatment_in_name) {
+    warning("Passing named treatments is deprecated.
+            Your code will still work fine, but you should provide the treatment name
+            (OCT, ...) via the labels argument in idocr::idocr.
+            In that case, the labels are assigned in alphabetic order to the treatments
+            i.e. the first label goes to TREATMENT_A and the second to B
+            ")
+    return(1)
+  } else {
+    return(2)
+  }
+}
+
+
 #' Preprocess a RAW idoc dataset
 #' 
 #' 1. Preprocess tracker and controller data
@@ -42,9 +62,15 @@ preprocess_dataset <- function(
     min(dataset$tracker$x),
     max(dataset$tracker$x)
   )
-  
+
   pixel_to_mm_ratio <- 2.3
   border <- border_mm * pixel_to_mm_ratio
+  
+  if (check_api_version(treatments) == 1) {
+    dataset$labels <- unname(treatments)
+    treatments <- names(treatments)
+  }
+
   dataset$border <- border
   dataset$CSplus <- treatments[1]
   dataset$CSminus <- treatments[treatments != dataset$CSplus]
@@ -66,7 +92,7 @@ load_dataset <- function(experiment_folder) {
   tracker_data <- load_systematic_rois(experiment_folder)
   
   # Load controller data
-  ## Wide format table where every piece of hardware has a column and the values are 1 or 0
+  ## Wide format table where every piece of stimulus has a column and the values are 1 or 0
   ## An extra column called t tells the time in seconds
   controller_data <- load_controller(experiment_folder)
     

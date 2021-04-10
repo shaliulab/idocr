@@ -8,7 +8,7 @@ wrap_quotes <- function(x) {
   paste0('"', x, '"')
 }
 
-#' Parse side from the hardware name
+#' Parse side from the stimulus name
 #' 
 #' Return -1 for left and 1 for right
 #'
