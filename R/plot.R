@@ -213,7 +213,7 @@ validate_inputs <- function(dataset, analysis) {
 #' Distill the dataset and analysis performed in the idocr workflow
 #' to the datasets required for plotting
 #' 
-#' A tracking dataset where every record represents the position
+#' A tracker dataset where every record represents the position
 #' of one animal in one timepoint is required to plot the trace
 #' 
 #' A corssing dataset where every record represents a decision zone
@@ -221,15 +221,15 @@ validate_inputs <- function(dataset, analysis) {
 #' @importFrom dplyr left_join
 combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE) {
   
-  tracking_data <- dplyr::left_join(dataset$tracker, analysis$pi, by = "region_id")
+  tracker_data <- dplyr::left_join(dataset$tracker, analysis$pi, by = "region_id")
   crossing_data <- dplyr::left_join(analysis$annotation, analysis$pi, by = "region_id")
   
   message("Generating facet labels")
-  tracking_data <- annotate_facet(tracking_data, plot_preference_index)
+  tracker_data <- annotate_facet(tracker_data, plot_preference_index)
   crossing_data <- annotate_facet(crossing_data, plot_preference_index)
 
   return(list(
-    tracking = tracking_data,
+    tracker = tracker_data,
     crossing = crossing_data
   ))
 }
@@ -274,7 +274,7 @@ plot_dataset <- function(experiment_folder,
   message("Validating passed data")
   validate_inputs(dataset, analysis)
   data <- combine_inputs(dataset, analysis, plot_preference_index)
-  tracking_data <- data$tracking
+  tracker_data <- data$tracker
   crossing_data <- data$crossing
   border <- dataset$border
   limits <- dataset$limits
@@ -284,10 +284,10 @@ plot_dataset <- function(experiment_folder,
     labels <- dataset$labels
   }
   
-  # initialize the plot by creating a tracking trace
+  # initialize the plot by creating a tracker trace
   # for each animal separately
   message("Generating base plot")
-  gg <- base_plot(tracking_data, limits)
+  gg <- base_plot(tracker_data, limits)
   
   # add rectangular marks to sign the controller events
   message("Marking controller events")

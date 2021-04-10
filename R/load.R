@@ -88,7 +88,7 @@ preprocess_dataset <- function(
 #' @seealso [preprocess_dataset()]
 #' @export
 load_dataset <- function(experiment_folder) {
-  # Load tracking data (ROI - Region of Interest)
+  # Load tracker data (ROI - Region of Interest)
   tracker_data <- load_systematic_rois(experiment_folder)
   
   # Load controller data

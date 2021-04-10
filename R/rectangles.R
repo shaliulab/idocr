@@ -120,7 +120,7 @@ validate_events <- function(data, stimulus) {
 
 
 #' Scale the x axis of a rectangle data table
-#' using the x column of tracking data
+#' using the x column of tracker data
 #' scale_shape fetches the width of the chambers
 #' and scales the shape accodingly
 #' 

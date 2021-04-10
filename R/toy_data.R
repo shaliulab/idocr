@@ -378,14 +378,14 @@ toy_annotation_data <- function() {
 toy_rectangle_data <- function() {
   
   crossing_data <- toy_annotation_data()
-  tracking_data <- toy_tracker_small()
+  tracker_data <- toy_tracker_small()
   controller_data <- toy_controller_small()
   
   dataset <- list(
     controller = controller_data,
     stimuli = colnames(controller_data)[1:4],
     limits = c(-100, 100),
-    tracking = NA
+    tracker = NA
   )
   
   rectangles <- define_rectangle_all(dataset)

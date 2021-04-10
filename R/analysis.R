@@ -17,7 +17,7 @@ analyse_dataset <- function(dataset, min_exits_required, min_time=0, ...) {
   event_data <- get_event_data(dataset)
 
   # get cross information by inferring
-  # crosses based on tracking data and predefined borders
+  # crosses based on tracker data and predefined borders
   message("Detecting decision zone exits i.e. crosses")
   cross_data <- find_exits_all(
     tracker_data = tracker_data,

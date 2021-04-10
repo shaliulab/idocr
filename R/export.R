@@ -9,10 +9,10 @@
 #' @return data.table
 #' @export
 #'
-make_summary <- function(tracking_data, controller_data) {
+make_summary <- function(tracker_data, controller_data) {
   . <- region_id <- x <- NULL
 
-  tracking_summary <- tracking_data %>%
+  tracker_summary <- tracker_data %>%
     dplyr::select(t, x, region_id) %>%
     dplyr::mutate(region_id = paste0("ROI_", region_id)) %>%
     tidyr::pivot_wider(data = ., values_from = x, names_from = region_id)
@@ -26,11 +26,11 @@ make_summary <- function(tracking_data, controller_data) {
   # one row for each frame that was analyzed
   controller_summary <- interpolate_controller(
     controller_data=controller_data,
-    index=tracking_summary[, "t"]
+    index=tracker_summary[, "t"]
   )
   
   summary_data <- dplyr::full_join(
-    tracking_summary,
+    tracker_summary,
     controller_summary,
     on = "t"
   )
@@ -89,7 +89,7 @@ export_dataset <- function(experiment_folder, dataset, analysis) {
   export_pi_summary(experiment_folder = experiment_folder, pi = analysis$pi)
   summary_data <- export_summary(
     experiment_folder = experiment_folder,
-    tracking_data = dataset$tracker,
+    tracker_data = dataset$tracker,
     controller_data = dataset$controller
   )
   export_data <- list(summary=summary_data, pi = analysis$pi)

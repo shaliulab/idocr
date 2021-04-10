@@ -18,7 +18,7 @@ document_data <- function() {
 }
 
 document_roi_data <- function() {
-  "@param roi_data IDOC tracking dataset where every row captures the position of one animal at one timepoint"
+  "@param roi_data IDOC tracker dataset where every row captures the position of one animal at one timepoint"
 }
 
 document_controller_data <- function() {
