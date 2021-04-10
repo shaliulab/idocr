@@ -1,7 +1,7 @@
   <!-- badges: start -->
   [![Codecov test coverage](https://codecov.io/gh/shaliulab/idocr/branch/master/graph/badge.svg)](https://codecov.io/gh/shaliulab/idocr?branch=master)
+  [![Travis build status](https://travis-ci.com/shaliulab/idocr.svg?branch=master)](https://travis-ci.com/shaliulab/idocr)
   <!-- badges: end -->
-  [Copied to clipboard]
   
   ## idocr
 
