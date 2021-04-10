@@ -164,10 +164,18 @@ make_rectangle <- function(shape_data, color="red", border="black", alpha=0.4) {
 #' @param plot_preference_index If TRUE, the PI displayed by the animal is
 #' put into the facet label
 annotate_facet <- function(data, plot_preference_index=TRUE) {
+  
+  browser()
   region_id <- paste0("ROI_", data$region_id)
 
   if (plot_preference_index) {
-    data$facet <- paste0(region_id, "\nPI: ", format_text(data$preference_index))
+    data$facet <- paste0(region_id, "\nPI: ",
+                         format_text(data$preference_index)
+                         )
+    data$facet <- ifelse(is.na(data$preference_index), data$facet,
+           paste0(data$facet,
+                  "\n(", data$appetitive, "|", data$aversive, ")"
+           ))
   } else {
     data$facet <- region_id
   }
