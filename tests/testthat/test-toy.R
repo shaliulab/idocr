@@ -36,5 +36,5 @@ test_that("toy_controller can receive a paradigm", {
     )
   )
 
-  expect_equal(class(toy_controller(paradigm = paradigm)), "matrix")
+  expect_equal(class(toy_controller(paradigm = paradigm)), c("data.table", "data.frame"))
 })

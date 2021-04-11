@@ -150,7 +150,8 @@ toy_controller <- function(paradigm=NULL) {
       controller_data <- lapply(seq(from = 0, to = 360, by = 0.5), function(t) {
       get_status(paradigm, t)
     }) %>% do.call(rbind, .) %>%
-      apply(., 2, as.numeric)
+      apply(., 2, as.numeric) %>%
+      data.table::as.data.table
   } else
     controller_data <- data.table()
   
