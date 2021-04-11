@@ -59,5 +59,5 @@
 <rect x='628.56' y='292.32' width='15.86' height='15.86' style='stroke-width: 1.07; stroke-linecap: square; stroke-linejoin: miter; fill: #0000FF; fill-opacity: 0.40;' clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)' />
 <g clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)'><text x='650.61' y='286.00' style='font-size: 8.80px; font-family: Liberation Sans;' textLength='63.91px' lengthAdjust='spacingAndGlyphs'>TREATMENT_A</text></g>
 <g clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)'><text x='650.61' y='303.28' style='font-size: 8.80px; font-family: Liberation Sans;' textLength='63.91px' lengthAdjust='spacingAndGlyphs'>TREATMENT_B</text></g>
-<g clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)'><text x='40.10' y='14.56' style='font-size: 13.20px; font-family: Liberation Sans;' textLength='97.44px' lengthAdjust='spacingAndGlyphs'>event-rectangles</text></g>
+<g clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)'><text x='40.10' y='14.56' style='font-size: 13.20px; font-family: Liberation Sans;' textLength='126.02px' lengthAdjust='spacingAndGlyphs'>plot_event-rectangles</text></g>
 </svg>

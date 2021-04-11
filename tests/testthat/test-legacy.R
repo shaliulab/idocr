@@ -65,7 +65,7 @@ test_that("idocr is backwards compatible", {
   )
   
   
-  vdiffr::expect_doppelganger("gg-legacy", p1$gg)
+  vdiffr::expect_doppelganger("legacy_main", p1$gg)
   expect_snapshot_value(
     p1$pi, 
     style = "serialize", cran = FALSE

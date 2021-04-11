@@ -56,7 +56,7 @@ idocr_time <- function() {
   if (is_testing) {
     time <- as.POSIXct("2021-01-01 00:00:01 CEST")
   } else {
-    time <- Sys.time()
+    time <- Sys.time()  # nocov
   }
   return(time)
 }

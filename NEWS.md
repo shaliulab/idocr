@@ -8,6 +8,10 @@ This helps avoid confusion between really missing data and program artifacts (wh
 * name of the treatment as shown in the plot is controlled via a new labels parameter in idocr::idocr.
 * validation of CONTROLLER_EVENTS table to check for heterogeneous number of fields on each row.
 A friendly error message is issued in that case with clear instructions on how to proceed.
+* Implement plot_mask to totally ignore any data outside of the plot_mask, in seconds.
+Ignored data is not considered for analysis nor plotting
+* Implement analysis mask to ignore any data outside of the analysis_mask, in seconds.
+Ignored data is not considered for analysis, but it is still plotted (i.e. a complete trace is shown).
 
 # idocr 1.0.0
 

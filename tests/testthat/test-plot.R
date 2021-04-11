@@ -7,7 +7,7 @@ test_that("base plot produces plot with correct axes and facet", {
   
   expect_equal(gg$scales$scales[[1]]$limits, c(-60, 0))
   expect_equal(gg$scales$scales[[2]]$limits, limits)
-  vdiffr::expect_doppelganger("base-plot", gg)
+  vdiffr::expect_doppelganger("plot_base-plot", gg)
   
   limits <- c(-50, 50)
   tracker_data$facet <- paste0("ROI_", tracker_data$region_id)
@@ -16,6 +16,19 @@ test_that("base plot produces plot with correct axes and facet", {
   
 })
 
+test_that("mark time works", {
+  tracker_data <- toy_tracker_small()
+  gg <- ggplot()
+  data <- data.frame(t = seq(0, 900, 5), x = 1:181)
+  gg <- mark_time(data = data, gg = gg, freq = 60, downward = TRUE)
+  vdiffr::expect_doppelganger("plot_mark-time", gg)
+  
+  gg <- mark_time(data = data, gg = gg, freq = 120, downward = TRUE)
+  vdiffr::expect_doppelganger("plot_mark-time_custom-freq", gg)
+
+  gg <- mark_time(data = data, gg = gg, freq = 120, downward = FALSE)
+  vdiffr::expect_doppelganger("plot_mark-time_upward", gg)
+})
 
 test_that("mark stimuli renders stimuli as rectangles in the plot", {
 
@@ -27,7 +40,7 @@ test_that("mark stimuli renders stimuli as rectangles in the plot", {
     scale_x_continuous(limits = c(-100, 100)) +
     scale_y_continuous(limits=c(10, 0), trans = scales::reverse_trans())
   
-  vdiffr::expect_doppelganger("event-rectangles", gg)
+  vdiffr::expect_doppelganger("plot_event-rectangles", gg)
 })
 
 test_that("mark decision zone produces a vertical line on the plots", {
@@ -35,12 +48,12 @@ test_that("mark decision zone produces a vertical line on the plots", {
   gg <- ggplot() + scale_x_continuous(limits=c(-100, 100))
   border <- 20
   gg <- mark_decision_zone(gg, border)
-  vdiffr::expect_doppelganger("decision-zone-20", gg)
+  vdiffr::expect_doppelganger("plot_decision-zone-20", gg)
 
   gg <- ggplot() + scale_x_continuous(limits=c(-100, 100))
   border <- 50
   gg <- mark_decision_zone(gg, border)
-  vdiffr::expect_doppelganger("decision-zone-50", gg)
+  vdiffr::expect_doppelganger("plot_decision-zone-50", gg)
 })
 
 test_that("mark crosses produces marks that are visible and accurate", {
@@ -60,12 +73,12 @@ test_that("mark crosses produces marks that are visible and accurate", {
   
   gg <- ggplot()
   gg <- mark_crosses(gg, crossing_data)
-  vdiffr::expect_doppelganger("mark-crosses", gg)
+  vdiffr::expect_doppelganger("plot_mark-crosses", gg)
   
   gg <- ggplot()
   crossing_data$x <- crossing_data$x * -1
   gg <- mark_crosses(gg, crossing_data)
-  vdiffr::expect_doppelganger("mark-crosses-flip", gg)
+  vdiffr::expect_doppelganger("plot_mark-crosses-flip", gg)
 })
 
 
@@ -86,9 +99,20 @@ test_that("save_plot saves both pdf and png", {
 })
 
 
+test_that("mark_analysis_mask works", {
+  
+  gg <- ggplot() + geom_point(aes(x=1:10, y=1:10), size=2, color="black") +
+    scale_x_continuous(limits=c(0,10), breaks=1:10) +
+    scale_y_continuous(limits=c(0,10), breaks=1:10)
+  
+  gg <- mark_analysis_mask(gg, analysis_mask = c(1, 5))
+  vdiffr::expect_doppelganger("plot_mark-analysis_mask", gg)
+  
+})
+
 test_that("document_plot annotates the plot", {
   
   gg <- ggplot()
   gg <- document_plot(gg, subtitle = "A subtitle")
-  vdiffr::expect_doppelganger("document-plot", gg)
+  vdiffr::expect_doppelganger("plot_document-plot", gg)
 })

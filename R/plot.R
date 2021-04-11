@@ -100,10 +100,13 @@ mark_space <- function(limits, gg, extra=c(0)) {
 #' dots to mark the fly positions
 #' @eval document_data()
 #' @inherit mark_space
+#' @inherit mark_time
 #' @import ggplot2
 #' @eval document_gg("return")
+#' @seealso [mark_space()]
+#' @seealso [mark_time()]
 #' @export
-base_plot <- function(data, limits) {
+base_plot <- function(data, limits, downward=TRUE) {
 
   x <- id <- NULL
 
@@ -123,7 +126,7 @@ base_plot <- function(data, limits) {
     )
   
   # add custom time marks (we want every 60 seconds)
-  gg <- mark_time(data, gg, freq=60)
+  gg <- mark_time(data, gg, freq=60, downward=downward)
   gg <- mark_space(limits, gg, extra=c(0))
 
   # segregate the animals, one plot for each
@@ -203,9 +206,11 @@ validate_inputs <- function(dataset, analysis) {
 #' exit of one animal is required to show the exits in the plot
 #' @eval document_dataset()
 #' @eval document_analysis()
+#' @param plot_mask If not NULL, the plot contains data contained within
+#' the interval's start and end (s)
 #' @inherit annotate_facet
-#' @importFrom dplyr left_join
-combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE) {
+#' @importFrom dplyr left_join filter
+combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE, plot_mask=NULL) {
   
   tracker_data <- dplyr::left_join(dataset$tracker, analysis$pi, by = "region_id")
   crossing_data <- dplyr::left_join(analysis$annotation, analysis$pi, by = "region_id")
@@ -213,6 +218,14 @@ combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE) {
   message("Generating facet labels")
   tracker_data <- annotate_facet(tracker_data, plot_preference_index)
   crossing_data <- annotate_facet(crossing_data, plot_preference_index)
+  
+  if (!is.null(plot_mask)) {
+    tracker_data <- tracker_data %>%
+      dplyr::filter(., t >= plot_mask[1] & t <= plot_mask[2])
+    
+    crossing_data <- crossing_data %>%
+      dplyr::filter(., t >= plot_mask[1] & t <= plot_mask[2])
+  }
 
   return(list(
     tracker = tracker_data,
@@ -256,12 +269,17 @@ plot_dataset <- function(experiment_folder,
                            "TREATMENT_B" = "TREATMENT_B"
                          ),
                          analysis_mask = NULL,
+                         plot_mask = NULL,
+                         downward=TRUE,
                          ...
                          ) {
   
   message("Validating passed data")
   validate_inputs(dataset, analysis)
-  data <- combine_inputs(dataset, analysis, plot_preference_index)
+  data <- combine_inputs(dataset, analysis,
+                         plot_preference_index=plot_preference_index,
+                         plot_mask=plot_mask
+                         )
   tracker_data <- data$tracker
   crossing_data <- data$crossing
   border <- dataset$border
@@ -275,7 +293,7 @@ plot_dataset <- function(experiment_folder,
   # initialize the plot by creating a tracker trace
   # for each animal separately
   message("Generating base plot")
-  gg <- base_plot(tracker_data, limits)
+  gg <- base_plot(tracker_data, limits, downward=downward)
   
   # add rectangular marks to sign the controller events
   message("Marking controller events")
@@ -323,13 +341,12 @@ mark_analysis_mask <- function(gg, analysis_mask) {
     y = rep(analysis_mask, each=2)
   )
   mask_coords <- mask_coords[c(1,2,4,3),]
-  
-  
-  
+
   gg <- gg + geom_polygon(data = mask_coords,
                     mapping = aes(x=x,y=y),
-                    color="yellow", alpha=0.5, fill=NA,
-                    limetype="dashed")
+                    color="yellow", alpha=0.5,
+                    fill=NA, size=1,
+                    linetype="dashed")
   return(gg)
   
 }
