@@ -212,6 +212,8 @@ validate_inputs <- function(dataset, analysis) {
 #' @importFrom dplyr left_join filter
 combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE, plot_mask=NULL) {
   
+  . <- NULL
+  
   tracker_data <- dplyr::left_join(dataset$tracker, analysis$pi, by = "region_id")
   crossing_data <- dplyr::left_join(analysis$annotation, analysis$pi, by = "region_id")
   
@@ -248,6 +250,8 @@ combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE, plot_m
 #' @inherit mark_analysis_mask
 #' @inherit mark_stimuli
 #' @inherit annotate_facet
+#' @inherit mark_time
+#' @inherit combine_inputs
 #' @param ... Extra arguments for save_plot
 #' @seealso [mark_stimuli()]
 #' @seealso [mark_decision_zone()]

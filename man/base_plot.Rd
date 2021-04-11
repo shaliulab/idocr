@@ -5,7 +5,7 @@
 \title{Generate base IDOC plot upon which
 more annotation layers can be added}
 \usage{
-base_plot(data, limits)
+base_plot(data, limits, downward = TRUE)
 }
 \arguments{
 \item{data}{List with entries roi, controller, border, limits.
@@ -14,6 +14,9 @@ Border is a TODO. Limits is a numeric vector with 2 positions, delineating
 the boundaries of the x axis}
 
 \item{limits}{Position of ticks in space axis}
+
+\item{downward}{Whether the 0 should be at the top (TRUE)
+or the bottom (FALSE) of the plot}
 }
 \value{
 gg ggplot2 object
@@ -21,4 +24,9 @@ gg ggplot2 object
 \description{
 The base plot contains all individual panels,
 dots to mark the fly positions
+}
+\seealso{
+\code{\link[=mark_space]{mark_space()}}
+
+\code{\link[=mark_time]{mark_time()}}
 }

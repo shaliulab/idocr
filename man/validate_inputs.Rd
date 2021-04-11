@@ -30,6 +30,10 @@ Take a dataset and its analysis,
 together with plotting parameters,
 to visualize an IDOC experiment
 }
+\details{
+A corssing dataset where every record represents a decision zone
+exit of one animal is required to show the exits in the plot
+}
 \seealso{
 \code{\link[=mark_stimuli]{mark_stimuli()}}
 

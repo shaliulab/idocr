@@ -15,6 +15,8 @@ plot_dataset(
   colors = c(TREATMENT_A = "red", TREATMENT_B = "blue"),
   labels = c(TREATMENT_A = "TREATMENT_A", TREATMENT_B = "TREATMENT_B"),
   analysis_mask = NULL,
+  plot_mask = NULL,
+  downward = TRUE,
   ...
 )
 }
@@ -56,6 +58,12 @@ containing start and end timepoint of mask
 in seconds since the start of the experiment
 Every behavior outside of the mask is ignored}
 
+\item{plot_mask}{If not NULL, the plot contains data contained within
+the interval's start and end (s)}
+
+\item{downward}{Whether the 0 should be at the top (TRUE)
+or the bottom (FALSE) of the plot}
+
 \item{...}{Extra arguments for save_plot}
 }
 \value{
@@ -65,6 +73,10 @@ ggplot2 object
 Take a dataset and its analysis,
 together with plotting parameters,
 to visualize an IDOC experiment
+}
+\details{
+A corssing dataset where every record represents a decision zone
+exit of one animal is required to show the exits in the plot
 }
 \seealso{
 \code{\link[=mark_stimuli]{mark_stimuli()}}

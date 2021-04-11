@@ -5,7 +5,12 @@
 \title{Distill the dataset and analysis performed in the idocr workflow
 to the datasets required for plotting}
 \usage{
-combine_inputs(dataset, analysis, plot_preference_index = TRUE)
+combine_inputs(
+  dataset,
+  analysis,
+  plot_preference_index = TRUE,
+  plot_mask = NULL
+)
 }
 \arguments{
 \item{dataset}{List of raw data including:
@@ -25,6 +30,9 @@ value
 
 \item{plot_preference_index}{Whether to show the scored preference index
 with the region id on the facet label (TRUE), or just the region id (FALSE)}
+
+\item{plot_mask}{If not NULL, the plot contains data contained within
+the interval's start and end (s)}
 }
 \description{
 A tracker dataset where every record represents the position
