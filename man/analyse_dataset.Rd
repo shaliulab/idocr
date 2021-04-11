@@ -24,7 +24,5 @@ to be considered for significance}
 Take an IDOC dataset
 }
 \seealso{
-annotate_cross
-
-annotate_cross
+\code{\link[=annotate_cross]{annotate_cross()}}
 }

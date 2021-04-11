@@ -1,22 +1,10 @@
-library(testthat)
-library(data.table)
-library(magrittr)
-library(dplyr)
-
-context("cross")
-
-treatment_1 <- "TREATMENT_A"
-treatment_2 <- "TREATMENT_B"
-
-tracker_data <- toy_tracker_small()
-border <- 2
-cross_data_left <- NA
-cross_data_right <- NA
-
 test_that("find_exits works", {
 
-  cross_data_left <<- find_exits(tracker_data, border, side=-1)
-  cross_data_right <<- find_exits(tracker_data, border, side=1)
+  border <- 2
+  tracker_data <- toy_tracker_small()
+  
+  cross_data_left <- find_exits(tracker_data, border, side=-1)
+  cross_data_right <- find_exits(tracker_data, border, side=1)
   
   expect_true("region_id" %in% colnames(cross_data_left))
   expect_equal(nrow(cross_data_left[cross_data_left$region_id == 1,]), 2)
@@ -27,7 +15,12 @@ test_that("find_exits works", {
 
 
 test_that("find_exits_all works too", {
-  
+
+  border <- 2
+  tracker_data <- toy_tracker_small()
+  cross_data_left <- find_exits(tracker_data, border, side=-1)
+  cross_data_right <- find_exits(tracker_data, border, side=1)
+
   expect_true(identical(
     find_exits_all(tracker_data, border),
     rbind(cross_data_left, cross_data_right)
@@ -63,6 +56,7 @@ test_that("the second mask works", {
 
 test_that("that only crosses happening during the event are counted", {
   
+  treatment_1 <- "TREATMENT_A"  
   event_data <- toy_event_data()
   cross_data  <- toy_cross_data()
   
@@ -138,6 +132,7 @@ test_that("if there is no treatment in the event data that matches the query, th
 
 test_that("the treatment name is recorded properly in the annotation", {
 
+  treatment_1 <- "TREATMENT_A"  
   event_data <- toy_event_data()
   cross_data <- toy_cross_data()
   

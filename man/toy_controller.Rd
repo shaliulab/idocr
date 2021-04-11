@@ -12,7 +12,8 @@ toy_controller(paradigm = NULL)
 \value{
 data.table with one column per stimulus in paradigm
 and one row per sampling timepoint. The value of the i,j cell
-states whether the ith stimulus was on at time j
+states whether the ith stimulus was on at time j.
+If NULL, an emtpy data.table is returned instead
 }
 \description{
 Generate a toy controller dataset based on a paradigm

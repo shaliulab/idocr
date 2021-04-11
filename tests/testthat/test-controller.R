@@ -1,6 +1,3 @@
-library(testthat)
-context("controller")
-
 test_that("get_event_data processes a loaded dataset into a long format table where every combination of stimuli and timepoint have a dedicated row", {
 
   dataset <- toy_dataset_small()

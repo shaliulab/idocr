@@ -34,6 +34,11 @@ preprocess_controller <- function(controller_data, delay = 0) {
   return(controller_data)
 }
 
+validate_controller_file <- function(controller_path) {
+  validate_number_of_fields(controller_path)  
+  return(0)
+}
+
 #' Load a CONTROLLER_EVENTS .csv table into R
 #' 
 #' @importFrom data.table fread
@@ -44,6 +49,7 @@ load_controller <- function(experiment_folder) {
   csv_files <- list.files(path = experiment_folder, pattern = ".csv")
   controller_filename <- grep(pattern = "CONTROLLER_EVENTS", x = csv_files, value = T)
   controller_path <- file.path(experiment_folder, controller_filename)
+  validate_controller_file(controller_path)
   controller_data <- data.table::fread(file = controller_path, header = T)[, -1]
   return(controller_data)
 }

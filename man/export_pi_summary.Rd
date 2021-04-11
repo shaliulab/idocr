@@ -18,7 +18,3 @@ a new file in the experiment folder with key SUMMARY is produced}
 \description{
 Export the preference index to a csv file
 }
-\seealso{
-\code{\link[=make_summary]{make_summary()}}
-a new file in the experiment folder with key SUMMARY is produced
-}

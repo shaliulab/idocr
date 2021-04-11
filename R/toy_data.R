@@ -125,12 +125,17 @@ toy_roi_all <- function(channels=20, ...) {
 #' @param paradigm data.table with format stimulus, start, off
 #' @return data.table with one column per stimulus in paradigm
 #' and one row per sampling timepoint. The value of the i,j cell
-#' states whether the ith stimulus was on at time j
+#' states whether the ith stimulus was on at time j.
+#' If NULL, an emtpy data.table is returned instead
 toy_controller <- function(paradigm=NULL) {
   
   . <- NULL
   
   get_status <- function(paradigm, t) {
+    
+    stopifnot("stimulus" %in% colnames(paradigm))
+    stopifnot("on" %in% colnames(paradigm))
+    stopifnot("off" %in% colnames(paradigm))
     
     paradigm %>%
       dplyr::do(

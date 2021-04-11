@@ -4,7 +4,7 @@
 \alias{export_dataset}
 \title{Export analysis results to experiment_folder}
 \usage{
-export_dataset(experiment_folder, dataset, analysis)
+export_dataset(experiment_folder, dataset, analysis, ...)
 }
 \arguments{
 \item{experiment_folder}{Path to folder containing IDOC results .csv files}
@@ -23,8 +23,15 @@ export_dataset(experiment_folder, dataset, analysis)
 value
 \item pi: preference index scored by each animal
 }}
+
+\item{...}{Extra argumetns to export_summary}
 }
 \description{
 Generate the preference index table
 Generate the summary table
+}
+\seealso{
+\code{\link[=export_pi_summary]{export_pi_summary()}}
+
+\code{\link[=export_summary]{export_summary()}}
 }

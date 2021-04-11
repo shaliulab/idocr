@@ -1,14 +1,10 @@
-library(testthat)
-context("load")
-
-
-experiment_folder <- system.file(
-  "extdata/toy", package = "idocr",
-  mustWork = TRUE
-)
-
 test_that("load_dataset can read all files in the .csv database", {
-
+  
+  experiment_folder <- system.file(
+    "extdata/toy", package = "idocr",
+    mustWork = TRUE
+  )
+  
   dataset <- load_dataset(experiment_folder)
   
   # check it has the right entries
@@ -26,6 +22,12 @@ test_that("load_dataset can read all files in the .csv database", {
 })
   
 test_that("preprocess_dataset works", {
+  
+  
+  experiment_folder <- system.file(
+    "extdata/toy", package = "idocr",
+    mustWork = TRUE
+  )
   
   dataset_raw <- toy_dataset_small()
   dataset <- load_dataset(experiment_folder)
@@ -53,6 +55,55 @@ test_that("preprocess_dataset works", {
          )),
     sort(names(preprocessed))
   )
-  
-  
 })
+
+
+test_that("preprocess_dataset flips the type of treaatment", {
+  
+  experiment_folder <- system.file(
+    "extdata/toy", package = "idocr",
+    mustWork = TRUE
+  )
+  
+  dataset_raw <- toy_dataset_small()
+  dataset <- load_dataset(experiment_folder)
+  # dataset_raw <- list(
+  #   tracker = dataset_raw$tracker,
+  #   controller = dataset_raw$controller
+  # )
+  
+  preprocessed <- preprocess_dataset(
+    experiment_folder,
+    dataset = dataset,
+    CSplus_idx=2
+  )
+  
+  expect_equal(preprocessed$CSplus, preprocessed$treatments[2])
+  expect_equal(preprocessed$CSminus, preprocessed$treatments[1])
+})
+
+
+test_that("preprocess_dataset changes the decision zone", {
+  
+  experiment_folder <- system.file(
+    "extdata/toy", package = "idocr",
+    mustWork = TRUE
+  )
+  
+  dataset_raw <- toy_dataset_small()
+  dataset <- load_dataset(experiment_folder)
+  # dataset_raw <- list(
+  #   tracker = dataset_raw$tracker,
+  #   controller = dataset_raw$controller
+  # )
+  
+  preprocessed <- preprocess_dataset(
+    experiment_folder,
+    dataset = dataset,
+    border_mm=25
+  )
+  
+  expect_equal(preprocessed$border, 57.5)
+})
+
+

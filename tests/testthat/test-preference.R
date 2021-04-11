@@ -1,6 +1,3 @@
-library(testthat)
-context("preference_index")
-
 test_that("preference_index formula is implemented well and yields the expected result", {
   
   expect_equal(preference_index(appetitive = 5, aversive = 5, min_exits_required = 5), 0)
@@ -15,8 +12,6 @@ test_that("if all exits are on one side, the index is 1 or -1", {
   expect_equal(preference_index(appetitive = 5, aversive = 0, min_exits_required = 5), 1)
   expect_equal(preference_index(appetitive = 0, aversive = 5, min_exits_required = 5), -1)
 })
-  
-
 
 test_that("compute_preference_index calls preference_index successfully during analysis", {
   
@@ -27,7 +22,7 @@ test_that("compute_preference_index calls preference_index successfully during a
   expect_equal(pref_data$aversive, 2)
 })
 
-test_that("compute_preference_index produces NA when the minimum exists required are not met", {
+test_that("compute_preference_index produces NA when the minimum exits required are not met", {
   
   short_data <- toy_annotation_data()[1:4, ] 
   # require 1 more than the number of crosses available

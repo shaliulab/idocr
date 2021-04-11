@@ -1,11 +1,6 @@
-library(testthat)
-library(data.table)
-context("rectangles")
-
-controller_data <- toy_controller_small()
-
 test_that("rectangles are built ok", {
 
+  controller_data <- toy_controller_small()
   rectangle <- define_rectangle(controller_data, stimulus = "TREATMENT_A_LEFT")
   expect_equal(rectangle$x, c(-1, 0, 0, -1))
   expect_equal(rectangle$t, c(1, 1, 3, 3))
@@ -33,7 +28,7 @@ test_that("rectangles are built ok", {
 
 test_that("rectangles are inferred properly", {
   
-
+  controller_data <- toy_controller_small()
   dataset <- list(
     controller = controller_data,
     treatments = c("TREATMENT_A", "TREATMENT_B"),

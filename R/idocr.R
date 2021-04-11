@@ -41,7 +41,7 @@ idocr <- function(experiment_folder,
   dataset <- preprocess_dataset(
     experiment_folder, dataset,
     treatments=treatments, delay=delay,
-    border_mm=border_mm, CSplus_idx
+    border_mm=border_mm, CSplus_idx=CSplus_idx
   )
   
   message("Analysing dataset - ", experiment_folder)
@@ -57,7 +57,8 @@ idocr <- function(experiment_folder,
   
   message("Exporting results -> ", experiment_folder)
   export_dataset(experiment_folder = experiment_folder,
-                 dataset = dataset, analysis = analysis)
+                 dataset = dataset, analysis = analysis
+                 )
   
   return(list(gg = gg, pi = analysis$pi))
 }

@@ -180,7 +180,7 @@ validate_inputs <- function(dataset, analysis) {
   if (!"data.frame" %in% class(dataset$tracker))
     stop("Provided a non data frame variable under dataset$tracker.
          Please correct that by passing a data frame")
-  if (!all(expected_pi_columns == colnames(analysis$pi)))
+  if (!all(sort(expected_pi_columns) == sort(colnames(analysis$pi))))
     stop(sprintf(
       "Provided a non valid preference index computation.
        You should provide a dataframe with columns: %s under analysis$pi",
@@ -191,8 +191,6 @@ validate_inputs <- function(dataset, analysis) {
     stop("Provided limits under dataset$limits are NULL.
          Please provide a numeric vector of length 2 where you specify the minimum
          and maximum mm from the center of the chamber")
-
-  
 }
 
 #' Distill the dataset and analysis performed in the idocr workflow
@@ -298,7 +296,7 @@ plot_dataset <- function(experiment_folder,
   
   # add text on axis, title, ...
   message("Documenting plot")
-  gg <- document_plot(gg, experiment_folder, subtitle) 
+  gg <- document_plot(gg, experiment_folder, subtitle=subtitle) 
   
   # save the plot to the experiment's folder
   message("Saving plot to ->", experiment_folder)

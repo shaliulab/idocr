@@ -1,7 +1,3 @@
-context("plot")
-
-
-
 test_that("base plot produces plot with correct axes and facet", {
   
   tracker_data <- toy_tracker_small()

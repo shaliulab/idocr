@@ -1,9 +1,16 @@
+#' Confirm VAR_MAP csv table is not corrupted
+#' @param var_map_path Path to a VAR_MAP table .csv file
+validate_varmap_file <- function(var_map_path) {
+  return(0)
+}
+
 #' Load the VAR_MAP table into R
 #' 
 #' @importFrom data.table fread
 #' @eval document_experiment_folder()
 load_varmap <- function(experiment_folder) {
   var_map_path <- find_file(experiment_folder, "VAR_MAP")
+  validate_varmap_file(var_map_path)
   var_map <- data.table::fread(var_map_path, header = T)[, -1]
   return(var_map)
 }
@@ -78,7 +85,7 @@ preprocess_dataset <- function(
   }
 
   dataset$border <- border
-  dataset$CSplus <- treatments[1]
+  dataset$CSplus <- treatments[CSplus_idx]
   dataset$CSminus <- treatments[treatments != dataset$CSplus]
   dataset$treatments <- treatments
   dataset$stimuli <- paste0(rep(treatments, each=2), c("_LEFT", "_RIGHT"))

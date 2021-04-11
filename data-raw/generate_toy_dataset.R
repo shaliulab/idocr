@@ -5,7 +5,7 @@ set.seed(2021)
 dest = file.path("inst", "extdata", "toy")
 steps = 6000
 paradigm <- data.table(
-  hardware = c("IRLED", "ODOR_B_LEFT", "ODOR_A_RIGHT",
+  stimulus = c("IRLED", "ODOR_B_LEFT", "ODOR_A_RIGHT",
                "ODOR_A_LEFT", "ODOR_B_RIGHT",
                "MAIN_VALVE", "VACUUM",
                "TREATMENT_A_LEFT", "TREATMENT_A_RIGHT",

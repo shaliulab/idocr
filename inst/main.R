@@ -1,5 +1,4 @@
 library(idocr)
-setwd('/home/antortjim/Downloads/')
 
 ##############################################
 # CHANGE CODE BELOW THIS LINE
@@ -9,7 +8,7 @@ setwd('/home/antortjim/Downloads/')
 
 # Supply an experiment contained in the working directory
 # Press TAB to autocomplete
-experiment_folder <- "~/Downloads/2020-11-01_10-11-31/"
+experiment_folder <- "INSERT"
 
 # Change what treatment A and B are
 # to fit it to your needs

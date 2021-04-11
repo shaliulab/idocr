@@ -1,8 +1,3 @@
-context("export")
-library(testthat)
-library(magrittr)
-
-
 test_that("pi_summary is exported and animals with less than minimum exists have a NA PI", {
 
   experiment_folder <- system.file(
@@ -44,16 +39,30 @@ test_that("main summary matches expectation in the saved file", {
   )
   
   tracker_data <- toy_tracker_small()
+  # include rois 10 and 11 in tracker  data
+  tracker_data_01 <- toy_tracker_small()
+  
+  tracker_data_10 <- tracker_data_01[tracker_data_01$id == "toy|01", ]
+  tracker_data_10$id <- "toy|10"
+  tracker_data_10$region_id <- 10
+  tracker_data_11 <- tracker_data_01[tracker_data_01$id == "toy|02", ]
+  tracker_data_11$id <- "toy|11"
+  tracker_data_11$region_id <- 11
+  tracker_data <- rbind(
+    tracker_data,
+    tracker_data_10,
+    tracker_data_11
+  )
+  
   controller_data <- toy_controller_small()
   
-  summmary_data <- export_summary(
+  summmary_data <- export_summary_new(
     experiment_folder = experiment_folder,
     output_csv = NULL,
     tracker_data = tracker_data,
     controller_data = controller_data
   )
 
-  local_edition(3)
   expect_snapshot_value(
     summmary_data, 
     style = "serialize", cran = FALSE
@@ -87,11 +96,8 @@ test_that("export_dataset runs without issues", {
     build_filename(experiment_folder = experiment_folder, key = "PI")
   ))
   
-  local_edition(3)
   expect_snapshot_value(
     all_exports, 
     style = "serialize", cran = FALSE
   )
-  
-  
 })
