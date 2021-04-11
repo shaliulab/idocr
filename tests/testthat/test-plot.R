@@ -69,7 +69,7 @@ test_that("mark crosses produces marks that are visible and accurate", {
 })
 
 
-test_that("save plot saves both pdf and png with the right file size", {
+test_that("save_plot saves both pdf and png", {
   temp_dir <- tempdir()
   gg <- ggplot() + geom_point(aes(x=1:10, y=1:10), size=2, color="black") +
     scale_x_continuous(limits=c(0,10), breaks=1:10) +
@@ -83,11 +83,8 @@ test_that("save plot saves both pdf and png with the right file size", {
   # check the files exist
   expect_length(pdf_file, 1)
   expect_length(png_file, 1)
-
-  # check their expected size
-  expect_equal(file.size(pdf_file), 5098)
-  expect_equal(file.size(png_file), 914)
 })
+
 
 test_that("document_plot annotates the plot", {
   
