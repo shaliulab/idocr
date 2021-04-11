@@ -5,4 +5,4 @@
 data-raw/
 .*IMG_SNAPSHOTS/
 ^data-raw$
-.covignore
+.covrignore
