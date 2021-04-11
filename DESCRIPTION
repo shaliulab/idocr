@@ -1,4 +1,4 @@
-Package: idocr
+Package: idocrdev
 Title: Analyze traces created in the Individual Drosophila Optogenetics Conditioner (IDOC)
 Date: 2021-04-05
 Version: 1.1.0
