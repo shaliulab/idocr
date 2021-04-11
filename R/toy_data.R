@@ -151,7 +151,7 @@ toy_controller <- function(paradigm=NULL) {
       get_status(paradigm, t)
     }) %>% do.call(rbind, .) %>%
       apply(., 2, as.numeric) %>%
-      data.table::as.data.table
+      data.table::as.data.table(.)
   } else
     controller_data <- data.table()
   
