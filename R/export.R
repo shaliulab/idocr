@@ -12,9 +12,14 @@
 make_summary <- function(tracker_data, controller_data) {
   . <- region_id <- x <- NULL
 
-  tracker_summary <- tracker_data %>%
+  # keep the fields we want
+  tracker_summary_long <- tracker_data %>%
     dplyr::select(t, x, region_id) %>%
-    dplyr::mutate(region_id = paste0("ROI_", region_id)) %>%
+    dplyr::mutate(region_id = paste0("ROI_", region_id))
+
+  # cast to a wide table where each animal and stimulus gets its own column
+  # each timepoint gets its own row
+  tracker_summary <- tracker_summary_long %>% 
     tidyr::pivot_wider(data = ., values_from = x, names_from = region_id)
   
   # make sure ROIs are placed in right order (1->20)
@@ -58,7 +63,7 @@ format_summary <- function(x) {
 #' @seealso [make_summary()]
 #' a new file in the experiment folder with key SUMMARY is produced
 export_summary_new <- function(experiment_folder, output_csv=NULL, ...) {
-  
+
   summary_data <- make_summary(...)
   
   if(is.null(output_csv)) {
@@ -70,7 +75,6 @@ export_summary_new <- function(experiment_folder, output_csv=NULL, ...) {
   }
   
   message("Saving SUMMARY -> ", output_csv)
-  
   fwrite_(summary_data, output_csv)
   
 
