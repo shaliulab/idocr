@@ -11,31 +11,33 @@ find_rois <- function(experiment_folder) {
 }
 
 #' Set the median x position to 0
-#' @eval document_tracker_data()
-center_around_median <- function(tracker_data) {
+#' @param x Vector of animal positions
+center_around_median <- function(x) {
   # TODO Should we infer the min/max from the data
   # or rather hardcode them?
-  min_x <- min(tracker_data$x)
-  max_x <- max(tracker_data$x)
   
-  x <- tracker_data$x - min_x
-  x <- x - max_x / 2
-  tracker_data$x <- x
-  return(tracker_data)
+  browser()
+  median_x <- median(x)
+  x <- x - median_x
+  return(x)
 }
 
 
+#' Give each animal a unique id based on the run id of the experiment/machine
+#' and its position on the machine#' 
 #' @importFrom stringr str_pad
-construct_animal_id <- function(experiment_folder, tracker_data) {
+#' @eval document_experiment_folder()
+#' @param region_id Position of the animal in the machine
+construct_animal_id <- function(experiment_folder, region_id) {
  
   field <- value <- NULL
   metadata <- load_metadata(experiment_folder)
   run_id <- metadata[field == "run_id", value]
-  tracker_data$id <- paste0(run_id, "|", stringr::str_pad(
-    string = tracker_data$region_id, width = 2, side = "left", pad = "0"
+  id <- paste0(run_id, "|", stringr::str_pad(
+    string = region_id, width = 2, side = "left", pad = "0"
     )
   )
-  return(tracker_data)
+  return(id)
 }
 
 #' Read a single ROI csv file
@@ -57,7 +59,8 @@ read_roi <- function(file) {
   }
 }
 
-
+#' Remove duplicate entries in a data table
+#' Duplicates have same region_id and t
 #' @importFrom dplyr select
 #' @importFrom magrittr `%>%`
 remove_duplicates <- function(tracker_data) {
@@ -88,11 +91,11 @@ keep_needed_columns_only <- function(experiment_folder, tracker_data) {
 #' @return tracker_data
 preprocess_tracker <- function(experiment_folder, tracker_data) {
   # construct the id of the flies
-  tracker_data <- construct_animal_id(experiment_folder, tracker_data)
+  tracker_data$id <- construct_animal_id(experiment_folder, tracker_data$region_id)
   
   # center the data around the median
   # i.e. estimate the center of the chamber using the median (central) x
-  tracker_data <- center_around_median(tracker_data)
+  tracker_data$x <- center_around_median(tracker_data$x)
   
   # keep only needed columns
   tracker_data <- keep_needed_columns_only(experiment_folder, tracker_data)

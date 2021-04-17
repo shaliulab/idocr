@@ -141,7 +141,4 @@ validate_number_of_fields <- function(csv_file) {
     stop(error_message)
          
   } 
-  
-  
-  
 }

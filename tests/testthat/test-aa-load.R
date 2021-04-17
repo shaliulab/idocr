@@ -42,7 +42,7 @@ test_that("preprocess_dataset works", {
     )
 
   # TODO Maybe I can make the default toy dataset more convenient...
-  expect_equal(c(-85.5, 54.5), preprocessed$limits)
+  expect_equal(c(-86, 54), preprocessed$limits)
   expect_equal(11.5, preprocessed$border)
   expect_equal(120000, nrow(preprocessed$tracker))
   expect_equal(721, nrow(preprocessed$controller))
