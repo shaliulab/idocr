@@ -97,10 +97,11 @@ preprocess_dataset <- function(
 #' 
 #' Load the .csv database available at the passed directory
 #' @eval document_experiment_folder()
+#' @inherit load_systematic_rois
 #' @export
-load_dataset <- function(experiment_folder) {
+load_dataset <- function(experiment_folder, n=20) {
   # Load tracker data (ROI - Region of Interest)
-  tracker_data <- load_systematic_rois(experiment_folder)
+  tracker_data <- load_systematic_rois(experiment_folder, n=n)
   
   # Load controller data
   ## Wide format table where every piece of stimulus has a column and the values are 1 or 0

@@ -189,7 +189,10 @@ add_empty_roi <- function(experiment_folder, tracker_data, n=20) {
 #' Load data from n channels
 #' and expose missing data if needed 
 #' @param ... Arguments to load_rois
-#' @param n Number of channels desired
+#' @param n Number of channels desired.
+#' If less than this amount of animals is found, idocr
+#' will make up animals until this amount is hit
+#' It (should match nrow x ncol of layout passed in the idocr function)
 #' @return tibble
 #' @export
 #' 

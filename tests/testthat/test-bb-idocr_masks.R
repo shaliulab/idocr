@@ -1,3 +1,25 @@
+test_that("analysis mask works", {
+  
+  pkg_name <- testing_package()
+  
+  experiment_folder <- system.file(
+    "extdata/toy", package = pkg_name,
+    mustWork = TRUE
+  )
+  
+  result <- idocr(experiment_folder = experiment_folder, CSplus_idx = 2,
+                  min_exits_required = 5,
+                  analysis_mask = list(FIRST_TWO_MINS = c(0, 120)),
+                  border_mm = 12.5, delay = 0,
+                  subtitle = "analysis_mask=[0,120]")
+  
+  vdiffr::expect_doppelganger("idocr_analysis-mask", result[[1]]$gg)
+  expect_snapshot_value(
+    result[[1]]$pi, 
+    style = "serialize", cran = FALSE
+  )
+})
+
 test_that("analysis mask takes more than 1 mask", {
   
   pkg_name <- testing_package()

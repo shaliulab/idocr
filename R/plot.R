@@ -99,6 +99,8 @@ mark_space <- function(limits, gg, extra=c(0)) {
 #' The base plot contains all individual panels,
 #' dots to mark the fly positions
 #' @eval document_data()
+#' @param nrow Number of rows in facet layout
+#' @param ncol Number of columns in facet layout
 #' @inherit mark_space
 #' @inherit mark_time
 #' @import ggplot2
@@ -106,7 +108,7 @@ mark_space <- function(limits, gg, extra=c(0)) {
 #' @seealso [mark_space()]
 #' @seealso [mark_time()]
 #' @export
-base_plot <- function(data, limits, downward=TRUE) {
+base_plot <- function(data, limits, downward=TRUE, nrow=2,ncol=10) {
 
   x <- id <- NULL
 
@@ -128,12 +130,18 @@ base_plot <- function(data, limits, downward=TRUE) {
   # add custom time marks (we want every 60 seconds)
   gg <- mark_time(data, gg, freq=60, downward=downward)
   gg <- mark_space(limits, gg, extra=c(0))
+  
+  if(length(unique(data$facet)) != (nrow * ncol)) {
+    stop("The passed layout does not match the number of animals.
+       Make sure nrow * ncol evaluates to the number of animals in the dataset ")
+  }
+  
 
   # segregate the animals, one plot for each
   gg <- gg + facet_wrap(
     . ~ facet,
     drop = F,
-    nrow = 2, ncol = 10
+    nrow = nrow, ncol = ncol
   )
 
   return(gg)
@@ -279,6 +287,7 @@ plot_dataset <- function(experiment_folder,
                          plot_mask = NULL,
                          downward=TRUE,
                          suffix = "",
+                         nrow=2, ncol=10,
                          ...
                          ) {
   
@@ -304,7 +313,7 @@ plot_dataset <- function(experiment_folder,
   # initialize the plot by creating a tracker trace
   # for each animal separately
   message("Generating base plot")
-  gg <- base_plot(tracker_data, limits, downward=downward)
+  gg <- base_plot(tracker_data, limits, downward=downward, nrow=nrow, ncol=ncol)
   
   # add rectangular marks to sign the controller events
   message("Marking controller events")

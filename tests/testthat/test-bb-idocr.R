@@ -99,8 +99,7 @@ test_that("CSplus_idx can be set to 2", {
 })
 
 
-
-test_that("analysis mask works", {
+test_that("Number of rows and columns of layout can be tuned", {
   
   pkg_name <- testing_package()
   
@@ -111,13 +110,26 @@ test_that("analysis mask works", {
   
   result <- idocr(experiment_folder = experiment_folder, CSplus_idx = 2,
                   min_exits_required = 5,
-                  analysis_mask = list(FIRST_TWO_MINS = c(0, 120)),
                   border_mm = 12.5, delay = 0,
-                  subtitle = "analysis_mask=[0,120]")
+                  subtitle = "All 20 animals should be on one row", nrow=1, ncol=20)
   
-  vdiffr::expect_doppelganger("idocr_analysis-mask", result[[1]]$gg)
-  expect_snapshot_value(
-    result[[1]]$pi, 
-    style = "serialize", cran = FALSE
-  )
+  vdiffr::expect_doppelganger("idocr_one-row", result[[1]]$gg)
 })
+
+
+# test_that("Number of rows and columns of layout must match number of animals", {
+#   
+#   pkg_name <- testing_package()
+#   
+#   experiment_folder <- system.file(
+#     "extdata/toy", package = pkg_name,
+#     mustWork = TRUE
+#   )
+#   
+#   expect_error({
+#     result <- idocr(experiment_folder = experiment_folder, CSplus_idx = 2,
+#                   min_exits_required = 5,
+#                   border_mm = 12.5, delay = 0,
+#                   subtitle = "All 20 animals should be on one row", nrow=1, ncol=10)
+#   }, regexp = ".*The passed layout does not match the number of animals.*")
+# })

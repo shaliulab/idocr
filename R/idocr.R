@@ -11,6 +11,7 @@
 #' @param analysis_mask Named list of numeric vectors specifying
 #' the start and end time in seconds of a period of the experiment that should
 #' be analyzed separately
+#' @inherit load_systematic_rois
 #' @param ... Extra arguments to plot_dataset
 #' @inherit document_script
 #' @inherit preprocess_controller
@@ -33,12 +34,13 @@ idocr <- function(experiment_folder,
                   src_file = NULL,
                   mask_duration = 0.5,
                   analysis_mask = NULL,
+                  n=20,
                   ...) {
   
   document_script(src_file, experiment_folder)
 
   message("Loading dataset <- ", experiment_folder)
-  dataset <- load_dataset(experiment_folder)
+  dataset <- load_dataset(experiment_folder, n=n)
   
   message("Preprocessing dataset - ", experiment_folder)
 
@@ -91,7 +93,6 @@ pipeline <- function(experiment_folder, dataset, min_exits_required, mask_durati
      suffix <- names(analysis_mask)
      if (! dir.exists(result_folder)) dir.create(result_folder)
    }
-  
   
   
   message("Analysing dataset - ", experiment_folder, " ", suffix)
