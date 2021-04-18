@@ -1,9 +1,9 @@
 library(data.table)
 library(dplyr)
-library(idocr)
 library(magrittr)
 library(testthat)
 library(zoo)
 library(vdiffr)
-
-test_check("idocr")
+pkg_name <- testthat::testing_package()
+library(pkg_name)
+test_check(pkg_name)

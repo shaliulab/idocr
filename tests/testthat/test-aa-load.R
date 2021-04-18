@@ -1,7 +1,9 @@
 test_that("load_dataset can read all files in the .csv database", {
   
+  pkg_name <- testing_package()
+  
   experiment_folder <- system.file(
-    "extdata/toy", package = "idocr",
+    "extdata/toy", package = pkg_name,
     mustWork = TRUE
   )
   
@@ -24,8 +26,10 @@ test_that("load_dataset can read all files in the .csv database", {
 test_that("preprocess_dataset works", {
   
   
+  pkg_name <- testing_package()
+  
   experiment_folder <- system.file(
-    "extdata/toy", package = "idocr",
+    "extdata/toy", package = pkg_name,
     mustWork = TRUE
   )
   
@@ -60,11 +64,12 @@ test_that("preprocess_dataset works", {
 
 test_that("preprocess_dataset flips the type of treaatment", {
   
+  pkg_name <- testing_package()
+  
   experiment_folder <- system.file(
-    "extdata/toy", package = "idocr",
+    "extdata/toy", package = pkg_name,
     mustWork = TRUE
   )
-  
   dataset_raw <- toy_dataset_small()
   dataset <- load_dataset(experiment_folder)
   # dataset_raw <- list(
@@ -85,8 +90,10 @@ test_that("preprocess_dataset flips the type of treaatment", {
 
 test_that("preprocess_dataset changes the decision zone", {
   
+  pkg_name <- testing_package()
+  
   experiment_folder <- system.file(
-    "extdata/toy", package = "idocr",
+    "extdata/toy", package = pkg_name,
     mustWork = TRUE
   )
   

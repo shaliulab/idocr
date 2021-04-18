@@ -1,8 +1,10 @@
 test_that("idocr is backwards compatible", {
   
+  pkg_name <- testing_package()
+  
   experiment_folder <- system.file(
     "extdata/real",
-    package = "idocr", mustWork = TRUE
+    package = pkg_name, mustWork = TRUE
   ) 
   # Change what treatment A and B are
   # to fit it to your needs

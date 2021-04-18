@@ -1,8 +1,12 @@
 test_that("find_rois lists ROI .csv database correctly", {
+
+  pkg_name <- testing_package()
+  
   experiment_folder <- system.file(
-    "extdata/toy", package = "idocr",
+    "extdata/toy", package = pkg_name,
     mustWork = TRUE
   )
+  
   
   roi_database <- find_rois(experiment_folder)
   roi_filenames <- roi_database %>% lapply(., basename) %>% unlist
@@ -14,8 +18,10 @@ test_that("find_rois lists ROI .csv database correctly", {
 
 test_that("construct_animal_id works", {
   
+  pkg_name <- testing_package()
+  
   experiment_folder <- system.file(
-    "extdata/toy", package = "idocr",
+    "extdata/toy", package = pkg_name,
     mustWork = TRUE
   )
   

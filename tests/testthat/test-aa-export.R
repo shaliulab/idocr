@@ -1,9 +1,12 @@
 test_that("pi_summary is exported and animals with less than minimum exists have a NA PI", {
 
+  pkg_name <- testing_package()
+  
   experiment_folder <- system.file(
-    "extdata/toy", package = "idocr",
+    "extdata/toy", package = pkg_name,
     mustWork = TRUE
   )
+  
   pi <- toy_pi_data()
   min_exits_required <- 5
   
@@ -33,8 +36,10 @@ test_that("pi_summary is exported and animals with less than minimum exists have
 
 test_that("main summary matches expectation in the saved file", {
   
+  pkg_name <- testing_package()
+  
   experiment_folder <- system.file(
-    "extdata/toy", package = "idocr",
+    "extdata/toy", package = pkg_name,
     mustWork = TRUE
   )
   
@@ -71,8 +76,10 @@ test_that("main summary matches expectation in the saved file", {
 
 test_that("export_dataset runs without issues", {
   
+  pkg_name <- testing_package()
+  
   experiment_folder <- system.file(
-    "extdata/toy", package = "idocr",
+    "extdata/toy", package = pkg_name,
     mustWork = TRUE
   )
   
