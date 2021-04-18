@@ -1,18 +1,18 @@
 testthat::test_that("idocr works", {
 
   pkg_name <- testing_package()
-  
+
   experiment_folder <- system.file(
     "extdata/toy", package = pkg_name,
     mustWork = TRUE
   )
-  
+
   result <- idocr(experiment_folder = experiment_folder, CSplus_idx = 1,
                min_exits_required = 5, border_mm = 12.5, delay = 0)
   # if we get here without errors, we can tell it minimally works!
-  vdiffr::expect_doppelganger("idocr_main", result[[1]]$gg)
+  vdiffr::expect_doppelganger("bb-idocr_main", result[[1]]$gg)
   expect_snapshot_value(
-    result[[1]]$pi, 
+    result[[1]]$pi,
     style = "serialize", cran = FALSE
   )
 })
@@ -20,116 +20,80 @@ testthat::test_that("idocr works", {
 test_that("passing a new label updates the legend", {
 
   pkg_name <- testing_package()
-  
+
   experiment_folder <- system.file(
     "extdata/toy", package = pkg_name,
     mustWork = TRUE
   )
-  
+
   result <- idocr(experiment_folder = experiment_folder, CSplus_idx = 1,
                   min_exits_required = 5, border_mm = 12.5, delay = 0, labels = LETTERS[1:2],
                   subtitle = "Updated labels to A and B")
-  
-  vdiffr::expect_doppelganger("idocr_custom-labels", result[[1]]$gg)
+
+  vdiffr::expect_doppelganger("bb-idocr_custom-labels", result[[1]]$gg)
 })
 
 test_that("passing a different minimum of exits updates the results", {
-  
+
   pkg_name <- testing_package()
-  
+
   experiment_folder <- system.file(
     "extdata/toy", package = pkg_name,
     mustWork = TRUE
   )
-  
+
   result <- idocr(experiment_folder = experiment_folder, CSplus_idx = 1,
                   min_exits_required = 2, # very lenient
                   border_mm = 12.5, delay = 0,
                   subtitle = "min_exits_required=2")
-  
-  vdiffr::expect_doppelganger("idocr_custom-min-exits", result[[1]]$gg)
+
+  vdiffr::expect_doppelganger("bb-idocr_custom-min-exits", result[[1]]$gg)
   expect_snapshot_value(
-    result[[1]]$pi, 
+    result[[1]]$pi,
     style = "serialize", cran = FALSE
   )
 })
 
 
 test_that("passing a different decision zone border updates the results", {
-  
+
   pkg_name <- testing_package()
-  
+
   experiment_folder <- system.file(
     "extdata/toy", package = pkg_name,
     mustWork = TRUE
   )
-  
+
   result <- idocr(experiment_folder = experiment_folder, CSplus_idx = 1,
                   min_exits_required = 5,
                   border_mm = 5, delay = 0,
                   subtitle = "border of decision zone=5 mm")
 
-  vdiffr::expect_doppelganger("idocr_custom-border", result[[1]]$gg)
+  vdiffr::expect_doppelganger("bb-idocr_custom-border", result[[1]]$gg)
   expect_snapshot_value(
-    result[[1]]$pi, 
+    result[[1]]$pi,
     style = "serialize", cran = FALSE
   )
 })
 
 
 test_that("CSplus_idx can be set to 2", {
-  
+
   pkg_name <- testing_package()
-  
+
   experiment_folder <- system.file(
     "extdata/toy", package = pkg_name,
     mustWork = TRUE
   )
-  
+
   result <- idocr(experiment_folder = experiment_folder, CSplus_idx = 2,
                   min_exits_required = 5,
                   border_mm = 12.5, delay = 0,
                   subtitle = "CS+=TREATMENT_B")
-  
-  vdiffr::expect_doppelganger("idocr_CSplusB", result[[1]]$gg)
+
+  vdiffr::expect_doppelganger("bb-idocr_CSplusB", result[[1]]$gg)
   expect_snapshot_value(
-    result[[1]]$pi, 
+    result[[1]]$pi,
     style = "serialize", cran = FALSE
   )
 })
-
-
-test_that("Number of rows and columns of layout can be tuned", {
-  
-  pkg_name <- testing_package()
-  
-  experiment_folder <- system.file(
-    "extdata/toy", package = pkg_name,
-    mustWork = TRUE
-  )
-  
-  result <- idocr(experiment_folder = experiment_folder, CSplus_idx = 2,
-                  min_exits_required = 5,
-                  border_mm = 12.5, delay = 0,
-                  subtitle = "All 20 animals should be on one row", nrow=1, ncol=20)
-  
-  vdiffr::expect_doppelganger("idocr_one-row", result[[1]]$gg)
-})
-
-
-# test_that("Number of rows and columns of layout must match number of animals", {
-#   
-#   pkg_name <- testing_package()
-#   
-#   experiment_folder <- system.file(
-#     "extdata/toy", package = pkg_name,
-#     mustWork = TRUE
-#   )
-#   
-#   expect_error({
-#     result <- idocr(experiment_folder = experiment_folder, CSplus_idx = 2,
-#                   min_exits_required = 5,
-#                   border_mm = 12.5, delay = 0,
-#                   subtitle = "All 20 animals should be on one row", nrow=1, ncol=10)
-#   }, regexp = ".*The passed layout does not match the number of animals.*")
-# })

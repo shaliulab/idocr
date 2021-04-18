@@ -5,4 +5,6 @@ library(testthat)
 library(zoo)
 library(vdiffr)
 library(idocrd)
-test_check("idocrd")
+suppressMessagese(
+  test_check("idocrd")
+)

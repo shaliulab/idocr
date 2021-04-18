@@ -3,19 +3,18 @@ test_that("base plot produces plot with correct axes and facet", {
   tracker_data <- toy_tracker_small()
   limits <- c(-100, 100)
   tracker_data$facet <- paste0("ROI_", tracker_data$region_id)
-  gg <- base_plot(tracker_data, limits) + labs(
+  gg <- base_plot(tracker_data, limits, nrow=1, ncol=2) + labs(
   subtitle = "y axis should run downard. Plot should have two faces, one per animal"
   )
   
   expect_equal(gg$scales$scales[[1]]$limits, c(-60, 0))
   expect_equal(gg$scales$scales[[2]]$limits, limits)
-  vdiffr::expect_doppelganger("plot_base-plot", gg)
+  vdiffr::expect_doppelganger("ab-plot_base-plot", gg)
   
   limits <- c(-50, 50)
   tracker_data$facet <- paste0("ROI_", tracker_data$region_id)
-  gg <- base_plot(tracker_data, limits)
+  gg <- base_plot(tracker_data, limits, nrow=1, ncol=2)
   expect_equal(gg$scales$scales[[2]]$limits, limits)
-  
 })
 
 test_that("mark time works", {
@@ -25,19 +24,19 @@ test_that("mark time works", {
   gg <- mark_time(data = data, gg = gg, freq = 60, downward = TRUE) + labs(
     subtitle = "y axis should run downard with one tick every minute (60 s)"
   )
-  vdiffr::expect_doppelganger("plot_mark-time", gg)
+  vdiffr::expect_doppelganger("ab-plot_mark-time", gg)
   
   gg <- mark_time(data = data, gg = gg, freq = 120, downward = TRUE) + labs(
     subtitle = "y axis should run downard with one tick every 2 minutes (120 s)"
   )
   
-  vdiffr::expect_doppelganger("plot_mark-time_custom-freq", gg)
+  vdiffr::expect_doppelganger("ab-plot_mark-time-custom-freq", gg)
 
   gg <- mark_time(data = data, gg = gg, freq = 120, downward = FALSE)  + labs(
     subtitle = "y axis should run upward with one tick every 2 minutes (120 s)"
   )
   
-  vdiffr::expect_doppelganger("plot_mark-time_upward", gg)
+  vdiffr::expect_doppelganger("ab-plot_mark-time-upward", gg)
 })
 
 test_that("mark stimuli renders stimuli as rectangles in the plot", {
@@ -54,7 +53,7 @@ test_that("mark stimuli renders stimuli as rectangles in the plot", {
          Second row runs from 3-5 mins and has a flipped pattern
          ")
   
-  vdiffr::expect_doppelganger("plot_event-rectangles", gg)
+  vdiffr::expect_doppelganger("ab-plot_event-rectangles", gg)
 })
 
 test_that("mark decision zone produces a vertical line on the plots", {
@@ -63,12 +62,12 @@ test_that("mark decision zone produces a vertical line on the plots", {
   border <- 20
   gg <- mark_decision_zone(gg, border) +
     labs(subtitle = "Decision zone should be visible by dashed vertical lines at 20/-20")
-  vdiffr::expect_doppelganger("plot_decision-zone-20", gg)
+  vdiffr::expect_doppelganger("ab-plot_decision-zone-20", gg)
 
   gg <- ggplot() + scale_x_continuous(limits=c(-100, 100))
   border <- 50
   gg <- mark_decision_zone(gg, border)
-  vdiffr::expect_doppelganger("plot_decision-zone-50", gg)
+  vdiffr::expect_doppelganger("ab-plot_decision-zone-50", gg)
 })
 
 test_that("mark crosses produces marks that are visible and accurate", {
@@ -90,13 +89,13 @@ test_that("mark crosses produces marks that are visible and accurate", {
   gg <- mark_crosses(gg, crossing_data) + labs(
     subtitle = "x..xx / ..x.."
   )
-  vdiffr::expect_doppelganger("plot_mark-crosses", gg)
+  vdiffr::expect_doppelganger("ab-plot_mark-crosses", gg)
   
   gg <- ggplot()
   crossing_data$x <- crossing_data$x * -1
   gg <- mark_crosses(gg, crossing_data) +
     labs(subtitle = "..x.. / x..xx")
-  vdiffr::expect_doppelganger("plot_mark-crosses-flip", gg)
+  vdiffr::expect_doppelganger("ab-plot_mark-crosses-flip", gg)
 })
 
 
@@ -125,7 +124,7 @@ test_that("mark_analysis_mask works", {
   
   gg <- mark_analysis_mask(gg, analysis_mask = c(1, 5)) +
     labs(subtitle = "Analysis mask should be displayed from min 1-5")
-  vdiffr::expect_doppelganger("plot_mark-analysis_mask", gg)
+  vdiffr::expect_doppelganger("ab-plot_mark-analysis-mask", gg)
   
 })
 
@@ -133,5 +132,5 @@ test_that("document_plot annotates the plot", {
   
   gg <- ggplot()
   gg <- document_plot(gg, subtitle = "A subtitle")
-  vdiffr::expect_doppelganger("plot_document-plot", gg)
+  vdiffr::expect_doppelganger("ab-plot_document-plot", gg)
 })
