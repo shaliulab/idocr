@@ -37,6 +37,6 @@ test_that("center around median produces data whose center is at 0", {
   expect_true(min(toy_dataset$tracker$x) > 0)
   expect_true(median(toy_dataset$tracker$x) != 0)
   
-  centered_dataset <- center_around_median(toy_dataset$tracker$x)
-  expect_equal(median(centered_dataset$x), 0)
+  centered_x <- center_around_median(toy_dataset$tracker$x)
+  expect_equal(median(centered_x), 0)
 })
