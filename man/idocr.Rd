@@ -43,10 +43,9 @@ If NULL, take current file (works on RStudio)}
 so the same cross is not counted more than once due to noise in
 the border cross}
 
-\item{analysis_mask}{Numeric vector of length 2
-containing start and end timepoint of mask
-in seconds since the start of the experiment
-Every behavior outside of the mask is ignored}
+\item{analysis_mask}{Named list of numeric vectors specifying
+the start and end time in seconds of a period of the experiment that should
+be analyzed separately}
 
 \item{...}{Extra arguments to plot_dataset}
 }

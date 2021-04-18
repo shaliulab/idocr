@@ -63,19 +63,20 @@ test_that("idocr is backwards compatible", {
               subtitle = description,
               delay = delay,
               mask_duration = mask_duration
-    )}
-  )
+    )
+  })
   
   
   vdiffr::expect_doppelganger("legacy_main", p1$gg)
   expect_snapshot_value(
-    p1$pi, 
+    p1[[1]]$pi, 
     style = "serialize", cran = FALSE
   )
-  
-  # expect deprecation warning
+})
+
+
+test_that("calling export_summary issues warning", {
   expect_message({
     export_summary(experiment_folder = experiment_folder)
-  })
-  
+  })  
 })

@@ -58,19 +58,24 @@ format_summary <- function(x) {
 #' Export a single csv with all key data for analysis and plotting outside of R
 #' 
 #' @eval document_experiment_folder()
+#' @eval document_result_folder(required=FALSE)
 #' @param output_csv Path of csv output. If not provided,
+#' @eval document_suffix()
 #' @param ... Extra arguments to make_summary
 #' @seealso [make_summary()]
 #' a new file in the experiment folder with key SUMMARY is produced
-export_summary_new <- function(experiment_folder, output_csv=NULL, ...) {
+export_summary_new <- function(experiment_folder, result_folder=NULL, output_csv=NULL, suffix= "", ...) {
+
+  if (is.null(result_folder)) result_folder <- experiment_folder
 
   summary_data <- make_summary(...)
   
   if(is.null(output_csv)) {
     output_csv <- build_filename(
-      experiment_folder = experiment_folder,
+      result_folder = result_folder,
       metadata = load_metadata(experiment_folder),
-      key = "SUMMARY"
+      key = "SUMMARY",
+      suffix = suffix
     )
   }
   
@@ -106,17 +111,23 @@ export_summary <- function(experiment_folder) {
 
 #' Export the preference index to a csv file
 #' 
-#' @inherit export_summary
+#' @eval document_experiment_folder()
+#' @eval document_result_folder(required=FALSE)
 #' @param pi Dataframe to be exported.
 #' Should contain a column named preference_index
 #' @param output_csv Path of csv output. If not provided,
 #' a new file in the experiment folder with key SUMMARY is produced
-export_pi_summary <- function(experiment_folder, pi, output_csv=NULL) {
+#' @eval document_suffix()
+export_pi_summary <- function(experiment_folder, pi, result_folder=NULL, output_csv=NULL, suffix="") {
+  
+  if (is.null(result_folder)) result_folder <- experiment_folder
   
   if(is.null(output_csv)) {
     output_csv <- build_filename(
-      experiment_folder = experiment_folder,
-      metadata = load_metadata(experiment_folder), key = "PI"
+      result_folder = result_folder,
+      metadata = load_metadata(experiment_folder),
+      key = "PI",
+      suffix = suffix
     )
   }
   message("Saving PI -> ", output_csv)
@@ -133,15 +144,28 @@ export_pi_summary <- function(experiment_folder, pi, output_csv=NULL) {
 #' @eval document_experiment_folder()
 #' @eval document_dataset()
 #' @eval document_analysis()
-#' @param ... Extra argumetns to export_summary
+#' @eval document_result_folder()
+#' @eval document_suffix()
+#' @param ... Extra arguments to export_summary
 #' @seealso [export_pi_summary()]
 #' @seealso [export_summary()]
-export_dataset <- function(experiment_folder, dataset, analysis, ...) {
-  export_pi_summary(experiment_folder = experiment_folder, pi = analysis$pi)
+export_dataset <- function(experiment_folder, dataset, analysis,
+                           result_folder=NULL, suffix="", ...) {
+  
+  if (is.null(result_folder)) result_folder <- experiment_folder
+  
+  export_pi_summary(
+    experiment_folder = experiment_folder,
+    result_folder=result_folder,
+    pi = analysis$pi,
+    suffix=suffix
+  )
   summary_data <- export_summary_new(
     experiment_folder = experiment_folder,
+    result_folder=result_folder,
     tracker_data = dataset$tracker,
     controller_data = dataset$controller,
+    suffix=suffix,
     ...
   )
   export_data <- list(summary=summary_data, pi = analysis$pi)

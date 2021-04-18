@@ -97,10 +97,12 @@ test_that("export_dataset runs without issues", {
                  dataset = dataset, analysis = analysis)
   
   expect_true(file.exists(
-      build_filename(experiment_folder = experiment_folder, key = "SUMMARY")
+    build_filename(experiment_folder, metadata = load_metadata(experiment_folder),
+                   key = "SUMMARY")
   ))
   expect_true(file.exists(
-    build_filename(experiment_folder = experiment_folder, key = "PI")
+    build_filename(experiment_folder, metadata = load_metadata(experiment_folder),
+                   key = "PI")
   ))
   
   expect_snapshot_value(

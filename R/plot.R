@@ -247,6 +247,8 @@ combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE, plot_m
 #' @param colors Named vector of colors. Values should be colors
 #' and names need to map to controller events
 #' @param plot_crosses Whether to display the decision zone crosses (TRUE) or not.
+#' @eval document_suffix()
+#' @eval document_result_folder()
 #' @inherit mark_analysis_mask
 #' @inherit mark_stimuli
 #' @inherit annotate_facet
@@ -260,6 +262,7 @@ combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE, plot_m
 #' @export
 plot_dataset <- function(experiment_folder,
                          dataset, analysis,
+                         result_folder = NULL,
                          plot_preference_index = TRUE,
                          plot_decision_zone = TRUE,
                          plot_crosses = TRUE,
@@ -275,9 +278,13 @@ plot_dataset <- function(experiment_folder,
                          analysis_mask = NULL,
                          plot_mask = NULL,
                          downward=TRUE,
+                         suffix = "",
                          ...
                          ) {
   
+  
+  if (is.null(result_folder)) result_folder <- experiment_folder
+
   message("Validating passed data")
   validate_inputs(dataset, analysis)
   data <- combine_inputs(dataset, analysis,
@@ -321,8 +328,8 @@ plot_dataset <- function(experiment_folder,
   gg <- document_plot(gg, experiment_folder, subtitle=subtitle) 
   
   # save the plot to the experiment's folder
-  message("Saving plot to ->", experiment_folder)
-  save_plot(gg, experiment_folder, ...)
+  message("Saving plot to ->", result_folder)
+  save_plot(gg, experiment_folder, result_folder, suffix=suffix, ...)
   
   return(gg)
 }
@@ -342,7 +349,7 @@ mark_analysis_mask <- function(gg, analysis_mask) {
   
   mask_coords <- data.frame(
     x = rep(limits, times=2),
-    y = rep(analysis_mask, each=2)
+    y = rep(unlist(analysis_mask), each=2)
   )
   mask_coords <- mask_coords[c(1,2,4,3),]
 
@@ -476,12 +483,15 @@ mark_decision_zone <- function(gg, border) {
 #' 
 #' @param gg ggplot2 plot
 #' @eval document_experiment_folder()
+#' @eval document_result_folder()
+#' @eval document_suffix()
 #' @param ... Extra arguments for ggsave
 #' @seealso [ggplot2::ggsave()]
 #' @import ggplot2
-save_plot <- function(gg, experiment_folder, ...) {
+save_plot <- function(gg, experiment_folder, result_folder=NULL, suffix="", ...) {
   
   field <- value <- NULL
+  if (is.null(result_folder)) result_folder <- experiment_folder
   
   if (any(grep(x = list.files(experiment_folder), pattern = "METADATA"))) {
     metadata <- load_metadata(experiment_folder)
@@ -493,6 +503,12 @@ save_plot <- function(gg, experiment_folder, ...) {
   } else {
     plot_basename <- "DUMMY"
   }
+  
+  plot_basename <- ifelse(suffix=="",
+                          plot_basename,
+                          paste0(plot_basename, "_", suffix)
+                        )
+  
   
   # specify default width, height and dpi of plots
   ggsave_kwargs <- list(...)
@@ -510,7 +526,7 @@ save_plot <- function(gg, experiment_folder, ...) {
     
     # save!
     ggsave(
-      filename = file.path(experiment_folder, plot_filename),
+      filename = file.path(result_folder, plot_filename),
       width=width, height=height, dpi=dpi
     )
   }

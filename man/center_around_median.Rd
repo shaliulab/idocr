@@ -4,10 +4,10 @@
 \alias{center_around_median}
 \title{Set the median x position to 0}
 \usage{
-center_around_median(tracker_data)
+center_around_median(x)
 }
 \arguments{
-\item{tracker_data}{IDOC tracker dataset where every row captures the position of one animal at one timepoint}
+\item{x}{Vector of animal positions}
 }
 \description{
 Set the median x position to 0

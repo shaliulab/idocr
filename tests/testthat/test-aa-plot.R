@@ -3,7 +3,9 @@ test_that("base plot produces plot with correct axes and facet", {
   tracker_data <- toy_tracker_small()
   limits <- c(-100, 100)
   tracker_data$facet <- paste0("ROI_", tracker_data$region_id)
-  gg <- base_plot(tracker_data, limits)
+  gg <- base_plot(tracker_data, limits) + labs(
+  subtitle = "y axis should run downard. Plot should have two faces, one per animal"
+  )
   
   expect_equal(gg$scales$scales[[1]]$limits, c(-60, 0))
   expect_equal(gg$scales$scales[[2]]$limits, limits)
@@ -20,13 +22,21 @@ test_that("mark time works", {
   tracker_data <- toy_tracker_small()
   gg <- ggplot()
   data <- data.frame(t = seq(0, 900, 5), x = 1:181)
-  gg <- mark_time(data = data, gg = gg, freq = 60, downward = TRUE)
+  gg <- mark_time(data = data, gg = gg, freq = 60, downward = TRUE) + labs(
+    subtitle = "y axis should run downard with one tick every minute (60 s)"
+  )
   vdiffr::expect_doppelganger("plot_mark-time", gg)
   
-  gg <- mark_time(data = data, gg = gg, freq = 120, downward = TRUE)
+  gg <- mark_time(data = data, gg = gg, freq = 120, downward = TRUE) + labs(
+    subtitle = "y axis should run downard with one tick every 2 minutes (120 s)"
+  )
+  
   vdiffr::expect_doppelganger("plot_mark-time_custom-freq", gg)
 
-  gg <- mark_time(data = data, gg = gg, freq = 120, downward = FALSE)
+  gg <- mark_time(data = data, gg = gg, freq = 120, downward = FALSE)  + labs(
+    subtitle = "y axis should run upward with one tick every 2 minutes (120 s)"
+  )
+  
   vdiffr::expect_doppelganger("plot_mark-time_upward", gg)
 })
 
@@ -38,7 +48,11 @@ test_that("mark stimuli renders stimuli as rectangles in the plot", {
   gg <- mark_stimuli(gg, rectangles, colors, names(colors))
   gg <- gg +
     scale_x_continuous(limits = c(-100, 100)) +
-    scale_y_continuous(limits=c(10, 0), trans = scales::reverse_trans())
+    scale_y_continuous(limits=c(10, 0), trans = scales::reverse_trans()) +
+    labs(subtitle = "Plot should have a red and blue checker pattern. 
+         First row runs from 1-3 mins and has TREATMENT_A_LEFT & B_RIGHT.
+         Second row runs from 3-5 mins and has a flipped pattern
+         ")
   
   vdiffr::expect_doppelganger("plot_event-rectangles", gg)
 })
@@ -47,7 +61,8 @@ test_that("mark decision zone produces a vertical line on the plots", {
   
   gg <- ggplot() + scale_x_continuous(limits=c(-100, 100))
   border <- 20
-  gg <- mark_decision_zone(gg, border)
+  gg <- mark_decision_zone(gg, border) +
+    labs(subtitle = "Decision zone should be visible by dashed vertical lines at 20/-20")
   vdiffr::expect_doppelganger("plot_decision-zone-20", gg)
 
   gg <- ggplot() + scale_x_continuous(limits=c(-100, 100))
@@ -72,12 +87,15 @@ test_that("mark crosses produces marks that are visible and accurate", {
   crossing_data$x <- crossing_data$side * border
   
   gg <- ggplot()
-  gg <- mark_crosses(gg, crossing_data)
+  gg <- mark_crosses(gg, crossing_data) + labs(
+    subtitle = "x..xx / ..x.."
+  )
   vdiffr::expect_doppelganger("plot_mark-crosses", gg)
   
   gg <- ggplot()
   crossing_data$x <- crossing_data$x * -1
-  gg <- mark_crosses(gg, crossing_data)
+  gg <- mark_crosses(gg, crossing_data) +
+    labs(subtitle = "..x.. / x..xx")
   vdiffr::expect_doppelganger("plot_mark-crosses-flip", gg)
 })
 
@@ -105,7 +123,8 @@ test_that("mark_analysis_mask works", {
     scale_x_continuous(limits=c(0,10), breaks=1:10) +
     scale_y_continuous(limits=c(0,10), breaks=1:10)
   
-  gg <- mark_analysis_mask(gg, analysis_mask = c(1, 5))
+  gg <- mark_analysis_mask(gg, analysis_mask = c(1, 5)) +
+    labs(subtitle = "Analysis mask should be displayed from min 1-5")
   vdiffr::expect_doppelganger("plot_mark-analysis_mask", gg)
   
 })

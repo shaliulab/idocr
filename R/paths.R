@@ -1,33 +1,25 @@
 #' Module to infer names of .csv files based on metadata+key or experiment_folder+key
 
 #' Build a filename based on the metadata and a key
-#' @eval document_experiment_folder()
+#' @eval document_result_folder()
 #' @param metadata data.table with all information about the experiment
 #' i.e. when it was done, etc
 #' @param key Name of a table in the resulting database
+#' @eval document_suffix()
 #' @param extension Extension of file (.csv, ...)
 #' @return Filename with systematic metainformation and key to differentiate
 #' it from other files from the same experiment
-build_filename <- function(experiment_folder=NULL, metadata=NULL, key=NULL, extension=".csv") {
-  
-  if (is.null(experiment_folder) & !is.null(metadata))
-    experiment_folder <- "."
-  else if (!is.null(experiment_folder) & is.null(metadata))
-    metadata <- load_metadata(experiment_folder)
-  else if(!is.null(experiment_folder) & !is.null(metadata)) {
-  }
-  else
-    stop("Please pass at least experiment_folder or metadata")
+build_filename <- function(result_folder, metadata, key=NULL, suffix="", extension=".csv") {
   
   stopifnot(!is.null(key))
-  
   output_csv <- file.path(
-    experiment_folder,
+    result_folder,
     paste0(metadata[metadata$field == 'date_time', "value"],
            "_",
            metadata[metadata$field == 'machine_id', "value"],
            "_",
            key,
+           ifelse(suffix == "", suffix, paste0("_", suffix, "_")),
            extension
     )
   )
