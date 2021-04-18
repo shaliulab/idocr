@@ -16,7 +16,6 @@ center_around_median <- function(x) {
   # TODO Should we infer the min/max from the data
   # or rather hardcode them?
   
-  browser()
   median_x <- median(x)
   x <- x - median_x
   return(x)
