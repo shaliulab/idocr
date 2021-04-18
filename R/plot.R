@@ -512,9 +512,17 @@ save_plot <- function(gg, experiment_folder, result_folder=NULL, suffix="", ...)
   
   # specify default width, height and dpi of plots
   ggsave_kwargs <- list(...)
-  width = ifelse(is.null(ggsave_kwargs$width), 16, ggsave_kwargs$width)
-  height = ifelse(is.null(ggsave_kwargs$height), 16, ggsave_kwargs$height)
-  dpi = ifelse(is.null(ggsave_kwargs$dpi), 16, ggsave_kwargs$dpi)
+  
+  if (is_testing()) {
+    width = ifelse(is.null(ggsave_kwargs$width), 16, ggsave_kwargs$width)
+    height = ifelse(is.null(ggsave_kwargs$height), 16, ggsave_kwargs$height)
+    dpi = ifelse(is.null(ggsave_kwargs$dpi), 16, ggsave_kwargs$dpi)
+  } else {
+    width = ifelse(is.null(ggsave_kwargs$width), 25, ggsave_kwargs$width)
+    height = ifelse(is.null(ggsave_kwargs$height), 12, ggsave_kwargs$height)
+    dpi = ifelse(is.null(ggsave_kwargs$dpi), 300, ggsave_kwargs$dpi)
+  }
+  
   
   for (extension in c('pdf', 'png')) {
     message("Saving ", extension, " format")
