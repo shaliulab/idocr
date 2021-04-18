@@ -15,9 +15,9 @@ the boundaries of the x axis}
 
 \item{limits}{Position of ticks in space axis}
 
-\item{nrow}{Number of rows in facet layout}
+\item{nrow}{Number of rows used for facetting data}
 
-\item{ncol}{Number of columns in facet layout}
+\item{ncol}{Number of cols used for facetting data}
 
 \item{downward}{Whether the 0 should be at the top (TRUE)
 or the bottom (FALSE) of the plot}

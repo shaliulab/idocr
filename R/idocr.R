@@ -51,7 +51,6 @@ idocr <- function(experiment_folder,
   )
   
   result <- list()
-  # browser()
   
   if (is.null(analysis_mask)) {
     result[[1]] <- pipeline(experiment_folder, dataset,

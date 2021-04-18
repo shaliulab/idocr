@@ -107,8 +107,10 @@ mark_space <- function(limits, gg, extra=c(0)) {
 #' @eval document_gg("return")
 #' @seealso [mark_space()]
 #' @seealso [mark_time()]
+#' @param nrow Number of rows used for facetting data
+#' @param ncol Number of cols used for facetting data
 #' @export
-base_plot <- function(data, limits, downward=TRUE, nrow=2,ncol=10) {
+base_plot <- function(data, limits, nrow, ncol, downward=TRUE) {
 
   x <- id <- NULL
 
@@ -132,6 +134,7 @@ base_plot <- function(data, limits, downward=TRUE, nrow=2,ncol=10) {
   gg <- mark_space(limits, gg, extra=c(0))
   
   if(length(unique(data$facet)) != (nrow * ncol)) {
+    # browser()
     stop("The passed layout does not match the number of animals.
        Make sure nrow * ncol evaluates to the number of animals in the dataset ")
   }
@@ -522,7 +525,7 @@ save_plot <- function(gg, experiment_folder, result_folder=NULL, suffix="", ...)
   # specify default width, height and dpi of plots
   ggsave_kwargs <- list(...)
   
-  if (is_testing()) {
+  if (testthat_is_testing()) {
     width = ifelse(is.null(ggsave_kwargs$width), 16, ggsave_kwargs$width)
     height = ifelse(is.null(ggsave_kwargs$height), 16, ggsave_kwargs$height)
     dpi = ifelse(is.null(ggsave_kwargs$dpi), 16, ggsave_kwargs$dpi)
