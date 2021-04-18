@@ -14,6 +14,7 @@ idocr(
   src_file = NULL,
   mask_duration = 0.5,
   analysis_mask = NULL,
+  n = 20,
   ...
 )
 }
@@ -47,10 +48,15 @@ the border cross}
 the start and end time in seconds of a period of the experiment that should
 be analyzed separately}
 
+\item{n}{Number of channels desired.
+If less than this amount of animals is found, idocr
+will make up animals until this amount is hit
+It (should match nrow x ncol of layout passed in the idocr function)}
+
 \item{...}{Extra arguments to plot_dataset}
 }
 \value{
-tracker_data
+tibble
 }
 \description{
 Load data from the experiment folder, possibly with some specific settings

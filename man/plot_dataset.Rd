@@ -19,6 +19,8 @@ plot_dataset(
   plot_mask = NULL,
   downward = TRUE,
   suffix = "",
+  nrow = 2,
+  ncol = 10,
   ...
 )
 }

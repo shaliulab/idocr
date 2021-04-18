@@ -5,7 +5,7 @@
 \title{Generate base IDOC plot upon which
 more annotation layers can be added}
 \usage{
-base_plot(data, limits, downward = TRUE)
+base_plot(data, limits, nrow, ncol, downward = TRUE)
 }
 \arguments{
 \item{data}{List with entries roi, controller, border, limits.
@@ -14,6 +14,10 @@ Border is a TODO. Limits is a numeric vector with 2 positions, delineating
 the boundaries of the x axis}
 
 \item{limits}{Position of ticks in space axis}
+
+\item{nrow}{Number of rows in facet layout}
+
+\item{ncol}{Number of columns in facet layout}
 
 \item{downward}{Whether the 0 should be at the top (TRUE)
 or the bottom (FALSE) of the plot}
