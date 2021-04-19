@@ -265,6 +265,7 @@ combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE, plot_m
 #' @inherit annotate_facet
 #' @inherit mark_time
 #' @inherit combine_inputs
+#' @inherit base_plot
 #' @param ... Extra arguments for save_plot
 #' @seealso [mark_stimuli()]
 #' @seealso [mark_decision_zone()]

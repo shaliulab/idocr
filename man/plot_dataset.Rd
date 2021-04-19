@@ -75,6 +75,10 @@ from other output produced on the same experiment folder.
 Useful for segmenting the experiment into different periods of interest
 and analyzing these periods separately.}
 
+\item{nrow}{Number of rows used for facetting data}
+
+\item{ncol}{Number of cols used for facetting data}
+
 \item{...}{Extra arguments for save_plot}
 }
 \value{
