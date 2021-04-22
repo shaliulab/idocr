@@ -1,4 +1,4 @@
-library(idocr)
+library(idocr2)
 
 ##############################################
 # CHANGE CODE BELOW THIS LINE
@@ -46,6 +46,24 @@ border_mm <- 5
 # as two exits happening within ridiculously little time  
 mask_duration <- 0.5
 
+# Analysis mask
+# This is a list of numeric vectors of length 2
+# The name of the vector should represent some block or interval of your experiment
+# i.e. pre conditioning, post conditioning, etc
+# The vector should delimit the start and end time of the block in seconds
+# Passing this argument to idocr() will cause R to generate a subfolder
+# in the experiment data folder, for each element in the list
+# The folder will have the name of the element in the list
+# e.g. this list will create a subfolder called EVENT1 and another called EVENT2
+# Each of them will contain a pdf and png version of the plot but only the interval
+# when the mask is active is analyzed. It is marked accordingly on the plot
+# Moreover, you get SUMMARY and PI .csv files
+analysis_mask <- list(
+  EVENT1 = c(0, 60),
+  EVENT2 = c(60, 120)
+)                    
+
+
 ##################################################
 # CAUTION!! DONT CHANGE ANY CODE BELOW THIS LINE
 ##################################################
@@ -54,6 +72,7 @@ treatments <- c(
   TREATMENT_A = treatment_A,
   TREATMENT_B = treatment_B
 )
+
 
 src_file <- rstudioapi::getActiveDocumentContext()$path
 
@@ -64,7 +83,8 @@ p1 <- idocr(experiment_folder = experiment_folder,
             src_file = src_file,
             subtitle = description,
             delay = delay,
-            mask_duration = mask_duration
+            mask_duration = mask_duration,
+            analysis_mask = analysis_mask
             )
 
 export_summary(experiment_folder = experiment_folder)
