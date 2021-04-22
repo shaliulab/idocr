@@ -95,6 +95,10 @@ cross_detector <- function(tracker_data, border, side=c(-1, 1)) {
   cross_data$border <- border
   cross_data$side <- side
   cross_data$in_zone <- !cross_data$out_of_zone
+  # define a cross as events where the fly is at some timepoint t in the decision zone
+  # and at t+1 is out of the decision zone
+  if (nrow(cross_data) == 1) cross_data$cross <- FALSE
+  else  cross_data$cross <- cross_data[1:nrow(cross_data),]$in_zone & c(cross_data[2:nrow(cross_data),]$out_of_zone, F)
   return(cross_data)
 }
 
@@ -147,7 +151,7 @@ find_exits <- function(tracker_data, border, side=c(-1, 1),
     ) %>%
     lapply(., function(x) mask_FUN(x, ...)) %>%
     do.call(rbind, .) %>%
-    dplyr::filter(out_of_zone) %>%
+    dplyr::filter(cross) %>%
     tibble::as_tibble(.)
   
   cross_data$x <- cross_data$border * cross_data$side

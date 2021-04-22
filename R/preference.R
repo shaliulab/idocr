@@ -26,8 +26,7 @@ compute_preference_index <- function(annotated_data, min_exits_required = 5) {
   pi_data[is.na(pi_data$appetitive), "appetitive"] <- 0
   pi_data[is.na(pi_data$aversive), "aversive"] <- 0
   
-  # pi_data[, c('appetitive', 'aversive')][is.na(pi_data[, c('appetitive', 'aversive')])] <- 0
-  
+
   pi_data_summ <- pi_data %>%
     dplyr::ungroup() %>%
     dplyr::nest_by(region_id) %>%
