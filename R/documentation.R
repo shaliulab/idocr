@@ -10,7 +10,7 @@ document_script <- function(src_file=NULL, dst_folder) {
   
   dst_file <- file.path(
     dst_folder,
-    "script.R"
+    "script_idocr2.R"
   )
 
   message("Backing up script ->", dst_file)
