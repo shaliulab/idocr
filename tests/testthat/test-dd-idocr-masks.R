@@ -18,6 +18,17 @@ test_that("analysis mask works", {
     result[[1]]$pi,
     style = "serialize", cran = FALSE
   )
+  
+
+  result_folder <- file.path(experiment_folder, "FIRST_TWO_MINS")
+  # check the subfolder is created
+  expect_true(dir.exists(result_folder))
+  # check the subfolder is populated
+  expect_true(length(list.files(result_folder)) != 0)
+  
+  # cleanup
+  unlink(recursive = T, x = result_folder)
+  
 })
 
 test_that("analysis mask takes more than 1 mask", {
