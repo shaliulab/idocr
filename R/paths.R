@@ -19,7 +19,7 @@ build_filename <- function(result_folder, metadata, key=NULL, suffix="", extensi
            metadata[metadata$field == 'machine_id', "value"],
            "_",
            key,
-           ifelse(suffix == "", suffix, paste0("_", suffix, "_")),
+           ifelse(suffix == "", suffix, paste0("_", suffix)),
            extension
     )
   )

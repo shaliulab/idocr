@@ -25,12 +25,13 @@ preprocess_controller <- function(controller_data, delay = 0) {
   
   keep_cols <- controller_data %>% apply(., 2, function(x) !all(is.na(x)))
   controller_data <- controller_data[, keep_cols, with=F]
-  
-  
-  controller_data <- pad_t0(controller_data)
-  
+
   # delay the onset of the stimulus
   controller_data[, t := t + delay]
+  
+  # pad t0 now (after applying the delay)
+  controller_data <- pad_t0(controller_data)
+
   return(controller_data)
 }
 
@@ -111,6 +112,12 @@ get_event_data <- function(dataset) {
 interpolate_controller <- function(controller_data, index) {
   
   . <- NULL
+  
+  if (! 0 %in% controller_data$t) {
+    warning("I could not find the t0 of the controller data")
+    warning("I will make it up now")
+    controller_data <- pad_t0(controller_data)
+  }
   
   controller_summary <- controller_data %>%
     dplyr::full_join(index, ., on = "t") %>%
