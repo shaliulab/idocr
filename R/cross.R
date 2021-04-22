@@ -128,7 +128,6 @@ find_exits <- function(tracker_data, border, side=c(-1, 1),
                        ...) {
   
   . <- id <- out_of_zone <- NULL
-  
   if (!is.null(analysis_mask))
     tracker_data <- tracker_data %>%
       dplyr::filter(t >= unlist(analysis_mask)[1]) %>%
@@ -136,8 +135,8 @@ find_exits <- function(tracker_data, border, side=c(-1, 1),
   
   cross_data <- tracker_data %>%
     # get a clean of populated ids
-    remove_empty_roi(.) %>%
-    select(id) %>%
+    # remove_empty_roi(.) %>%
+    dplyr::select(id) %>%
     unique %>%
     unlist %>%
     # .[1:2] %>%

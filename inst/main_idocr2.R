@@ -1,4 +1,4 @@
-library(idocr2)
+# library(idocr2)
 
 ##############################################
 # CHANGE CODE BELOW THIS LINE
@@ -8,12 +8,13 @@ library(idocr2)
 
 # Supply an experiment contained in the working directory
 # Press TAB to autocomplete
-experiment_folder <- "INSERT"
+experiment_folder <- "inst/extdata/2021-04-11_17-59-00/"
 
-# Change what treatment A and B are
-# to fit it to your needs
-treatment_A <- "OCT"
-treatment_B <- "MCH+ES"
+# Change the name of the labels as you please
+# the first label should match treatment_A on your paradigm
+# the second label should match treatment_B on your paradigm
+labels <- c("OCT", "MCH+ES")
+CSplus_idx <- 1 # or 2 depending on which treatment is CS+
 
 # leave this empty or fill something relevant for the experiment
 # it will appear in the subtitle of the plot
@@ -28,7 +29,7 @@ min_exits_required <- 3
 # to account for the time it takes for odour to
 # arrive to the chambers
 # Units in seconds
-delay <- 0
+delay <- 5
 
 
 #### Probably you dont want to change this
@@ -44,7 +45,7 @@ border_mm <- 5
 # after the previous exit
 # to avoid counting the same exit 
 # as two exits happening within ridiculously little time  
-mask_duration <- 0.5
+mask_duration <- 1
 
 # Analysis mask
 # This is a list of numeric vectors of length 2
@@ -59,20 +60,25 @@ mask_duration <- 0.5
 # when the mask is active is analyzed. It is marked accordingly on the plot
 # Moreover, you get SUMMARY and PI .csv files
 analysis_mask <- list(
-  EVENT1 = c(0, 60),
-  EVENT2 = c(60, 120)
-)                    
+  GLOBAL = c(0, Inf),
+  PRE_1 = c(60, 120) + delay,
+  PRE_2 = c(120, 240) + delay,
+  POST_2 = c(1020, 1080) + delay
+)   
 
+nrow <- 1
+ncol <- 20
+height <- 14
+width <- 25
 
 ##################################################
 # CAUTION!! DONT CHANGE ANY CODE BELOW THIS LINE
 ##################################################
 
 treatments <- c(
-  TREATMENT_A = treatment_A,
-  TREATMENT_B = treatment_B
+  "TREATMENT_A",
+  "TREATMENT_B"
 )
-
 
 src_file <- rstudioapi::getActiveDocumentContext()$path
 
@@ -82,9 +88,9 @@ p1 <- idocr(experiment_folder = experiment_folder,
             min_exits_required = min_exits_required,
             src_file = src_file,
             subtitle = description,
-            delay = delay,
+            delay = delay, CSplus_idx = CSplus_idx,
             mask_duration = mask_duration,
-            analysis_mask = analysis_mask
+            analysis_mask = analysis_mask,
+            labels = labels,
+            nrow=nrow,ncol=ncol,height=height,width=width
             )
-
-export_summary(experiment_folder = experiment_folder)
