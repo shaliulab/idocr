@@ -15,19 +15,21 @@ annotate_cross <- function(cross_data, event_data, treatment, type=c("appetitive
   event_data <- event_data[event_data$treatment == treatment,]
 
   overlaps <- cross_data[NULL,]
+  overlaps$type <- character()
 
-  for (i in 1:nrow(cross_data)) {
-    row <- cross_data[i,]
-    t_ms <- row[["t"]] * 1000
-    event_hits <- t_ms > event_data$t_start & t_ms < event_data$t_end & row[["side"]] == event_data$side
-    if (sum(event_hits) == 1) {
-      row$idx <- event_data[event_hits,]$idx
-      overlaps <- rbind(overlaps, row)
+  if (nrow(cross_data) != 0) {
+    for (i in 1:nrow(cross_data)) {
+      row <- cross_data[i,]
+      t_ms <- row[["t"]] * 1000
+      event_hits <- t_ms > event_data$t_start & t_ms < event_data$t_end & row[["side"]] == event_data$side
+      if (sum(event_hits) == 1) {
+        row$idx <- event_data[event_hits,]$idx
+        overlaps <- rbind(overlaps, row)
+      }
     }
+    
+    overlaps$type <- type
   }
-  
-  overlaps$type <- type
-  
   return(overlaps)
 }
 
@@ -83,7 +85,6 @@ seconds_mask <- function(cross_data, min_time = 0) {
 cross_detector <- function(tracker_data, border, side=c(-1, 1)) {
   
   length_encoding <- rle((tracker_data$x * side) > border)
-  
   cross_data <- tibble::tibble(
     lengths = length_encoding$lengths,
     out_of_zone = length_encoding$values,
@@ -115,7 +116,7 @@ cross_detector <- function(tracker_data, border, side=c(-1, 1)) {
 #' @param ... Extra arguments to mask_FUN
 #' @importFrom purrr map
 #' @importFrom tibble as_tibble
-#' @importFrom dplyr filter
+#' @importFrom dplyr filter select
 #' @importFrom magrittr `%>%`
 #' @seealso seconds_mask
 #' @seealso cross_detector
