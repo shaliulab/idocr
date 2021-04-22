@@ -16,9 +16,9 @@ center_around_median <- function(tracker_data) {
   # TODO Should we infer the min/max from the data
   # or rather hardcode them?
   min_x <- min(tracker_data$x)
-  max_x <- max(tracker_data$x)
   
   x <- tracker_data$x - min_x
+  max_x <- max(x)
   x <- x - max_x / 2
   tracker_data$x <- x
   return(tracker_data)
