@@ -117,7 +117,12 @@ pipeline <- function(experiment_folder, dataset, min_exits_required, mask_durati
     experiment_folder = experiment_folder,
     dataset = dataset, analysis = analysis,
     result_folder = result_folder,
-    suffix = suffix
+    suffix = suffix,
+    # export summary only if the analysis mask is null
+    # if it is not null, this is an interval and we dont need it
+    # even if it is not null, still export summary if the name of the inteval
+    # is global (as a way to bypass the blocking of the summary export)
+    summary = is.null(analysis_mask) | suffix == "GLOBAL"
   )
   
   return(list(gg=gg, pi=analysis$pi))

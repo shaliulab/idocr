@@ -12,6 +12,7 @@
 make_summary <- function(tracker_data, controller_data) {
   . <- region_id <- x <- NULL
 
+  
   # keep the fields we want
   tracker_summary_long <- tracker_data %>%
     dplyr::select(t, x, region_id) %>%
@@ -146,29 +147,45 @@ export_pi_summary <- function(experiment_folder, pi, result_folder=NULL, output_
 #' @eval document_analysis()
 #' @eval document_result_folder()
 #' @eval document_suffix()
+#' @param summary Whether to export a summary or not
 #' @param ... Extra arguments to export_summary
 #' @seealso [export_pi_summary()]
 #' @seealso [export_summary()]
 export_dataset <- function(experiment_folder, dataset, analysis,
-                           result_folder=NULL, suffix="", ...) {
+                           result_folder=NULL, suffix="", summary=TRUE, ...) {
   
   if (is.null(result_folder)) result_folder <- experiment_folder
   
-  export_pi_summary(
-    experiment_folder = experiment_folder,
-    result_folder=result_folder,
-    pi = analysis$pi,
-    suffix=suffix
-  )
-  summary_data <- export_summary_new(
-    experiment_folder = experiment_folder,
-    result_folder=result_folder,
-    tracker_data = dataset$tracker,
-    controller_data = dataset$controller,
-    suffix=suffix,
-    ...
-  )
-  export_data <- list(summary=summary_data, pi = analysis$pi)
-  return(export_data)
+  results <- list(summary=NULL, pi = analysis$pi)
+  
+  tryCatch({
+    export_pi_summary(
+      experiment_folder = experiment_folder,
+      result_folder=result_folder,
+      pi = analysis$pi,
+      suffix=suffix
+    )}, error = function(e) {
+      warning("Could not save PI summary. See error below")
+      warning(e)
+    })
+  
+  # TODO Test this works fine!
+  if (summary) {
+    results$summary <- tryCatch({
+      export_summary_new(
+        experiment_folder = experiment_folder,
+        result_folder=result_folder,
+        tracker_data = dataset$tracker,
+        controller_data = dataset$controller,
+        suffix=suffix,
+        ...
+      )
+    }, error = function(e) {
+      warning("Could not save SUMMARY. See error below") 
+      warning(e)
+      1
+    })
+  }
+  return(results)
 }
   
