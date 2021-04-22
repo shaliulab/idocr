@@ -12,13 +12,14 @@ find_rois <- function(experiment_folder) {
 
 #' Set the median x position to 0
 #' @param x Vector of animal positions
-#' @importFrom stats median
 center_around_median <- function(x) {
   # TODO Should we infer the min/max from the data
   # or rather hardcode them?
-  
-  median_x <- stats::median(x)
-  x <- x - median_x
+  x <- x - min(x)
+  x <- x - max(x) / 2
+
+  # median_x <- stats::median(x)
+  # x <- x - median_x
   return(x)
 }
 
