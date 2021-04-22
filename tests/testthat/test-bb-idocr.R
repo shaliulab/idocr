@@ -97,3 +97,35 @@ test_that("CSplus_idx can be set to 2", {
     style = "serialize", cran = FALSE
   )
 })
+
+
+# TODO This test does not really test if delay can be non 0
+# if tests whether idocr emits any warning (because of delay being non 0)
+# but also maybe for another reason!
+# At least we know if this is the only test that fails,
+# we know it's because of the delay
+test_that("delay can be non 0", {
+  
+  pkg_name <- testing_package()
+  
+  experiment_folder <- system.file(
+    "extdata/toy", package = pkg_name,
+    mustWork = TRUE
+  )
+  
+  status <- tryCatch({
+     result <- idocr(
+      experiment_folder = experiment_folder, CSplus_idx = 2,
+      min_exits_required = 5,
+      border_mm = 12.5, delay = 5,
+      subtitle = "CS+=TREATMENT_B"
+     )
+     0
+     }
+    , warning = function(w) {
+      1
+    })
+  
+  expect_equal(status, 0)
+  
+})
