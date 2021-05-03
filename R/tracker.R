@@ -10,11 +10,20 @@ find_rois <- function(experiment_folder) {
   return(roi_files)
 }
 
-#' Set the median x position to 0
+#' Center the trace of movement along x axis so x=0 is set
+#' at the center of the chamber
+#' Estimating the center via Computer Vision is very costly because the center
+#' does not look similar across chambers (some chambers are wider than others, etc)
+#' For that reason, if you as user wish maximum accuracy,
+#' you should run the midline-detector/main.py script, available here
+#' https://github.com/shaliulab/midline-detector
+#' like so:
+#' python main <--experiment-folder EXPERIMENT_FOLDER> 
 #' @eval document_tracker_data()
 #' @eval document_experiment_folder()
 #' @param infer If false, read coords of roi centers from ROI_CENTER file
 #' otherwise estimate based on fly behavior
+#' @importFrom dplyr left_join select
 center_dataset <- function(experiment_folder, tracker_data, infer=FALSE) {
   # TODO Should we infer the min/max from the data
   # or rather hardcode them?
@@ -33,6 +42,12 @@ center_dataset <- function(experiment_folder, tracker_data, infer=FALSE) {
   return(tracker_data)
 }
 
+#' Read the x coordinate of the center of the rois
+#' This is useful for precise delineation of the decision zone
+#' The function expects the ROI_CENTER and ROI_MAP files to exist
+#' @eval document_experiment_folder()
+#' @importFrom dplyr left_join select
+#' @importFrom data.table fread
 get_roi_center <- function(experiment_folder) {
   
   roi_center_file <- grep(x = list.files(experiment_folder, full.names = TRUE), pattern = "ROI_CENTER", value = T)
@@ -51,7 +66,6 @@ get_roi_center <- function(experiment_folder) {
   }
   return(roi_center)
 }
-
 
 
 #' Give each animal a unique id based on the run id of the experiment/machine
