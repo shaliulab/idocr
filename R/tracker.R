@@ -11,17 +11,47 @@ find_rois <- function(experiment_folder) {
 }
 
 #' Set the median x position to 0
-#' @param x Vector of animal positions
-center_around_median <- function(x) {
+#' @eval document_tracker_data()
+#' @eval document_experiment_folder()
+#' @param infer If false, read coords of roi centers from ROI_CENTER file
+#' otherwise estimate based on fly behavior
+center_dataset <- function(experiment_folder, tracker_data, infer=FALSE) {
   # TODO Should we infer the min/max from the data
   # or rather hardcode them?
-  x <- x - min(x)
-  x <- x - max(x) / 2
-
-  # median_x <- stats::median(x)
-  # x <- x - median_x
-  return(x)
+  
+  if (infer) {
+    x <- tracker_data$x
+    x <- x - min(x)
+    x <- x - max(x) / 2
+    tracker_data$x <- x
+  } else {
+    roi_center <- get_roi_center(experiment_folder)
+    tracker_data <- dplyr::left_join(tracker_data, roi_center)
+    tracker_data$x <- tracker_data$x - tracker_data$center
+    tracker_data <- tracker_data %>% dplyr::select(-center)
+  }
+  return(tracker_data)
 }
+
+get_roi_center <- function(experiment_folder) {
+  
+  roi_center_file <- grep(x = list.files(experiment_folder, full.names = TRUE), pattern = "ROI_CENTER", value = T)
+  roi_map_file <- grep(x = list.files(experiment_folder, full.names = TRUE), pattern = "ROI_MAP", value = T)
+
+  if (length(roi_center_file) == 0) {
+    warning("Please execute mindline-detector and save a ROI_CENTER.csv file in the folder")
+    roi_center <- data.table(region_id=1:20, center=0)
+  } else {
+    roi_center <- data.table::fread(roi_center_file)
+    roi_map <- data.table::fread(roi_map_file)
+    roi_map$region_id <- roi_map$value
+    roi_center <- dplyr::left_join(roi_center, dplyr::select(roi_map, x, region_id))
+    roi_center$center <- roi_center$center - roi_center$x
+    roi_center <- dplyr::select(roi_center, -x)
+  }
+  return(roi_center)
+}
+
 
 
 #' Give each animal a unique id based on the run id of the experiment/machine
@@ -97,7 +127,7 @@ preprocess_tracker <- function(experiment_folder, tracker_data) {
   
   # center the data around the median
   # i.e. estimate the center of the chamber using the median (central) x
-  tracker_data$x <- center_around_median(tracker_data$x)
+  tracker_data <- center_dataset(experiment_folder, tracker_data, infer=FALSE)
   
   # keep only needed columns
   tracker_data <- keep_needed_columns_only(experiment_folder, tracker_data)
