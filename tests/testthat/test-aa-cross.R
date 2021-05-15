@@ -87,7 +87,7 @@ test_that("if the event is extended in time, the second cross is also considered
   expect_equal(annotation$t, c(2, 5))  
 })
 
-test_that("if the side of the event changes, other exits are considered", {
+test_that("if the side of the event changes, the other exits are considered", {
 
   treatment_1 <- "TREATMENT_A"
   event_data <- toy_event_data()

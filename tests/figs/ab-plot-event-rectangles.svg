@@ -19,10 +19,10 @@
   </clipPath>
 </defs>
 <rect x='40.10' y='73.73' width='576.79' height='471.40' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' clip-path='url(#cpNDAuMTB8NjE2LjkwfDU0NS4xM3w3My43Mw==)' />
-<polygon points='66.32,138.02 328.50,138.02 328.50,223.72 66.32,223.72 ' style='stroke-width: 1.07; fill: #FF0000; fill-opacity: 0.40;' clip-path='url(#cpNDAuMTB8NjE2LjkwfDU0NS4xM3w3My43Mw==)' />
-<polygon points='328.50,223.72 590.68,223.72 590.68,309.43 328.50,309.43 ' style='stroke-width: 1.07; fill: #FF0000; fill-opacity: 0.40;' clip-path='url(#cpNDAuMTB8NjE2LjkwfDU0NS4xM3w3My43Mw==)' />
-<polygon points='66.32,223.72 328.50,223.72 328.50,309.43 66.32,309.43 ' style='stroke-width: 1.07; fill: #0000FF; fill-opacity: 0.40;' clip-path='url(#cpNDAuMTB8NjE2LjkwfDU0NS4xM3w3My43Mw==)' />
-<polygon points='328.50,138.02 590.68,138.02 590.68,223.72 328.50,223.72 ' style='stroke-width: 1.07; fill: #0000FF; fill-opacity: 0.40;' clip-path='url(#cpNDAuMTB8NjE2LjkwfDU0NS4xM3w3My43Mw==)' />
+<polygon points='66.32,138.02 328.50,138.02 328.50,223.72 66.32,223.72 ' style='stroke-width: 1.07; stroke: none; fill: #FF0000; fill-opacity: 0.40;' clip-path='url(#cpNDAuMTB8NjE2LjkwfDU0NS4xM3w3My43Mw==)' />
+<polygon points='328.50,223.72 590.68,223.72 590.68,309.43 328.50,309.43 ' style='stroke-width: 1.07; stroke: none; fill: #FF0000; fill-opacity: 0.40;' clip-path='url(#cpNDAuMTB8NjE2LjkwfDU0NS4xM3w3My43Mw==)' />
+<polygon points='66.32,223.72 328.50,223.72 328.50,309.43 66.32,309.43 ' style='stroke-width: 1.07; stroke: none; fill: #0000FF; fill-opacity: 0.40;' clip-path='url(#cpNDAuMTB8NjE2LjkwfDU0NS4xM3w3My43Mw==)' />
+<polygon points='328.50,138.02 590.68,138.02 590.68,223.72 328.50,223.72 ' style='stroke-width: 1.07; stroke: none; fill: #0000FF; fill-opacity: 0.40;' clip-path='url(#cpNDAuMTB8NjE2LjkwfDU0NS4xM3w3My43Mw==)' />
 <rect x='40.10' y='73.73' width='576.79' height='471.40' style='stroke-width: 1.07; stroke: #333333;' clip-path='url(#cpNDAuMTB8NjE2LjkwfDU0NS4xM3w3My43Mw==)' />
 <defs>
   <clipPath id='cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA='>
@@ -54,9 +54,9 @@
 <rect x='627.85' y='284.49' width='86.67' height='49.88' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)' />
 <g clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)'><text x='627.85' y='293.19' style='font-size: 11.00px; font-family: Liberation Sans;' textLength='49.75px' lengthAdjust='spacingAndGlyphs'>Treatment</text></g>
 <rect x='627.85' y='299.81' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)' />
-<rect x='628.56' y='300.52' width='15.86' height='15.86' style='stroke-width: 1.07; stroke-linecap: square; stroke-linejoin: miter; fill: #FF0000; fill-opacity: 0.40;' clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)' />
+<rect x='628.56' y='300.52' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: square; stroke-linejoin: miter; fill: #FF0000; fill-opacity: 0.40;' clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)' />
 <rect x='627.85' y='317.09' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)' />
-<rect x='628.56' y='317.80' width='15.86' height='15.86' style='stroke-width: 1.07; stroke-linecap: square; stroke-linejoin: miter; fill: #0000FF; fill-opacity: 0.40;' clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)' />
+<rect x='628.56' y='317.80' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: square; stroke-linejoin: miter; fill: #0000FF; fill-opacity: 0.40;' clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)' />
 <g clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)'><text x='650.61' y='311.48' style='font-size: 8.80px; font-family: Liberation Sans;' textLength='63.91px' lengthAdjust='spacingAndGlyphs'>TREATMENT_A</text></g>
 <g clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)'><text x='650.61' y='328.76' style='font-size: 8.80px; font-family: Liberation Sans;' textLength='63.91px' lengthAdjust='spacingAndGlyphs'>TREATMENT_B</text></g>
 <g clip-path='url(#cpMC4wMHw3MjAuMDB8NTc2LjAwfDAuMDA=)'><text x='40.10' y='30.33' style='font-size: 11.00px; font-family: Liberation Sans;' textLength='239.94px' lengthAdjust='spacingAndGlyphs'>Plot should have a red and blue checker pattern. </text></g>
