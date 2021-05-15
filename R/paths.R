@@ -14,13 +14,14 @@ build_filename <- function(result_folder, metadata, key=NULL, suffix="", extensi
   stopifnot(!is.null(key))
   output_csv <- file.path(
     result_folder,
-    paste0(metadata[metadata$field == 'date_time', "value"],
-           "_",
-           metadata[metadata$field == 'machine_id', "value"],
-           "_",
-           key,
-           ifelse(suffix == "", suffix, paste0("_", suffix)),
-           extension
+    paste0(
+      metadata[metadata$field == 'date_time', "value"],
+      "_",
+      metadata[metadata$field == 'machine_id', "value"],
+      "_",
+      key,
+      ifelse(suffix == "", suffix, paste0("_", suffix)),
+      extension
     )
   )
   return(output_csv)
