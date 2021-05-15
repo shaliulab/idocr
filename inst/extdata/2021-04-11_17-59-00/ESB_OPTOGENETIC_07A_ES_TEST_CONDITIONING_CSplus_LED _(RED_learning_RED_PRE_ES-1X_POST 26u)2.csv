@@ -1,0 +1,138 @@
+hardware,start,end,on,off,mode,value
+MAIN_VALVE,0,20,NaN,NaN,o,1
+VACUUM,0,20,NaN,NaN,o,1
+IRLED,0,20,NaN,NaN,o,1
+TARGETS,0,20,NaN,NaN,o,1
+ONBOARD_LED,0,20,5000,5000,o,1
+
+##################################################
+#Experimenter = Sayed Baz
+##################################################
+#LIGHT PWM =0.3 = ~26 uW/mm2 
+#Background light PWM=0 = 0 uW/mm2
+#ESHOCK_VOLTAGE = 60 Volt DC
+#Inflow rate = 100 ml/min each side
+
+##################################################
+# (1min) Fresh air in  30ml mineral oil (MO)
+# Inflow rate total 2000ml/min per side
+##################################################
+
+VIBRATOR,0,0.05,1000,1000,o,1             #5V
+
+
+
+#@@@@@@@@@@@@@@@@@@@@@@@**PREFERENCE**@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##################################################
+#(1min) CS_plus optogenetic preference LEFT_side
+#**************PRE_CONDITIONING_I*****************
+##################################################
+
+VIBRATOR,0.9,0.95,2000,1500,o,1            #5V
+TREATMENT_A_LEFT,0.8,0.9,NaN,NaN,o,1
+TREATMENT_A_RIGHT,0.8,0.9,NaN,NaN,o,1
+
+LED_R_LEFT,1,2,NaN,NaN,p,0.3        
+
+TREATMENT_A_LEFT,1,2,NaN,NaN,o,1
+TREATMENT_B_RIGHT,1,2,NaN,NaN,o,1
+
+VIBRATOR,1.5,1.55,2000,1500,o,1            #5V
+
+##################################################
+#1min Fresh air in  30ml mineral oil (MO)
+# Inflow rate total 2000ml/min per side
+##################################################
+
+
+##################################################
+#(1min) CS_plus optogenetic preference RIGHT_side
+#**************PRE_CONDITIONING_II****************
+##################################################
+
+VIBRATOR,2.9,2.95,2000,1500,o,1           #5V
+TREATMENT_A_LEFT,2.8,2.9,NaN,NaN,o,1
+TREATMENT_A_RIGHT,2.8,2.9,NaN,NaN,o,1
+
+LED_R_RIGHT,3,4,NaN,NaN,p,0.3      
+
+TREATMENT_B_LEFT,3,4,NaN,NaN,o,1
+TREATMENT_A_RIGHT,3,4,NaN,NaN,o,1
+
+VIBRATOR,3.5,3.55,2000,1500,o,1            #5V
+
+##################################################
+#(5min) fresh air in  30ml mineral oil (MO)
+# Inflow rate total 2000ml/min per side
+##################################################
+
+
+#@@@@@@@@@@@@@@@@@@@**ASSOCIATED_CONDITIONING**@@@@@@@@@@@@@@@@@@@@@@@@
+##################################################
+#(1min) CS_plus paired with electric shock 
+##################################################
+
+VIBRATOR,8.9,8.95,2000,1500,o,1           #5V
+TREATMENT_A_LEFT,8.8,8.9,NaN,NaN,o,1
+TREATMENT_A_RIGHT,8.8,8.9,NaN,NaN,o,1
+
+LED_R_LEFT,9,10,NaN,NaN,p,0.3
+LED_R_RIGHT,9,10,NaN,NaN,p,0.3
+          
+EL_SHOCK_LEFT,9.01,9.99,1250,3750,o,1 
+EL_SHOCK_RIGHT,9.01,9.99,1250,3750,o,1  
+
+TREATMENT_A_LEFT,9,10,NaN,NaN,o,1
+TREATMENT_A_RIGHT,9,10,NaN,NaN,o,1
+
+VIBRATOR,9.5,9.55,1000,1000,o,1           #5V
+
+##################################################
+#(5min) Fresh air in  30ml mineral oil (MO)
+# Inflow rate total 2000ml/min per side
+##################################################
+
+
+#@@@@@@@@@@@@@@@@@@@@@@@**PREFERENCE**@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##################################################
+#(1min) CS_plus optogenetic preference LEFT_side
+#**************POST_CONDITIONING_I***************
+##################################################
+
+VIBRATOR,14.9,15.04,1500,1500,o,1                #5V
+TREATMENT_A_LEFT,14.8,14.9,NaN,NaN,o,1
+TREATMENT_A_RIGHT,14.8,14.9,NaN,NaN,o,1
+
+LED_R_LEFT,15,16,NaN,NaN,p,0.3      
+
+TREATMENT_A_LEFT,15,16,NaN,NaN,o,1
+TREATMENT_B_RIGHT,15,16,NaN,NaN,o,1
+
+VIBRATOR,15.5,15.55,2000,1500,o,1                #5V
+
+##################################################
+#(1min) Fresh air in  30ml mineral oil (MO)
+# Inflow rate total 2000ml/min per side
+##################################################
+
+
+##################################################
+#CS_plus optogenetic preference RIGHT_side (1min)
+#**************POST_CONDITIONING_II***************
+##################################################
+VIBRATOR,16.9,17.04,1500,1500,o,1                  #5V
+TREATMENT_A_LEFT,16.8,16.9,NaN,NaN,o,1
+TREATMENT_A_RIGHT,16.8,16.9,NaN,NaN,o,1
+
+LED_R_RIGHT,17,18,NaN,NaN,p,0.3        
+
+TREATMENT_B_LEFT,17,18,NaN,NaN,o,1
+TREATMENT_A_RIGHT,17,18,NaN,NaN,o,1
+
+VIBRATOR,17.5,17.55,2000,1500,o,1                  #5V
+
+##################################################
+#(2min) Fresh air in  30ml mineral oil (MO)
+# Inflow rate total 2000ml/min per side
+##################################################
+#END of EXPERIEMNT

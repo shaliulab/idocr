@@ -1,0 +1,10 @@
+,field,value
+0,run_id,2021-04-11_17-59-00_7eb8e
+1,machine_id,7eb8e224bdb944a68825986bc70de6b1
+2,machine_name,IDOC_001
+3,version,"{'id': '7d45ece1b7d796fc926f55e1b4466ee3b95ada50', 'date': '2021-02-08 15:31:15'}"
+4,date_time,2021-04-11_17-59-00
+5,selected_options,"{'camera': <class 'idoc.server.io.pylon_camera.PylonCamera'>, 'board': <class 'idoc.server.controllers.boards.ArduinoMegaBoard'>, 'drawer': <class 'idoc.server.drawers.drawers.DefaultDrawer'>, 'result_writer': <class 'idoc.server.io.result_writer.CSVResultWriter'>, 'roi_builder': <class 'idoc.server.roi_builders.target_roi_builder.IDOCROIBuilder'>, 'tracker': <class 'idoc.server.trackers.adaptive_bg_tracker.AdaptiveBGModel'>, 'controller': True, 'recognizing': True}"
+6,settings,"{'adaptation_time': 0, 'controller': {'programmer': {'paradigm_path': 'ESB_OPTOGENETIC_07A_ES_TEST_CONDITIONING_CSplus_LED _(RED_learning_RED_PRE_ES-1X_POST 26u)2.csv'}}, 'recognizer': {'drawer': {'framerate': 20}, 'result_writer': {}, 'camera': {'drop_each': 1, 'framerate': 20.0, 'exposure_time': 25000, 'resolution': [960, 720], 'video_path': None}}, 'result_writer': {}}"
+7,user_data,"{'control': True, 'recognize': True, 'wrap': None, 'use_wall_clock': False, 'mapping_path': None, 'paradigm_path': None, 'arduino_port': '/dev/ttyACM0', 'framerate': None, 'video_path': None, 'adaptation_time': 0, 'max_duration': None, 'run': False, 'start_datetime': None, 'experimenter': None, 'default': True}"
+8,description,
