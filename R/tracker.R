@@ -35,7 +35,7 @@ center_dataset <- function(experiment_folder, tracker_data, infer=FALSE) {
     tracker_data$x <- x
   } else {
     roi_center <- get_roi_center(experiment_folder)
-    tracker_data <- dplyr::left_join(tracker_data, roi_center)
+    tracker_data <- dplyr::left_join(tracker_data, roi_center, by="region_id")
     tracker_data$x <- tracker_data$x - tracker_data$center
     tracker_data <- tracker_data %>% dplyr::select(-center)
   }
@@ -65,7 +65,7 @@ get_roi_center <- function(experiment_folder) {
     }
     roi_map <- data.table::fread(roi_map_file)
     roi_map$region_id <- roi_map$value
-    roi_center <- dplyr::left_join(roi_center, dplyr::select(roi_map, x, region_id))
+    roi_center <- dplyr::left_join(roi_center, dplyr::select(roi_map, x, region_id), by="region_id")
     roi_center$center <- roi_center$center - roi_center$x
     roi_center <- dplyr::select(roi_center, -x)
   }
