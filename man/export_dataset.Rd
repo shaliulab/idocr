@@ -10,6 +10,7 @@ export_dataset(
   analysis,
   result_folder = NULL,
   suffix = "",
+  summary = TRUE,
   ...
 )
 }
@@ -37,6 +38,8 @@ value
 from other output produced on the same experiment folder.
 Useful for segmenting the experiment into different periods of interest
 and analyzing these periods separately.}
+
+\item{summary}{Whether to export a summary or not}
 
 \item{...}{Extra arguments to export_summary}
 }

@@ -7,13 +7,13 @@ A .csv database is a collection of .csv files under the same folder
 where every .csv file has a common prefix and a differential key
 that distinguishes it from other files and hints at its contents}
 \usage{
-write_dataset(dataset, dest)
+write_dataset(dataset, result_folder)
 }
 \arguments{
 \item{dataset}{A list with entries metadata, roi_data,
 controller_data, var_map and roi_map}
 
-\item{dest}{A folder where to generate a .csv database.
+\item{result_folder}{A folder where to generate a .csv database.
 Created on the spot if it doesn't exist}
 }
 \description{

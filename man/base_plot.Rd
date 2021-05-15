@@ -5,7 +5,7 @@
 \title{Generate base IDOC plot upon which
 more annotation layers can be added}
 \usage{
-base_plot(data, limits, nrow, ncol, downward = TRUE)
+base_plot(data, limits, line_alpha = 1, nrow = 1, ncol = 20, downward = TRUE)
 }
 \arguments{
 \item{data}{List with entries roi, controller, border, limits.
@@ -14,6 +14,8 @@ Border is a TODO. Limits is a numeric vector with 2 positions, delineating
 the boundaries of the x axis}
 
 \item{limits}{Position of ticks in space axis}
+
+\item{line_alpha}{Alpha of position trace}
 
 \item{nrow}{Number of rows used for facetting data}
 

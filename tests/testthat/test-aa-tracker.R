@@ -38,6 +38,14 @@ test_that("remove_duplicates actually removes duplicates", {
 })
 
 test_that("center around median produces data whose center is at 0", {
+
+  pkg_name <- testing_package()
+  
+  experiment_folder <- system.file(
+    "extdata/toy", package = pkg_name,
+    mustWork = TRUE
+  )
+  
   
   # the x position is always positive in the raw data
   expect_true(min(toy_dataset$tracker$x) > 0)
@@ -49,7 +57,7 @@ test_that("center around median produces data whose center is at 0", {
   
   expect_true(all(
     centered_x ==
-      c(7.5, 8.6, 8.8, 6.9, 9.5, 7.8, 9.2, 8.0, 8.0, 6.6, 11.0, 10.3, 8.8, 8.0, 9.7, 8.2, 7.5, 10.0, 7.9, 9.9)
+      rep(9,20)
   ))
   
   

@@ -21,6 +21,8 @@ plot_dataset(
   suffix = "",
   nrow = 2,
   ncol = 10,
+  cross_size = 2,
+  line_alpha = 1,
   ...
 )
 }
@@ -78,6 +80,8 @@ and analyzing these periods separately.}
 \item{nrow}{Number of rows used for facetting data}
 
 \item{ncol}{Number of cols used for facetting data}
+
+\item{line_alpha}{Alpha of position trace}
 
 \item{...}{Extra arguments for save_plot}
 }
