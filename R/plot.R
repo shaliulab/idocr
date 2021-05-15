@@ -88,7 +88,7 @@ mark_time <- function(data, gg, freq=60, downward=TRUE) {
 #' @eval document_gg("return")
 mark_space <- function(limits, gg, extra=c(0)) {
   breaks <- c(limits[1], extra, limits[2])
-  gg <- gg + scale_x_continuous(limits = limits, breaks = breaks)
+  gg <- gg + scale_x_continuous(limits = limits, breaks = breaks, labels = round(breaks, digits = 0))
   return(gg)
 }
 
