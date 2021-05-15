@@ -203,8 +203,8 @@ get_roi_map <- function(channels=20) {
   
 }
 
-get_roi_center <- function() {
-  x<-data.table(region_id=1:20, center=50)
+get_toy_roi_center <- function() {
+  x <- data.table(region_id=1:20, center=c(rep(337+91, 10), rep(537+91,10)))
   x
 }
 
@@ -288,7 +288,7 @@ generate_toy_dataset <- function(dest=NULL, paradigm=NULL, ...) {
                         "bool", "interaction", "count")
   )
   
-  roi_center <- get_roi_center(experiment_folder)
+  roi_center <- get_toy_roi_center()
   
   metadata <- get_metadata()
   dataset <- list(
