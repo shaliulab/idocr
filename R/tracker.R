@@ -52,12 +52,17 @@ get_roi_center <- function(experiment_folder) {
   
   roi_center_file <- grep(x = list.files(experiment_folder, full.names = TRUE), pattern = "ROI_CENTER", value = T)
   roi_map_file <- grep(x = list.files(experiment_folder, full.names = TRUE), pattern = "ROI_MAP", value = T)
-
+  
   if (length(roi_center_file) == 0) {
     warning("Please execute mindline-detector and save a ROI_CENTER.csv file in the folder")
     roi_center <- data.table(region_id=1:20, center=0)
   } else {
     roi_center <- data.table::fread(roi_center_file)
+    if (any(roi_center$center == 0)) {
+      warning("I found a ROI_CENTER file but it is not correct.
+              Please check again a non-zero center is available for all ROIs"
+      )
+    }
     roi_map <- data.table::fread(roi_map_file)
     roi_map$region_id <- roi_map$value
     roi_center <- dplyr::left_join(roi_center, dplyr::select(roi_map, x, region_id))
@@ -74,13 +79,13 @@ get_roi_center <- function(experiment_folder) {
 #' @eval document_experiment_folder()
 #' @param region_id Position of the animal in the machine
 construct_animal_id <- function(experiment_folder, region_id) {
- 
+  
   field <- value <- NULL
   metadata <- load_metadata(experiment_folder)
   run_id <- metadata[field == "run_id", value]
   id <- paste0(run_id, "|", stringr::str_pad(
     string = region_id, width = 2, side = "left", pad = "0"
-    )
+  )
   )
   return(id)
 }
@@ -163,7 +168,7 @@ load_rois <- function(experiment_folder) {
   
   # link .csv files
   roi_files <- find_rois(experiment_folder)
-
+  
   # read them into a single tibble
   tracker_data <- roi_files %>%
     # read the data into R
@@ -172,7 +177,7 @@ load_rois <- function(experiment_folder) {
     do.call(what = rbind, .) %>%
     # cast the one data.table into a tibble
     tibble::as_tibble(.)
-
+  
   if (nrow(tracker_data) < 10) {
     return(NULL)
   }
@@ -197,7 +202,7 @@ load_rois <- function(experiment_folder) {
 add_empty_roi <- function(experiment_folder, tracker_data, n=20) {
   
   . <- sql_type <- NULL
-
+  
   var_map <- load_varmap(experiment_folder)
   R_types <- list("SMALLINT" = integer, "BOOLEAN" = logical, "INT" = integer)
   tracker_data_template <- var_map[, map(sql_type, ~R_types[[.]](length=1))]
@@ -261,7 +266,7 @@ load_systematic_rois <- function(..., n=20) {
 #' @param minimum Minimum number of datapoints in a row to be considered
 #' not sparse (not noise) and thus valid
 remove_empty_roi <- function(tracker_data, minimum=100) {
-
+  
   id <- . <- NULL
   
   # check whether this is running in a testing environment
