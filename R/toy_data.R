@@ -221,7 +221,9 @@ get_toy_roi_center <- function() {
 #' @return NULL
 write_dataset <- function(dataset, result_folder) {
   
-  dir.create(dest, recursive = TRUE, showWarnings = F)
+  
+  
+  dir.create(result_folder, recursive = TRUE, showWarnings = F)
   
   purrr::imap(
     dataset$roi_data,
@@ -263,14 +265,14 @@ write_dataset <- function(dataset, result_folder) {
 
 #' Generate a toy dataset
 #' 
-#' @param dest Path to the destination folder where toy dataset should be stored
+#' @param result_folder Path to the destination folder where toy dataset should be stored
 #' It is created if not available
 #' @param paradigm data.table containing a paradigm i.e. a list of controller events 
 #' @param ...  Additional arguments for toy_roi_all
 #' @export
 #' @seealso toy_roi_all
 #' @seealso toy_controller
-generate_toy_dataset <- function(dest=NULL, paradigm=NULL, ...) {
+generate_toy_dataset <- function(result_folder=NULL, paradigm=NULL, ...) {
   
   roi_data <- toy_roi_all(channels=20, ...)
   controller_data <- toy_controller(paradigm)
@@ -297,7 +299,7 @@ generate_toy_dataset <- function(dest=NULL, paradigm=NULL, ...) {
     roi_center = roi_center
   )
   
-  if (!is.null(dest)) write_dataset(dataset, dest)
+  if (!is.null(result_folder)) write_dataset(dataset, result_folder)
   
   dataset$tracker <- do.call(rbind, 
                              lapply(1:length(dataset$roi_data), function(i) {

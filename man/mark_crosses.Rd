@@ -13,6 +13,8 @@ mark_crosses(gg, cross_data, size = 2, color = "black")
 when the animal exits the decision zone. Must contain fields t, side, region_id}
 
 \item{size}{Size of markers representing crosses}
+
+\item{color}{Color of the points, black by default}
 }
 \description{
 Mark decision zone exit events (crosses)

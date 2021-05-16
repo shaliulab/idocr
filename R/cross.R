@@ -128,7 +128,7 @@ find_exits <- function(tracker_data, border, side=c(-1, 1),
                        analysis_mask=NULL,
                        ...) {
   
-  . <- id <- out_of_zone <- NULL
+  . <- id <- out_of_zone <- cross <- NULL
   if (!is.null(analysis_mask))
     tracker_data <- tracker_data %>%
       dplyr::filter(t >= unlist(analysis_mask)[1]) %>%

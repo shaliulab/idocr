@@ -81,6 +81,8 @@ and analyzing these periods separately.}
 
 \item{ncol}{Number of cols used for facetting data}
 
+\item{cross_size}{Size of dots used to represent decision zone exits (crosses)}
+
 \item{line_alpha}{Alpha of position trace}
 
 \item{...}{Extra arguments for save_plot}

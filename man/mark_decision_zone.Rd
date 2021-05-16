@@ -10,6 +10,8 @@ mark_decision_zone(gg, border, center_alpha = 0.2)
 \item{gg}{ggplot2 object}
 
 \item{border}{Pixels between center and decision zone}
+
+\item{center_alpha}{Transparency of line marking the center of the chamber}
 }
 \value{
 gg ggplot2 object

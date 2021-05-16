@@ -275,6 +275,7 @@ combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE, plot_m
 #' @inherit mark_time
 #' @inherit combine_inputs
 #' @inherit base_plot
+#' @param cross_size Size of dots used to represent decision zone exits (crosses)
 #' @param ... Extra arguments for save_plot
 #' @seealso [mark_stimuli()]
 #' @seealso [mark_decision_zone()]
@@ -302,7 +303,7 @@ plot_dataset <- function(experiment_folder,
                          suffix = "",
                          nrow=2, ncol=10,
                          cross_size = 2,
-                         line_alpha=1,
+                         line_alpha = 1,
                          ...
                          ) {
   
@@ -473,6 +474,7 @@ return(gg)
 #' @eval document_gg()
 #' @eval document_cross_data()
 #' @param size Size of markers representing crosses 
+#' @param color Color of the points, black by default
 #' @importFrom dplyr select left_join
 #' @import ggplot2
 mark_crosses <- function(gg, cross_data, size=2, color="black") {
@@ -499,6 +501,7 @@ mark_crosses <- function(gg, cross_data, size=2, color="black") {
 #'
 #' @eval document_gg()
 #' @param border Pixels between center and decision zone
+#' @param center_alpha Transparency of line marking the center of the chamber
 #' @eval document_gg("return")
 #' @import ggplot2
 mark_decision_zone <- function(gg, border, center_alpha=0.2) {

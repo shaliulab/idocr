@@ -28,6 +28,8 @@ center_dataset <- function(experiment_folder, tracker_data, infer=FALSE) {
   # TODO Should we infer the min/max from the data
   # or rather hardcode them?
   
+  center <- NULL
+  
   if (infer) {
     x <- tracker_data$x
     x <- x - min(x)
@@ -49,6 +51,8 @@ center_dataset <- function(experiment_folder, tracker_data, infer=FALSE) {
 #' @importFrom dplyr left_join select
 #' @importFrom data.table fread
 get_roi_center <- function(experiment_folder) {
+  
+  x <- region_id <- NULL
   
   roi_center_file <- grep(x = list.files(experiment_folder, full.names = TRUE), pattern = "ROI_CENTER", value = T)
   roi_map_file <- grep(x = list.files(experiment_folder, full.names = TRUE), pattern = "ROI_MAP", value = T)
