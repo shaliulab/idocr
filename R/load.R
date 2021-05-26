@@ -71,10 +71,15 @@ preprocess_dataset <- function(
   dataset$tracker <- preprocess_tracker(experiment_folder, dataset$tracker)
   dataset$controller <- preprocess_controller(dataset$controller, delay=delay)
   
-  dataset$limits <- c(
-    min(dataset$tracker$x),
-    max(dataset$tracker$x)
-  )
+  # dataset$limits <- c(
+  #   min(dataset$tracker$x),
+  #   max(dataset$tracker$x)
+  # )
+  # dataset$limits <- c(
+  #   -max(abs(dataset$tracker$x)),
+  #   +max(abs(dataset$tracker$x))
+  # )
+  dataset$limits <- c(-100, 100)
 
   pixel_to_mm_ratio <- 2.3
   border <- border_mm * pixel_to_mm_ratio
