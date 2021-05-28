@@ -79,7 +79,7 @@ preprocess_dataset <- function(
   #   -max(abs(dataset$tracker$x)),
   #   +max(abs(dataset$tracker$x))
   # )
-  dataset$limits <- c(-100, 100)
+  dataset$limits <- c(-70, 70)
 
   pixel_to_mm_ratio <- 2.3
   border <- border_mm * pixel_to_mm_ratio
