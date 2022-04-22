@@ -1,5 +1,5 @@
-library(idocr)
-setwd('/1TB/Cloud/Data/idoc_data/results/7eb8e224bdb944a68825986bc70de6b1/IDOC_001')
+library(idocr2)
+setwd('/home/vibflysleep/FlySleepLab Dropbox/idoc_data/results/7eb8e224bdb944a68825986bc70de6b1/IDOC_001')
 
 ##############################################
 # CHANGE CODE BELOW THIS LINE
@@ -9,7 +9,7 @@ setwd('/1TB/Cloud/Data/idoc_data/results/7eb8e224bdb944a68825986bc70de6b1/IDOC_0
 
 # Supply an experiment contained in the working directory
 # Press TAB to autocomplete
-experiment_folder <- "2020-10-05_13-05-51"
+experiment_folder <- "2022-04-19 (CCC)/2022-04-19_22-10-12"
 
 
 # Change what treatment A and B are
