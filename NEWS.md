@@ -1,3 +1,18 @@
+# idocr 1.1.0
+
+* Test coverage reached of > 80% and Travis CI implemented.
+* Summary outputs contain NA when no data is available, instead of just blank.
+This helps avoid confusion between really missing data and program artifacts (which can always happen).
+* export_summary is integrated into the main idocr::idocr entrypoint.
+* treatments passed to idocr should be unnamed and match a stimulus listed in the CONTROLLER_EVENTS table.
+* name of the treatment as shown in the plot is controlled via a new labels parameter in idocr::idocr.
+* validation of CONTROLLER_EVENTS table to check for heterogeneous number of fields on each row.
+A friendly error message is issued in that case with clear instructions on how to proceed.
+* Implement plot_mask to totally ignore any data outside of the plot_mask, in seconds.
+Ignored data is not considered for analysis nor plotting
+* Implement analysis mask to ignore any data outside of the analysis_mask, in seconds.
+Ignored data is not considered for analysis, but it is still plotted (i.e. a complete trace is shown).
+
 # idocr 1.0.0
 
 * Code reorganized into modules with well defined functionality.

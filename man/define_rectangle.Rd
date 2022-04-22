@@ -4,14 +4,21 @@
 \alias{define_rectangle}
 \title{Reshape the controller data to be plotted in ggplot2}
 \usage{
-define_rectangle(controller_data, hardware = "LED_R_LEFT")
+define_rectangle(controller_data, stimulus)
+}
+\arguments{
+\item{controller_data}{data.frame with recordings of IDOC status at several timepoints,
+one timepoint per row. Wide format}
+
+\item{stimulus}{Namew of stimulus or event, which should match
+a column in the passed \code{controller_data}}
 }
 \description{
-Given a table containing when several hardware turned on/off
-during an experiment, and a piece of hardware,
+Given a table containing when several stimulus turned on/off
+during an experiment, and a piece of stimulus,
 prepare_shape_data will generate a table with one row per corner in a rectangle
-encompassing all the area of the plot where the hardware is active
+encompassing all the area of the plot where the stimulus is active
 This is given by its side (X axis) and the time when it was on (Y axis)
-If the hardware was turned on/off n times, we get n rectangles and thus n*4 rows.#'
+If the stimulus was turned on/off n times, we get n rectangles and thus n*4 rows.#'
 The x axis is assumed to go from -1 to 1. To scale it, see scale_shape
 }

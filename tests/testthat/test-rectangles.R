@@ -1,31 +1,44 @@
-context("rectangles")
+test_that("rectangles are built ok", {
 
-testthat::test_that("define_rectangle works", {
-  
-  controller_data <- toy_controller("2020-10-05_13-05-51")
-  rectangle_data <-  define_rectangle(controller_data, hardware = "TREATMENT_A_LEFT")
-  expect_equal(nrow(rectangle_data), 4)
-  expect_equal(rectangle_data$side, rep(-1, 4))
-  expect_equal(rectangle_data$hardware_, rep("TREATMENT_A_LEFT", 4))
-  
-  rectangle_data <-  define_rectangle(controller_data, hardware = "TREATMENT_B_RIGHT")
-  expect_equal(nrow(rectangle_data), 4)
-  expect_equal(rectangle_data$side, rep(1, 4))
-  expect_equal(rectangle_data$hardware_, rep("TREATMENT_B_RIGHT", 4))
-  
-  rectangle_data <-  define_rectangle(controller_data, hardware = "TREATMENT_B_LEFT")
-  expect_equal(nrow(rectangle_data), 0)
-  expect_equal(colnames(rectangle_data), c("group", "x", "t", "side", "hardware_"))
+  controller_data <- toy_controller_small()
+  rectangle <- define_rectangle(controller_data, stimulus = "TREATMENT_A_LEFT")
+  expect_equal(rectangle$x, c(-1, 0, 0, -1))
+  expect_equal(rectangle$t, c(1, 1, 3, 3))
+  expect_equal(rectangle$stimulus, rep("TREATMENT_A_LEFT", 4))
+  expect_equal(rectangle$side, rep(-1, 4))
 
+  rectangle <- define_rectangle(controller_data, stimulus = "TREATMENT_B_RIGHT")
+  expect_equal(rectangle$x, c(0, 1, 1, 0))
+  expect_equal(rectangle$t, c(1, 1, 3, 3))
+  expect_equal(rectangle$stimulus, rep("TREATMENT_B_RIGHT", 4))
+  expect_equal(rectangle$side, rep(1, 4))
+
+  rectangle <- define_rectangle(controller_data, stimulus = "TREATMENT_A_RIGHT")
+  expect_equal(rectangle$x, c(0, 1, 1, 0))
+  expect_equal(rectangle$t, c(3, 3, 5, 5))
+  expect_equal(rectangle$stimulus, rep("TREATMENT_A_RIGHT", 4))
+  expect_equal(rectangle$side, rep(1, 4))
+  
+  # remove the recording of the switch off of one of the components
+  corruped_data <- controller_data[1:(nrow(controller_data)-1),]
+  error <- expect_error(define_rectangle(corruped_data, stimulus = "TREATMENT_A_RIGHT"))
+  expect_equal(error$message, "Problem parsing an end timestamp for TREATMENT_A_RIGHT")
 })
 
 
-testthat::test_that("define_rectangles works", {
-  controller_data <- toy_controller("2020-10-05_13-05-51")
-  rectangle_data <-  define_rectangles(controller_data,
-                                       hardware = c("TREATMENT_A_LEFT", "TREATMENT_B_RIGHT", "TREATMENT_B_LEFT"),
-                                       limits = c(-10, 10))
-  expect_equal(length(rectangle_data), 2)
-  expect_equal(rectangle_data[[1]]$x, c(-10, 0, 0, -10))
-  expect_equal(rectangle_data[[2]]$x, c(0, 10, 10, 0))
+test_that("rectangles are inferred properly", {
+  
+  controller_data <- toy_controller_small()
+  dataset <- list(
+    controller = controller_data,
+    treatments = c("TREATMENT_A", "TREATMENT_B"),
+    stimuli = colnames(controller_data)[1:4],
+    limits = c(-100, 100)
+  )
+  
+  rectangle_data <- define_rectangle_all(dataset)
+  
+  expect_equal(length(rectangle_data), 4)
+  expect_equal(rectangle_data[[1]]$x, c(-100, 0, 0, -100))
+  expect_equal(rectangle_data[[2]]$x, c(0, 100, 100, 0))
 })

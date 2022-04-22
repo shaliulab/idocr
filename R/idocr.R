@@ -1,62 +1,66 @@
 #' The standard idocr workflow.
 #' 
 #' Load data from the experiment folder, possibly with some specific settings
-#' and return a data frame with the apetitive index of each fly
+#' and return a data frame with the appetitive index of each fly
 #' and a plot visualizing the experiment
-#' @param treatments Named vector where names should match hardware (without side annotation) and value is a meaningful name for a treatment
-#' example: c(TREATMENT_A = "OCT")
-#' @import ggplot2
-#' @importFrom purrr map
+#' @eval document_experiment_folder()
+#' @eval document_delay()
+#' @param mask_duration Seconds of behavior to be ignored after last cross,
+#' so the same cross is not counted more than once due to noise in
+#' the border cross
+#' @param ... Extra arguments to plot_dataset
+#' @inherit document_script
+#' @inherit preprocess_controller
+#' @inherit find_exits
+#' @inherit preprocess_dataset
+#' @inherit analyse_dataset
 #' @importFrom data.table fwrite
+#' @seealso [load_dataset()]
+#' @seealso [preprocess_dataset()]
+#' @seealso [analyse_dataset()] 
+#' @seealso [plot_dataset()]
+#' @seealso [export_dataset()]
 #' @export
-idocr <- function(experiment_folder, treatments, hardware = c("TREATMENT_A_LEFT",  "TREATMENT_A_RIGHT", "TREATMENT_B_LEFT",  "TREATMENT_B_RIGHT"),
-                  border_mm = 5, min_exits_required = 5, CSplus="TREATMENT_A", delay = 0,
-                  src_file = NULL, mask_duration = 0.5,
+idocr <- function(experiment_folder,
+                  treatments=paste0("TREATMENT_", c("A", "B")),
+                  min_exits_required = 5,
+                  CSplus_idx=1,
+                  border_mm = 5,
+                  delay = 0,
+                  src_file = NULL,
+                  mask_duration = 0.5,
+                  analysis_mask = NULL,
                   ...) {
   
   document_script(src_file, experiment_folder)
 
+  message("Loading dataset <- ", experiment_folder)
+  dataset <- load_dataset(experiment_folder)
   
-  # Convert human understandable mm
-  # to pixels that are easy to work with in R
-  pixel_to_mm_ratio <- 2.3
-  border <- border_mm * pixel_to_mm_ratio
+  message("Preprocessing dataset - ", experiment_folder)
+  dataset <- preprocess_dataset(
+    experiment_folder, dataset,
+    treatments=treatments, delay=delay,
+    border_mm=border_mm, CSplus_idx=CSplus_idx
+  )
   
-  # Load tracking data (ROI - Region of Interest)
-  roi_data <- load_rois(experiment_folder)
-  roi_data <- add_empty_roi(experiment_folder, roi_data, n = 20)
-  
-  # Load controller data
-  ## Wide format table where every piece of hardware ahs a column and the values are 1 or 0
-  ## An extra column called t tells the time in seconds
-  controller_data <- load_controller(experiment_folder, delay = delay)
-  limits <- c(min(roi_data$x), max(roi_data$x))
-  
-  rectangle_data <- define_rectangles(controller_data, hardware, limits)
-  cross_data <- infer_decision_zone_exits(roi_data, border = border)
+  message("Analysing dataset - ", experiment_folder)
+  analysis <- analyse_dataset(
+    dataset,
+    min_exits_required=min_exits_required,
+    min_time=mask_duration,
+    analysis_mask=analysis_mask
+  )
 
-  side_agnostic_hardware <- sapply(
-    hardware, function(x) strsplit(x, split = "_") %>%
-      sapply(., function(y) paste0(y[1], "_", y[2]))) %>% 
-    unique
+  message("Plotting dataset -> ", experiment_folder)
+  gg <- plot_dataset(experiment_folder, dataset, analysis, analysis_mask=analysis_mask, ...)
   
-  stopifnot(length(treatments[side_agnostic_hardware]) == length(side_agnostic_hardware))
-  names(side_agnostic_hardware) <- treatments[side_agnostic_hardware]
+  message("Exporting results -> ", experiment_folder)
+  export_dataset(experiment_folder = experiment_folder,
+                 dataset = dataset, analysis = analysis
+                 )
   
-  CSminus <- side_agnostic_hardware[side_agnostic_hardware != CSplus]
-  
-  # one row per exit
-  preference_data <- compute_preference_data(cross_data, rectangle_data, CSplus, CSminus, mask_duration=mask_duration)
-  # one row per fly with count of apetitive and aversive exits
-  # as well as the computed preference index
-  pi_data <- compute_pi_data(preference_data, min_exits_required = min_exits_required)
-
-  gg <- idoc_plot(experiment_folder, roi_data, rectangle_data,
-                  preference_data, pi_data,
-                  CSplus = CSplus, CSminus = CSminus, border = border, limits = limits,
-                  side_agnostic_hardware = side_agnostic_hardware, ...)
-  
-  data.table::fwrite(x = pi_data, file = output_path_maker(experiment_folder, 'PI'))
-  
-  return(list(gg = gg, pi = pi_data))
+  return(list(gg = gg, pi = analysis$pi))
 }
+
+

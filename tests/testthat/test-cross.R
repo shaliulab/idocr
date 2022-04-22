@@ -1,72 +1,146 @@
-context("cross")
+test_that("find_exits works", {
 
-testthat::test_that("overlap_cross_events finds expected number of exits and segregation is correct", {
+  border <- 2
+  tracker_data <- toy_tracker_small()
   
-  side <- c(-1, 1, -1, 1, 1, -1, 1, -1, 1, 1)
-  side <- c(side, -side)
-  t <- 1:10
-  t <- 10 * t
-  cross_data <- data.frame(region_id = rep(1:2, each = 10),
-                         t = rep(t, times = 2),
-                         side = side)
+  cross_data_left <- find_exits(tracker_data, border, side=-1)
+  cross_data_right <- find_exits(tracker_data, border, side=1)
   
-  event_data <- data.frame(
-    hardware_ = c("CSplus", "CSminus"),
-    t_start = c(30,30) * 1000,
-    t_end = c(80, 80) * 1000,
-    side = c(1, -1),
-    hardware_small = c("CSplus", "CSminus")
-  )
-  
-  
-  apetitive <- overlap_cross_events(
-        cross_data = cross_data,
-        event_data = event_data[event_data$hardware_small == "CSplus",],
-        type = "apetitive", mask_FUN = seconds_mask
-  )
-  
-  aversive <- overlap_cross_events(
-    cross_data = cross_data,
-    event_data = event_data[event_data$hardware_small == "CSminus",],
-    type = "aversive", mask_FUN = seconds_mask
-  )
-  
-  expect_equal(nrow(apetitive[apetitive$region_id == 1, ]), 3)
-  expect_equal(nrow(apetitive[apetitive$region_id == 2, ]), 1)
-  
-  expect_equal(nrow(apetitive[aversive$region_id == 1, ]), 1)
-  expect_equal(nrow(apetitive[aversive$region_id == 2, ]), 3)
-  
+  expect_true("region_id" %in% colnames(cross_data_left))
+  expect_equal(nrow(cross_data_left[cross_data_left$region_id == 1,]), 2)
+  expect_equal(nrow(cross_data_right[cross_data_right$region_id == 1,]), 3)
+  expect_equal(nrow(cross_data_left[cross_data_left$region_id == 2,]), 0)
+  expect_equal(nrow(cross_data_right[cross_data_right$region_id == 2,]), 0)
 })
 
 
-testthat::test_that("seconds_mask masks correctly", {
-  
-  side <- c(-1, 1, -1, 1, 1, -1, 1, -1, 1, 1)
-  side <- c(side, -side)
-  t <- 1:10
-  t <- 10 * t
-  cross_data <- data.frame(region_id = rep(1:2, each = 10),
-                           t = rep(t, times = 2),
-                           side = side)
-  
-  expect_equal(nrow(seconds_mask(cross_data, duration = 1)), nrow(cross_data))
-  
-  side <- c(-1, 1, -1, 1, 1, -1, 1, -1, 1, 1)
-  side <- c(side, -side)
-  t <- c(1, 13, 25, 28, 35, 37, 60, 70, 80, 90)
-  cross_data <- data.frame(region_id = rep(1:2, each = 10),
-                           t = rep(t, times = 2),
-                           side = side)
+test_that("find_exits_all works too", {
 
+  border <- 2
+  tracker_data <- toy_tracker_small()
+  cross_data_left <- find_exits(tracker_data, border, side=-1)
+  cross_data_right <- find_exits(tracker_data, border, side=1)
+
+  expect_true(identical(
+    find_exits_all(tracker_data, border),
+    rbind(cross_data_left, cross_data_right)
+  ))
+})
+
+
+test_that("the second mask works", {
+  
+  # to avoid a warning emitted by seconds_mask when a dt column is
+  # already present the cross data cannot contain a dt column
+  cross_data_left <- tibble::tibble(id="toy|01", region_id=1, t=c(1, 9))
+  
+  cross_data_left_masked <- seconds_mask(cross_data = cross_data_left, min_time = 0) %>%
+    dplyr::select(-dt)
+  # expect both should be identical, since the mask is of length 0
+  # ignore the dt column
+  expect_identical(
+    cross_data_left,
+    cross_data_left_masked
+    )
+  
+  cross_data_left_masked <- seconds_mask(cross_data = cross_data_left, min_time = 10)  %>%
+    dplyr::select(-dt)
+  # expect only the first cross remains
+  # since the second one happens during the masking period (within 10 seconds)
+  expect_identical(
+    cross_data_left[1, ],
+    cross_data_left_masked
+  )
+})
+
+
+test_that("that only crosses happening during the event are counted", {
+  
+  treatment_1 <- "TREATMENT_A"  
+  event_data <- toy_event_data()
+  cross_data  <- toy_cross_data()
+  
+  annotation <- annotate_cross(
+    cross_data = cross_data,
+    event_data = event_data,
+    treatment = treatment_1,
+    type = "dummy"
+  )
+  
+  expect_equal(annotation$t, 2)
+})
+
+test_that("if the event is extended in time, the second cross is also considered", {
+
+  treatment_1 <- "TREATMENT_A"
+  event_data <- toy_event_data()
+  cross_data <- toy_cross_data()
+
+  event_data$t_end <- 10000
+  
+  annotation <- annotate_cross(
+    cross_data = cross_data,
+    event_data = event_data,
+    treatment = treatment_1,
+    type = "dummy"
+  )
+  expect_equal(annotation$t, c(2, 5))  
+})
+
+test_that("if the side of the event changes, other exits are considered", {
+
+  treatment_1 <- "TREATMENT_A"
+  event_data <- toy_event_data()
+  cross_data <- toy_cross_data()
   
   
-  cross_data <- seconds_mask(cross_data, duration = 5)
+  event_data$t_end <- 10000
+  event_data$side <- -1
   
-  expect_equal(nrow(cross_data), 16)
-  # expect 28 and 37 to be gone because these exits happened
-  # 3 and 2 seconds after the last one, which is less than the max duration allowed
-  # 5 in this case
-  expect_false(any(c(28, 37) %in% unique(cross_data$t)))
+  annotation <- annotate_cross(
+    cross_data = cross_data,
+    event_data = event_data,
+    treatment = treatment_1,
+    type = "dummy"
+  )
+  expect_equal(annotation$t, c(6, 7, 8))
   
+})
+
+test_that("if there is no treatment in the event data that matches the query, the result is null", {
+  
+  treatment_1 <- "TREATMENT_A"
+  treatment_2 <- "TREATMENT_B"
+  
+  event_data <- toy_event_data()
+  cross_data <- toy_cross_data()
+  
+  event_data$treatment <- treatment_1
+
+  expect_warning({
+    annotation <- annotate_cross(
+      cross_data = cross_data,
+      event_data = event_data,
+      treatment = treatment_2,
+      type = "dummy"
+    )},
+    "")
+  
+  expect_equal(nrow(annotation), 0)  
+})
+
+
+test_that("the treatment name is recorded properly in the annotation", {
+
+  treatment_1 <- "TREATMENT_A"  
+  event_data <- toy_event_data()
+  cross_data <- toy_cross_data()
+  
+  annotation <- annotate_cross(
+    cross_data = cross_data,
+    event_data = event_data,
+    treatment = treatment_1,
+    type = "dummy"
+  )
+  expect_true(all(annotation$type == "dummy"))  
 })

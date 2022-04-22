@@ -1,111 +1,112 @@
+#' Confirm VAR_MAP csv table is not corrupted
+#' @param var_map_path Path to a VAR_MAP table .csv file
+validate_varmap_file <- function(var_map_path) {
+  return(0)
+}
+
+#' Load the VAR_MAP table into R
+#' 
 #' @importFrom data.table fread
-#' @export
+#' @eval document_experiment_folder()
 load_varmap <- function(experiment_folder) {
-  
-  csv_files <- list.files(path = experiment_folder, pattern = ".csv")
-  var_map_filename <- grep(pattern = "VAR_MAP", x = csv_files, value = T)
-  var_map_path <- file.path(experiment_folder, var_map_filename)
-  var_map <- data.table::fread(file = var_map_path, header = T)[, -1]
+  var_map_path <- find_file(experiment_folder, "VAR_MAP")
+  validate_varmap_file(var_map_path)
+  var_map <- data.table::fread(var_map_path, header = T)[, -1]
   return(var_map)
 }
 
-
-
+#' Load the METADATA table into R
 #' @importFrom data.table fread
-#'@export
+#' @eval document_experiment_folder()
+#' @export
 load_metadata <- function(experiment_folder) {
-  
-  csv_files <- list.files(path = experiment_folder, pattern = ".csv")
-  metadata_filename <- grep(pattern = "METADATA", x = csv_files, value = T)
-  metadata <- data.table::fread(file.path(experiment_folder, metadata_filename), header = T)
+  metadata_path <- find_file(experiment_folder, "METADATA")
+  metadata <- data.table::fread(metadata_path, header = T)[,-1]
   return(metadata)
 }
 
-
-#' Load data in ROI tables into a single tibble
-#'
-#' @importFrom gtools mixedsort
-#' @importFrom purrr imap map discard
-#' @importFrom tibble as_tibble
-#' @return tibble
-#' @export
-load_rois <- function(experiment_folder) {
-  
-  # R_types <- NULL
-  csv_files <- list.files(path = experiment_folder, pattern = ".csv")
-  
-  metadata <- load_metadata(experiment_folder)
-  run_id <- metadata[field == "run_id", value]
-  
-  # keep the ROI_* files only and in numerical order i.e. 10 after 9 and not after 1
-  roi_files <- gtools::mixedsort(grep(pattern = "ROI_\\d", x = csv_files, value = T))
-  
-  roi_data <- roi_files %>%
-    purrr::map(~ file.path(experiment_folder, .)) %>%
-    purrr::map(~data.table::fread(.x, header = T)[, -1]) %>%
-    purrr::imap(~cbind(.x, region_id = .y)) %>%
-    purrr::discard(~ nrow(.x) < 10) %>%
-    do.call(rbind, .) %>%
-    tibble::as_tibble(.)
-  
-  roi_data <- roi_data[
-    roi_data %>%
-      select(region_id, t) %>%
-      duplicated %>%
-      !.,
-    ]
-  
-  if (nrow(roi_data) < 10) {
-    return(NULL)
-  }
-  
-  roi_data$id <- paste0(run_id, "|", roi_data$region_id)
-  #roi_data$x <- roi_data$x - (max(roi_data$x) - min(roi_data$x)) / 2
-  
-  # center the data around the median
-  # i.e. estimate the center of the chamber using the median x
-  # roi_data$x <- roi_data$x - median(roi_data$x)
-  x <- roi_data$x - min(roi_data$x)
-  x <- x - max(x) / 2
-  roi_data$x <- x
-  
-  
-  # keep only needed columns
-  var_map <- load_varmap(experiment_folder)
-  roi_data <- roi_data[,c(var_map$var_name, names(get_extra_columns()))]
-  
-  return(roi_data)
-}
-
-
-#' Load the CONTROLLER_EVENTS table into R
+#' Check whether the user is running deprecated code
 #' 
-#' @importFrom data.table fread
-#' @export
-load_controller <- function(experiment_folder, set_t0 = TRUE, delay = 0) {
+#' @eval document_treatments()
+check_api_version <- function(treatments) {
   
+  treatment_in_name <- length(grep(pattern = "TREATMENT", x = names(treatments))) != 0
+  # treatment_not_in_value <- length(grep(pattern = "TREATMENT", x = names(treatments))) != 0
   
-  
-  csv_files <- list.files(path = experiment_folder, pattern = ".csv")
-  controller_filename <- grep(pattern = "CONTROLLER_EVENTS", x = csv_files, value = T)
-  controller_path <- file.path(experiment_folder, controller_filename)
-  controller_data <- data.table::fread(file = controller_path, header = T)[, -1]
-  
-  if(controller_data[1, t] != 0 & set_t0) {
-    # add a row 0 for t0 where the hardware is off
-    # required for the diff operation to detect a change
-    # if the hardware appears on already on the first row
-    # otherwise, it has no effect
-    first_row <- copy(controller_data[1,]) * 0
-    controller_data <- rbind(first_row, controller_data)
+  if (treatment_in_name) {
+    warning("Passing named treatments is deprecated.
+            Your code will still work fine, but you should provide the treatment name
+            (OCT, ...) via the labels argument in idocr::idocr.
+            In that case, the labels are assigned in alphabetic order to the treatments
+            i.e. the first label goes to TREATMENT_A and the second to B
+            ")
+    return(1)
+  } else {
+    return(2)
   }
-  
-  # delay the onset of the 
-  controller_data[, t := t + delay]
-  
-  # rename(controller_data, "hardware", "hardware_")
-  
-  return(controller_data)
 }
 
 
+#' Preprocess a RAW idoc dataset
+#' 
+#' 1. Preprocess tracker and controller data
+#' 2. Features expected by the analysis functions
+#' are only available after some minor computations in the raw data
+#' @eval document_experiment_folder()
+#' @eval document_dataset()
+#' @eval document_treatments()
+#' @param border_mm mm from center of chamber to decision zone edge
+#' @param CSplus_idx Whether the first treatment (CSplus_idx=1) or the second
+#' (CSplus_idx=2) is associated with appetitive behavior
+#' @inherit preprocess_tracker
+#' @inherit preprocess_controller
+#' @export
+preprocess_dataset <- function(
+  experiment_folder, dataset,
+  treatments = c("TREATMENT_A", "TREATMENT_B"),
+  delay=0, border_mm=5, CSplus_idx=1
+  ) {
+  
+  # Preprocess
+  dataset$tracker <- preprocess_tracker(experiment_folder, dataset$tracker)
+  dataset$controller <- preprocess_controller(dataset$controller, delay=delay)
+  
+  dataset$limits <- c(
+    min(dataset$tracker$x),
+    max(dataset$tracker$x)
+  )
+
+  pixel_to_mm_ratio <- 2.3
+  border <- border_mm * pixel_to_mm_ratio
+  
+  if (check_api_version(treatments) == 1) {
+    dataset$labels <- unname(treatments)
+    treatments <- names(treatments)
+  }
+
+  dataset$border <- border
+  dataset$CSplus <- treatments[CSplus_idx]
+  dataset$CSminus <- treatments[treatments != dataset$CSplus]
+  dataset$treatments <- treatments
+  dataset$stimuli <- paste0(rep(treatments, each=2), c("_LEFT", "_RIGHT"))
+  
+  return(dataset)
+}
+
+#' Load an IDOC .csv dataset
+#' 
+#' Load the .csv database available at the passed directory
+#' @eval document_experiment_folder()
+#' @export
+load_dataset <- function(experiment_folder) {
+  # Load tracker data (ROI - Region of Interest)
+  tracker_data <- load_systematic_rois(experiment_folder)
+  
+  # Load controller data
+  ## Wide format table where every piece of stimulus has a column and the values are 1 or 0
+  ## An extra column called t tells the time in seconds
+  controller_data <- load_controller(experiment_folder)
+    
+  dataset <- list(tracker=tracker_data, controller=controller_data)
+  return(dataset)
+}

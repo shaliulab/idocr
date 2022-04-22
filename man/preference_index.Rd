@@ -4,14 +4,14 @@
 \alias{preference_index}
 \title{Compute the preference index of a dataset}
 \usage{
-preference_index(data, min_exits_required = 5)
+preference_index(appetitive, aversive, min_exits_required = 5)
 }
 \arguments{
-\item{data}{A data.frame with two columns: type and idx
-type encodes whether the cross is positive (preference) or negative (aversive)
-idx encodes the exposition index. TODO Implement requirement by exposition block}
+\item{appetitive}{Number of exits towards the CSplus simulus}
 
-\item{min_exists_required}{An integer stating the minimal number
+\item{aversive}{Number of exits towards the CSminus stimulus}
+
+\item{min_exits_required}{An integer stating the minimal number
 of cross events required for the data to be considered significant}
 }
 \description{

@@ -2,10 +2,14 @@
 % Please edit documentation in R/cross.R
 \name{seconds_mask}
 \alias{seconds_mask}
-\title{Dont count crosses happening within less than seconds_masked seconds
-since the previous one}
+\title{Ignore too close crosses}
 \usage{
-seconds_mask(data, seconds_masked = 5)
+seconds_mask(cross_data, min_time = 0)
+}
+\arguments{
+\item{cross_data}{data.frame of crosses}
+
+\item{min_time}{Minimum amount of seconds between crosses allowed}
 }
 \description{
 Dont count crosses happening within less than seconds_masked seconds

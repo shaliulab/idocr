@@ -1,240 +1,517 @@
+#' Format text so numbers on it are rendered consistently
+#' 
+#' @param text Character text to be formatted
 #' @importFrom stringr str_pad
-preference_index_labeller <- function(xx) {
+#' @return Formatted character
+format_text <- function(text) {
   
   # single values
-  labeller <- function(x) {
-    pi_val <- round(x, digits = 2)
-    pi_val <- ifelse(is.na(pi_val), "NA", as.character(pi_val))
-    pi_val <- stringr::str_pad(string = pi_val, width = 2, side = "left", pad = 0)
-    return(pi_val)
+  formatter <- function(x) {
+    y <- round(x, digits = 2)
+    y <- ifelse(is.na(y), "NA", as.character(y))
+    y <- stringr::str_pad(string = y, width = 2, side = "left", pad = 0)
+    return(y)
   }
   
-  pi_vals <- lapply(xx, function(x) {ifelse(is.character(x), x, as.character(labeller(x)))})
-  return(pi_vals)
+  y <- lapply(text, function(x) {
+    ifelse(is.character(x), x, as.character(formatter(x)))
+  })
+  return(y)
 }
 
-#' @importFrom stringr str_match
-sort_roi_level <- function(roi_level) {
-  levels <- unique(roi_level)
-  matches <- stringr::str_match(string = levels, pattern = "ROI_(\\d{1,2})\nPI: -?.*")
-  matches <- as.integer(matches[,2])
-  names(matches) <- levels
-  sorted_levels <- names(sort(matches))
-  return(sorted_levels)
+# @importFrom stringr str_match
+#' Enforce a numeric sorting of facets for visualization
+#' @importFrom gtools mixedsort
+#' @param facets Character of facets to be sorted
+#' @return Facet levels sorted in numeric order
+#' (ROI_1, ROI_2, ..., ROI_19, ROI_20)
+sort_facet_levels <- function(facets) {
+  facets <- unique(facets)
+  sorted_facets <- gtools::mixedsort(facets)
+  # TODO Remove commented code if mixedsort does the job
+  #matches <- stringr::str_match(string = facets, pattern = "ROI_(\\d{1,2})\nPI: -?.*")
+  #matches <- as.integer(matches[,2])
+  #names(matches) <- levels
+  #sorted_facets <- names(sort(matches))
+  return(sorted_facets)
 }
 
-#' Generate base IDOC plot upon which
-#' more annotation layers can be added
-#' 
+
+#' Mark time with a custom frequency
+#'
+#' Place the ticks on the time axis with an intuitive frequency
+#' @eval document_data()
+#' @eval document_gg()
+#' @param freq Number of seconds in between axis ticks, 60 by default
+#' @param downward Whether the 0 should be at the top (TRUE)
+#' or the bottom (FALSE) of the plot
+#' @importFrom scales reverse_trans
 #' @import ggplot2
-#' @importFrom glue glue
-#' @importFrom dplyr full_join
-#' @export
-base_plot <- function(experiment_folder, data, limits, pi, run_id=NULL, plot_preference_index=TRUE, subtitle = "", downward=TRUE) {
-  
-  theme_set(theme_bw())
-
-  if (is.null(run_id)) {
-    metadata <- load_metadata(experiment_folder)
-    run_id <- metadata[field == "run_id", value]
-  }
-  
-  data <- dplyr::full_join(data, pi, by="region_id")
-  
-  data$PI <- preference_index_labeller(data$preference_index)
-  if (plot_preference_index) {
-    data$facet <- paste0("ROI_", data$region_id,"\nPI: ", data$PI)
-  } else {
-    data$facet <- paste0("ROI_", data$region_id)
-  }
-  
-  levels <- sort_roi_level(data$facet)
-  data$facet <- factor(data$facet, levels = levels)
-  
-  breaks <- c(limits[1], 0, limits[2])
-  
-  gg <- ggplot() +
-    geom_line(
-      data = data, mapping = aes(x = x, y = t, group = id),
-      orientation="y"
-    ) +
-    labs(x = "Chamber (mm)", y = "t (s)", title = run_id, subtitle = subtitle,
-         caption = glue::glue('Produced on {Sys.time()}')) +
-    scale_x_continuous(limits = limits, breaks = breaks)
+#' @return ggplot2 object
+mark_time <- function(data, gg, freq=60, downward=TRUE) {
   
   time_limits <- c(min(data$t), max(data$t))
-  time_limits <- c(floor(time_limits[1] / 60) * 60, ceiling(time_limits[2] / 60) * 60)
+  time_limits <- c(
+    floor(time_limits[1] / freq) * freq,
+    ceiling(time_limits[2] / freq) * freq
+  )
   
   if (downward) {
-  gg <- gg + scale_y_continuous(
-    limits = rev(time_limits),
-    breaks = seq(
-      from = time_limits[2],
-      to = time_limits[1],
-      by = -60
-    ),
-    trans = scales::reverse_trans()
-  )
+    gg <- gg + scale_y_continuous(
+      limits = rev(time_limits),
+      breaks = seq(
+        from = time_limits[2],
+        to = time_limits[1],
+        by = -freq
+      ),
+      trans = scales::reverse_trans()
+    )
   } else {
     gg <- gg + scale_y_continuous(
       limits = time_limits,
       breaks = seq(
         from = time_limits[1],
         to = time_limits[2],
-        by = 60
+        by = freq
       )
     )
   }
+  return(gg)
+}
+
+#' Mark space
+#' Place the ticks on the space axis so visualization is convenient
+#' @eval document_limits()
+#' @eval document_gg()
+#' @param extra Position of ticks in space besides limits
+#' @import  ggplot2
+#' @eval document_gg("return")
+mark_space <- function(limits, gg, extra=c(0)) {
+  breaks <- c(limits[1], extra, limits[2])
+  gg <- gg + scale_x_continuous(limits = limits, breaks = breaks)
+  return(gg)
+}
+
+
+#' Generate base IDOC plot upon which
+#' more annotation layers can be added
+#' 
+#' The base plot contains all individual panels,
+#' dots to mark the fly positions
+#' @eval document_data()
+#' @inherit mark_space
+#' @inherit mark_time
+#' @import ggplot2
+#' @eval document_gg("return")
+#' @seealso [mark_space()]
+#' @seealso [mark_time()]
+#' @export
+base_plot <- function(data, limits, downward=TRUE) {
+
+  x <- id <- NULL
+
+  theme_set(theme_bw() + theme(
+    panel.spacing = unit(1, "lines"),
+    text = element_text(size = 20))
+  )
+
+  # initialize canvas
+  gg <- ggplot()
   
+  # add line trace
+  gg <- gg +
+    geom_line(
+      data = data, mapping = aes(x = x, y = t, group = id),
+      orientation="y"
+    )
+  
+  # add custom time marks (we want every 60 seconds)
+  gg <- mark_time(data, gg, freq=60, downward=downward)
+  gg <- mark_space(limits, gg, extra=c(0))
+
+  # segregate the animals, one plot for each
   gg <- gg + facet_wrap(
     . ~ facet,
     drop = F,
     nrow = 2, ncol = 10
-  ) + theme(panel.spacing = unit(1, "lines"))
+  )
+
+  return(gg)
+}
+
+
+#' Customize the facet label
+#'
+#' @eval document_data()
+#' @param plot_preference_index Whether to show the scored preference index
+#' with the region id on the facet label (TRUE), or just the region id (FALSE)
+annotate_facet <- function(data, plot_preference_index=TRUE) {
   
-  gg <- gg + theme(text = element_text(size = 20))
-  # it is ok to render now as the coords have been flipped
+  region_id <- paste0("ROI_", data$region_id)
+
+  if (plot_preference_index) {
+    data$facet <- paste0(region_id, "\nPI: ",
+                         format_text(data$preference_index)
+                         )
+    data$facet <- ifelse(is.na(data$preference_index), data$facet,
+           paste0(data$facet,
+                  "\n(", data$appetitive, "|", data$aversive, ")"
+           ))
+  } else {
+    data$facet <- region_id
+  }
+
+  # make sure the facets have a numerical order
+  # e.g. ROI_1 and then comes ROI_2, not ROI_10
+  levels <- sort_facet_levels(data$facet)
+  data$facet <- factor(data$facet, levels = levels)
+  
+  return(data)
+}
+
+#' Validate data passed to plot_dataset
+#' @inherit plot_dataset
+validate_inputs <- function(dataset, analysis) {
+  expected_pi_columns <- c(
+    "region_id", "appetitive",
+    "aversive", "preference_index"
+  )
+  
+  if (is.null(dataset$tracker))
+    stop("Provided data frame under dataset$tracker slot is NULL.
+         Please correct that by passing a non NULL data frame")
+  if (!"data.frame" %in% class(dataset$tracker))
+    stop("Provided a non data frame variable under dataset$tracker.
+         Please correct that by passing a data frame")
+  if (!all(sort(expected_pi_columns) == sort(colnames(analysis$pi))))
+    stop(sprintf(
+      "Provided a non valid preference index computation.
+       You should provide a dataframe with columns: %s under analysis$pi",
+       paste0(expected_pi_columns, collapse=" ")
+    ))
+  
+  if (is.null(dataset$limits) || length(dataset$limits) != 2)
+    stop("Provided limits under dataset$limits are NULL.
+         Please provide a numeric vector of length 2 where you specify the minimum
+         and maximum mm from the center of the chamber")
+}
+
+#' Distill the dataset and analysis performed in the idocr workflow
+#' to the datasets required for plotting
+#' 
+#' A tracker dataset where every record represents the position
+#' of one animal in one timepoint is required to plot the trace
+#' 
+#' A corssing dataset where every record represents a decision zone
+#' exit of one animal is required to show the exits in the plot
+#' @eval document_dataset()
+#' @eval document_analysis()
+#' @param plot_mask If not NULL, the plot contains data contained within
+#' the interval's start and end (s)
+#' @inherit annotate_facet
+#' @importFrom dplyr left_join filter
+combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE, plot_mask=NULL) {
+  
+  . <- NULL
+  
+  tracker_data <- dplyr::left_join(dataset$tracker, analysis$pi, by = "region_id")
+  crossing_data <- dplyr::left_join(analysis$annotation, analysis$pi, by = "region_id")
+  
+  message("Generating facet labels")
+  tracker_data <- annotate_facet(tracker_data, plot_preference_index)
+  crossing_data <- annotate_facet(crossing_data, plot_preference_index)
+  
+  if (!is.null(plot_mask)) {
+    tracker_data <- tracker_data %>%
+      dplyr::filter(., t >= plot_mask[1] & t <= plot_mask[2])
+    
+    crossing_data <- crossing_data %>%
+      dplyr::filter(., t >= plot_mask[1] & t <= plot_mask[2])
+  }
+
+  return(list(
+    tracker = tracker_data,
+    crossing = crossing_data
+  ))
+}
+#' Generate  an IDOC plot 
+#'
+#' Take a dataset and its analysis,
+#' together with plotting parameters,
+#' to visualize an IDOC experiment
+#' @eval document_experiment_folder()
+#' @eval document_dataset()
+#' @eval document_analysis()
+#' @param plot_decision_zone Whether to display the decision zone (TRUE) or not.
+#' @param subtitle Character to write on the plot subtitles
+#' @param colors Named vector of colors. Values should be colors
+#' and names need to map to controller events
+#' @param plot_crosses Whether to display the decision zone crosses (TRUE) or not.
+#' @inherit mark_analysis_mask
+#' @inherit mark_stimuli
+#' @inherit annotate_facet
+#' @inherit mark_time
+#' @inherit combine_inputs
+#' @param ... Extra arguments for save_plot
+#' @seealso [mark_stimuli()]
+#' @seealso [mark_decision_zone()]
+#' @seealso [mark_crosses()]
+#' @seealso [save_plot()] 
+#' @export
+plot_dataset <- function(experiment_folder,
+                         dataset, analysis,
+                         plot_preference_index = TRUE,
+                         plot_decision_zone = TRUE,
+                         plot_crosses = TRUE,
+                         subtitle = "",
+                         colors = c(
+                           "TREATMENT_A" = "red",
+                           "TREATMENT_B" = "blue"
+                          ),
+                         labels = c(
+                           "TREATMENT_A" = "TREATMENT_A",
+                           "TREATMENT_B" = "TREATMENT_B"
+                         ),
+                         analysis_mask = NULL,
+                         plot_mask = NULL,
+                         downward=TRUE,
+                         ...
+                         ) {
+  
+  message("Validating passed data")
+  validate_inputs(dataset, analysis)
+  data <- combine_inputs(dataset, analysis,
+                         plot_preference_index=plot_preference_index,
+                         plot_mask=plot_mask
+                         )
+  tracker_data <- data$tracker
+  crossing_data <- data$crossing
+  border <- dataset$border
+  limits <- dataset$limits
+  rectangles <- analysis$rectangles
+  
+  if (!is.null(dataset$labels) & all(labels == c("TREATMENT_A", "TREATMENT_B"))) {
+    labels <- dataset$labels
+  }
+  
+  # initialize the plot by creating a tracker trace
+  # for each animal separately
+  message("Generating base plot")
+  gg <- base_plot(tracker_data, limits, downward=downward)
+  
+  # add rectangular marks to sign the controller events
+  message("Marking controller events")
+  gg <- mark_stimuli(gg, rectangles, colors, labels)
+  
+
+  if (!is.null(analysis_mask)) {
+    message("Marking analysis mask")
+    gg <- mark_analysis_mask(gg, analysis_mask)
+  }
+  # delineate the decision zone
+  message("Marking decision zone")
+  if (plot_decision_zone) gg <- mark_decision_zone(gg, border)
+  
+  # add points whenever an exit (decision zone cross) happens
+  message("Marking decision zone crosses")
+  if (plot_crosses) gg <- mark_crosses(gg, crossing_data)
+  
+  # add text on axis, title, ...
+  message("Documenting plot")
+  gg <- document_plot(gg, experiment_folder, subtitle=subtitle) 
+  
+  # save the plot to the experiment's folder
+  message("Saving plot to ->", experiment_folder)
+  save_plot(gg, experiment_folder, ...)
   
   return(gg)
 }
 
-#' Mark when a piece of IDOC hardware was active
-#' in the form of a shape (usually a rectangle)
+#' Mark the analysis mask
 #' 
-#' @import ggplot2
-#' @importFrom ggforce geom_shape
-#' @export
-add_shape <- function(shape_data, color="red", border="black") {
+#' Mark the time interval of the experiment for which
+#' the preference computation is performed
+#' This is shown with a yellow rectangle in the plot
+#' @eval document_gg()
+#' @inherit find_exits
+mark_analysis_mask <- function(gg, analysis_mask) {
+
+  x <- y <- NULL
   
-  shape <- geom_shape(
-    data = shape_data,
-    mapping = aes(y = t, x = x, group = group),
-    #   # expand = unit(1, 'cm'),
-    radius = unit(0.15, 'cm'),
-    fill = color, alpha = 0.4, color = border
+  limits <- gg$scales$scales[[2]]$limits
+  
+  mask_coords <- data.frame(
+    x = rep(limits, times=2),
+    y = rep(analysis_mask, each=2)
   )
+  mask_coords <- mask_coords[c(1,2,4,3),]
+
+  gg <- gg + geom_polygon(data = mask_coords,
+                    mapping = aes(x=x,y=y),
+                    color="yellow", alpha=0.5,
+                    fill=NA, size=1,
+                    linetype="dashed")
+  return(gg)
   
-  return(shape)
 }
 
-
-#' Mark when a piece of IDOC hardware was active
-#' in the form of a polygon (usually a rectangle)
-#' 
-#' @import ggplot2
-#' @importFrom ggforce geom_shape
-#' @export
-add_polygon <- function(shape_data, color="red", border="black") {
+#' Annotate experiment metadata on plot for documentation
+#' Users can write down particular features of their experiment
+#' in the subtitle (frequency, duty cycle, odours, paradigms, etc)
+#' A default title with the run id is generated if the experiment_folder is passed
+#' A default caption with the current timestamp is placed on the bottom right
+#' @eval document_gg()
+#' @eval document_experiment_folder()
+#' @param ... Extra arguments to ggplot2::labs
+#' @seealso [ggplot2::labs()]
+#' @return document_gg("return")
+document_plot <- function(gg, experiment_folder=NULL, ...) {
   
-  shape <- geom_polygon(
-    data = shape_data,
-    mapping = aes(
-      y = t, x = x, group = group,
-      fill = color, color = border
-    ), alpha = 0.4
-    
-  )
+  value <- field <- NULL
   
-  return(shape)
-}
-
-
-
-
-
-#' @export
-idoc_plot <- function(experiment_folder, roi_data, rectangle_data,
-                      preference_data, pi_data,
-                      CSplus, CSminus, border, limits,
-                      side_agnostic_hardware = NULL,
-                      plot_preference_index=TRUE,
-                      plot_decision_zone=TRUE,
-                      plot_basename = NULL,
-                      old_mapping = FALSE,
-                      subtitle = ""
-                      ) {
-  
-  # To order the region_id s in the old way
-  if (old_mapping) {
-    mapper <- c(1,3,5,7,9,11,13,15,17,19,2,4,6,8,10,12,14,16,18,20)
-    names(mapper) <- 1:20
-    roi_data$region_id <- mapper[roi_data$region_id]
-  }
-  
-  apetitive <- preference_data[preference_data$type == 'apetitive',]
-  aversive <- preference_data[preference_data$type == 'aversive',]
-  
-  preference_data <- dplyr::left_join(preference_data, pi_data, by = "region_id")
-  
-  if (plot_preference_index) {
-     preference_data$facet <- paste0("ROI_", preference_data$region_id, "\nPI: ", preference_index_labeller(preference_data$preference_index))
+  if (!is.null(experiment_folder)) {
+    metadata <- load_metadata(experiment_folder)
+    run_id <- metadata[field == "run_id", value]
   } else {
-    preference_data$facet <- paste0("ROI_", preference_data$region_id)
+    run_id <- ""
   }
   
-  levels <- sort_roi_level(preference_data$facet)
-  preference_data$facet <- factor(preference_data$facet, levels = levels)
-  
-  apetitive <- preference_data[preference_data$type == 'apetitive',]
-  aversive <- preference_data[preference_data$type == 'aversive',]
-  
-  colors <- c("red", "blue")[1:length(side_agnostic_hardware)]
-  names(colors) <- side_agnostic_hardware 
-  
-  gg <- base_plot(
-    experiment_folder, roi_data, limits,
-    run_id = rev(unlist(strsplit(experiment_folder, split = '/')))[1],
-    pi = pi_data, plot_preference_index = plot_preference_index, subtitle = subtitle
+  # TODO Make the call smarter by passing title and caption
+  # only if the user did not provide them
+  # If a user provides them, use them!
+  gg <- gg +
+    labs(
+      x = "Chamber (mm)", y = "t (s)",
+      title = run_id,
+      caption = paste0("Produced on ", idocr_time()),
+      ...
   )
+  
+  return(gg)
+}
 
-  rectangles <- rectangle_data %>%
-    purrr::map(~add_polygon(., color = colors[unique(.$hardware_small)]))
+#' Mark stimuli / treatment action over time with rectangles on the plot 
+#'  
+#' @eval document_gg()
+#' @param rectangles List of rectangle datasets where every dataset is a
+#' dataframe of 4 rows describing the 4 corners of a rectangle.
+#' They represent the occurrence of a stimulus each#' 
+#' @param colors Named character vector where values are colors and names
+#' are treatments. It establishes the color used to represent the treatments
+#' on the plot
+#' @param labels Character vector whose values become
+#' the name of the treatments as rendered in the plot's legend
+#' @importFrom purrr map
+#' @import ggplot2
+#' @return ggplot2 object
+mark_stimuli <- function(gg, rectangles, colors, labels) {
   
-  for (rect in rectangles) {
-    gg <- gg + rect
-  }
+  . <- x <- t <- group <- treatment <- NULL
+  
+  treatments <- names(colors)
+
+  rectangles_df <- lapply(1:length(rectangles), function(i) {
+    rectangles[[i]]$group <- i
+    rectangles[[i]]
+  }) %>%
+    do.call(rbind, .)
+  
+  gg <- gg + geom_polygon(
+    data = rectangles_df,
+    mapping = aes(
+      x = x, y=t,
+      group=group,
+      fill=treatment),
+    color = "black", alpha=0.4
+  ) +
+    scale_fill_manual(
+      name = 'Treatment',
+      values = unname(colors),
+      labels = labels,
+      guide = "legend"
+    )
+
+  return(gg)
+}
+
+#' Mark decision zone exit events (crosses)
+#'
+#' @eval document_gg()
+#' @eval document_cross_data()
+#' @importFrom dplyr select left_join
+#' @import ggplot2
+mark_crosses <- function(gg, cross_data) {
+  
+  x <- t <- NULL
+  
+  appetitive <- cross_data[cross_data$type == 'appetitive',]
+  aversive <- cross_data[cross_data$type == 'aversive',]
   
   gg <- gg +
-    scale_fill_identity(name = 'Treatment', breaks = colors, labels = names(side_agnostic_hardware),
-                        guide = "legend") +
-    guides(color = F)
+    geom_point(
+      data = appetitive, aes(x = x, y = t),
+      color = "black", size = 2
+    ) +
+    geom_point(
+      data = aversive, aes(x = x, y = t),
+      color = "black", size = 2, shape = 4
+    )
   
-  gg <- gg +
-    geom_point(data = apetitive, aes(x = x, y = t), color = "black", size = 2) +
-    geom_point(data = aversive, aes(x = x, y = t), color = "black", size = 2, shape = 4)
+  return(gg)
+}
+
+#' Draw a dashed line to signal the decision zone
+#'
+#' @eval document_gg()
+#' @param border Pixels between center and decision zone
+#' @eval document_gg("return")
+#' @import ggplot2
+mark_decision_zone <- function(gg, border) {
+  gg <- gg + geom_vline(xintercept = -border, linetype = "dashed")
+  gg <- gg + geom_vline(xintercept = border, linetype = "dashed") 
+  return(gg)
+}
+
+#' Save a ggplot2 plot in pdf and png format using consistent naming
+#' 
+#' @param gg ggplot2 plot
+#' @eval document_experiment_folder()
+#' @param ... Extra arguments for ggsave
+#' @seealso [ggplot2::ggsave()]
+#' @import ggplot2
+save_plot <- function(gg, experiment_folder, ...) {
   
+  field <- value <- NULL
   
-  border_lines <- list(
-    geom_hline(yintercept = -border, linetype = "dashed"),
-    geom_hline(yintercept = border, linetype = "dashed") 
-  )
-  
-  if (isTRUE(plot_decision_zone)) {
-    for (b_line in border_lines) {
-      gg <- gg + b_line
-    }
-  }
-  
-  
-  metadata <- load_metadata(experiment_folder)
-  if (is.null(plot_basename)) {
+  if (any(grep(x = list.files(experiment_folder), pattern = "METADATA"))) {
+    metadata <- load_metadata(experiment_folder)
     plot_basename <- sprintf(
       "%s_%s",
       metadata[field == "date_time", value],
       metadata[field == "machine_id", value]
     )
+  } else {
+    plot_basename <- "DUMMY"
   }
   
+  # specify default width, height and dpi of plots
+  ggsave_kwargs <- list(...)
+  width = ifelse(is.null(ggsave_kwargs$width), 16, ggsave_kwargs$width)
+  height = ifelse(is.null(ggsave_kwargs$height), 16, ggsave_kwargs$height)
+  dpi = ifelse(is.null(ggsave_kwargs$dpi), 16, ggsave_kwargs$dpi)
+  
   for (extension in c('pdf', 'png')) {
+    message("Saving ", extension, " format")
     plot_filename <- sprintf(
       "%s.%s",
       plot_basename,
       extension
     )
-    ggplot2::ggsave(filename = file.path(experiment_folder, plot_filename), width = 25, height = 12)
+    
+    # save!
+    ggsave(
+      filename = file.path(experiment_folder, plot_filename),
+      width=width, height=height, dpi=dpi
+    )
   }
-  return(gg)
 }
-
-
-

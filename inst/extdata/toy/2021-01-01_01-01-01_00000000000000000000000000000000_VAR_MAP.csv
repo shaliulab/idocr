@@ -1,0 +1,10 @@
+,var_name,sql_type,functional_type
+1,x,SMALLINT,distance
+2,y,SMALLINT,distance
+3,w,SMALLINT,distance
+4,h,SMALLINT,distance
+5,phi,SMALLINT,angle
+6,xy_dist_log10x1000,SMALLINT,relative_distance_1e6
+7,is_inferred,BOOLEAN,bool
+8,has_interacted,SMALLINT,interaction
+9,frame_count,INT,count
