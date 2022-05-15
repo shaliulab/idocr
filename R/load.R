@@ -80,8 +80,8 @@ preprocess_dataset <- function(
   #   +max(abs(dataset$tracker$x))
   # )
   dataset$limits <- c(-70, 70)
-
-  pixel_to_mm_ratio <- 2.3
+  config <- load_config()
+  pixel_to_mm_ratio <- config$pixel_to_mm_ratio
   border <- border_mm * pixel_to_mm_ratio
   
   if (check_api_version(treatments) == 1) {
