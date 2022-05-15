@@ -80,7 +80,7 @@ preprocess_dataset <- function(
   #   +max(abs(dataset$tracker$x))
   # )
   dataset$limits <- c(-70, 70)
-  config <- load_config()
+  config <- read_config()
   pixel_to_mm_ratio <- config$pixel_to_mm_ratio
   border <- border_mm * pixel_to_mm_ratio
   
