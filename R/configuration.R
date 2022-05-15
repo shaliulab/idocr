@@ -2,6 +2,7 @@ CONFIG_FILE <- "analysis_params.yaml"
 DEFAULT_CONFIG <- list(pixels_to_mm_ratio = 2.3)
 #' @importFrom yaml read_yaml
 #' @import glue
+#' @export
 read_config <- function() {
   
   if (file.exists(CONFIG_FILE)) {
