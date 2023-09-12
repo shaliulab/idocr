@@ -61,6 +61,7 @@ get_roi_center <- function(experiment_folder) {
     warning("Please execute mindline-detector and save a ROI_CENTER.csv file in the folder")
     roi_center <- data.table(region_id=1:20, center=0)
   } else {
+    message(paste0("Reading file ", roi_center_file))
     roi_center <- data.table::fread(roi_center_file)
     if (any(roi_center$center == 0)) {
       warning("I found a ROI_CENTER file but it is not correct.
