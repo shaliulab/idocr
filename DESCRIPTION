@@ -1,4 +1,4 @@
-Package: idocr
+Package: idocr2
 Title: Analyze traces created in the Individual Drosophila Optogenetics Conditioner (IDOC)
 Date: 2021-04-05
 Version: 1.1.0
@@ -20,7 +20,9 @@ Imports:
     tibble (>= 3.1.0),
     tidyr (>= 1.1.3),
     zoo (>= 1.8-9),
-    scales (>= 1.1.1)
+    scales (>= 1.1.1),
+    parallel,
+    ggprism
 Suggests:
     testthat (>= 3.0.2),
     covr (>= 3.5.1),
@@ -33,6 +35,6 @@ LazyData: true
 URL: https://github.com/shaliulab/idocr
 BugReports: https://github.com/shaliulab/idocr/issues
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3
 Config/testthat/edition: 3
 Remotes: hadley/emo

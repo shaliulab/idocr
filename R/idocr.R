@@ -53,14 +53,16 @@ idocr <- function(experiment_folder,
   )
 
   message("Plotting dataset -> ", experiment_folder)
-  gg <- plot_dataset(experiment_folder, dataset, analysis, analysis_mask=analysis_mask, ...)
+  out <- plot_dataset(experiment_folder, dataset, analysis, analysis_mask=analysis_mask, ...)
+  plot_paths <- out$paths
+  gg <- out$gg
   
   message("Exporting results -> ", experiment_folder)
-  export_dataset(experiment_folder = experiment_folder,
+  out <- export_dataset(experiment_folder = experiment_folder,
                  dataset = dataset, analysis = analysis
                  )
-  
-  return(list(gg = gg, pi = analysis$pi))
+  csv_paths <- out$paths
+  return(list(gg = gg, pi = analysis$pi, paths = c(plot_paths, csv_paths)))
 }
 
 

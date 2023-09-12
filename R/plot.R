@@ -106,7 +106,7 @@ mark_space <- function(limits, gg, extra=c(0)) {
 #' @seealso [mark_space()]
 #' @seealso [mark_time()]
 #' @export
-base_plot <- function(data, limits, downward=TRUE) {
+base_plot <- function(data, limits, downward=TRUE, ...) {
 
   x <- id <- NULL
 
@@ -114,7 +114,7 @@ base_plot <- function(data, limits, downward=TRUE) {
     panel.spacing = unit(1, "lines"),
     text = element_text(size = 20))
   )
-
+  
   # initialize canvas
   gg <- ggplot()
   
@@ -128,14 +128,14 @@ base_plot <- function(data, limits, downward=TRUE) {
   # add custom time marks (we want every 60 seconds)
   gg <- mark_time(data, gg, freq=60, downward=downward)
   gg <- mark_space(limits, gg, extra=c(0))
-
+  
   # segregate the animals, one plot for each
   gg <- gg + facet_wrap(
     . ~ facet,
     drop = F,
-    nrow = 2, ncol = 10
+    ...
   )
-
+  
   return(gg)
 }
 
@@ -148,19 +148,19 @@ base_plot <- function(data, limits, downward=TRUE) {
 annotate_facet <- function(data, plot_preference_index=TRUE) {
   
   region_id <- paste0("ROI_", data$region_id)
-
+  
   if (plot_preference_index) {
     data$facet <- paste0(region_id, "\nPI: ",
                          format_text(data$preference_index)
-                         )
+    )
     data$facet <- ifelse(is.na(data$preference_index), data$facet,
-           paste0(data$facet,
-                  "\n(", data$appetitive, "|", data$aversive, ")"
-           ))
+                         paste0(data$facet,
+                                "\n(", data$appetitive, "|", data$aversive, ")"
+                         ))
   } else {
     data$facet <- region_id
   }
-
+  
   # make sure the facets have a numerical order
   # e.g. ROI_1 and then comes ROI_2, not ROI_10
   levels <- sort_facet_levels(data$facet)
@@ -187,7 +187,7 @@ validate_inputs <- function(dataset, analysis) {
     stop(sprintf(
       "Provided a non valid preference index computation.
        You should provide a dataframe with columns: %s under analysis$pi",
-       paste0(expected_pi_columns, collapse=" ")
+      paste0(expected_pi_columns, collapse=" ")
     ))
   
   if (is.null(dataset$limits) || length(dataset$limits) != 2)
@@ -228,7 +228,7 @@ combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE, plot_m
     crossing_data <- crossing_data %>%
       dplyr::filter(., t >= plot_mask[1] & t <= plot_mask[2])
   }
-
+  
   return(list(
     tracker = tracker_data,
     crossing = crossing_data
@@ -267,7 +267,7 @@ plot_dataset <- function(experiment_folder,
                          colors = c(
                            "TREATMENT_A" = "red",
                            "TREATMENT_B" = "blue"
-                          ),
+                         ),
                          labels = c(
                            "TREATMENT_A" = "TREATMENT_A",
                            "TREATMENT_B" = "TREATMENT_B"
@@ -275,15 +275,16 @@ plot_dataset <- function(experiment_folder,
                          analysis_mask = NULL,
                          plot_mask = NULL,
                          downward=TRUE,
+                         nrow=1, ncol=20,
                          ...
-                         ) {
+) {
   
   message("Validating passed data")
   validate_inputs(dataset, analysis)
   data <- combine_inputs(dataset, analysis,
                          plot_preference_index=plot_preference_index,
                          plot_mask=plot_mask
-                         )
+  )
   tracker_data <- data$tracker
   crossing_data <- data$crossing
   border <- dataset$border
@@ -297,13 +298,13 @@ plot_dataset <- function(experiment_folder,
   # initialize the plot by creating a tracker trace
   # for each animal separately
   message("Generating base plot")
-  gg <- base_plot(tracker_data, limits, downward=downward)
+  gg <- base_plot(tracker_data, limits, downward=downward, nrow=nrow, ncol=ncol)
   
   # add rectangular marks to sign the controller events
   message("Marking controller events")
   gg <- mark_stimuli(gg, rectangles, colors, labels)
   
-
+  
   if (!is.null(analysis_mask)) {
     message("Marking analysis mask")
     gg <- mark_analysis_mask(gg, analysis_mask)
@@ -322,9 +323,9 @@ plot_dataset <- function(experiment_folder,
   
   # save the plot to the experiment's folder
   message("Saving plot to ->", experiment_folder)
-  save_plot(gg, experiment_folder, ...)
+  paths <- save_plot(gg, experiment_folder, ...)
   
-  return(gg)
+  return(list(paths=paths, plot=gg))
 }
 
 #' Mark the analysis mask
@@ -335,7 +336,7 @@ plot_dataset <- function(experiment_folder,
 #' @eval document_gg()
 #' @inherit find_exits
 mark_analysis_mask <- function(gg, analysis_mask) {
-
+  
   x <- y <- NULL
   
   limits <- gg$scales$scales[[2]]$limits
@@ -345,12 +346,12 @@ mark_analysis_mask <- function(gg, analysis_mask) {
     y = rep(analysis_mask, each=2)
   )
   mask_coords <- mask_coords[c(1,2,4,3),]
-
+  
   gg <- gg + geom_polygon(data = mask_coords,
-                    mapping = aes(x=x,y=y),
-                    color="yellow", alpha=0.5,
-                    fill=NA, size=1,
-                    linetype="dashed")
+                          mapping = aes(x=x,y=y),
+                          color="yellow", alpha=0.5,
+                          fill=NA, size=1,
+                          linetype="dashed")
   return(gg)
   
 }
@@ -385,7 +386,7 @@ document_plot <- function(gg, experiment_folder=NULL, ...) {
       title = run_id,
       caption = paste0("Produced on ", idocr_time()),
       ...
-  )
+    )
   
   return(gg)
 }
@@ -409,7 +410,7 @@ mark_stimuli <- function(gg, rectangles, colors, labels) {
   . <- x <- t <- group <- treatment <- NULL
   
   treatments <- names(colors)
-
+  
   rectangles_df <- lapply(1:length(rectangles), function(i) {
     rectangles[[i]]$group <- i
     rectangles[[i]]
@@ -430,7 +431,7 @@ mark_stimuli <- function(gg, rectangles, colors, labels) {
       labels = labels,
       guide = "legend"
     )
-
+  
   return(gg)
 }
 
@@ -498,7 +499,8 @@ save_plot <- function(gg, experiment_folder, ...) {
   ggsave_kwargs <- list(...)
   width = ifelse(is.null(ggsave_kwargs$width), 16, ggsave_kwargs$width)
   height = ifelse(is.null(ggsave_kwargs$height), 16, ggsave_kwargs$height)
-  dpi = ifelse(is.null(ggsave_kwargs$dpi), 16, ggsave_kwargs$dpi)
+  dpi = ifelse(is.null(ggsave_kwargs$dpi), "print", ggsave_kwargs$dpi)
+  paths <- list()
   
   for (extension in c('pdf', 'png')) {
     message("Saving ", extension, " format")
@@ -507,11 +509,16 @@ save_plot <- function(gg, experiment_folder, ...) {
       plot_basename,
       extension
     )
+    path <- file.path(experiment_folder, plot_filename)
+    paths[[extension]] <- path
     
     # save!
-    ggsave(
-      filename = file.path(experiment_folder, plot_filename),
+    suppressMessages(ggsave(
+      filename = path,
+      plot = gg,
       width=width, height=height, dpi=dpi
-    )
+    ))
   }
+  return(paths)
+  
 }

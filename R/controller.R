@@ -112,9 +112,19 @@ interpolate_controller <- function(controller_data, index) {
   
   . <- NULL
   
-  controller_summary <- controller_data %>%
-    dplyr::full_join(index, ., on = "t") %>%
+  controller_data <- controller_data[!duplicated(controller_data$t),]
+  controller_summary <-  dplyr::full_join(index, controller_data, by = "t") %>%
     dplyr::arrange(t)
+  
+  first_non_nan_row <- min(which(!apply(
+    is.na(controller_summary[, -1]),
+    1,
+    all
+    )))
+  
+  controller_summary <- controller_summary[first_non_nan_row:nrow(controller_summary), ]
+
+
   
   # carry forward the last observation
   controller_summary <- controller_summary %>%
@@ -122,7 +132,7 @@ interpolate_controller <- function(controller_data, index) {
       X = .,
       MARGIN = 2,
       FUN = zoo::na.locf
-    ) %>%
-    tibble::as_tibble(.)    
+    )  %>%
+    tibble::as_tibble(.)  
 }
 

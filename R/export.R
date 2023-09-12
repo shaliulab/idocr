@@ -11,7 +11,6 @@
 #' @export
 make_summary <- function(tracker_data, controller_data) {
   . <- region_id <- x <- NULL
-
   tracker_summary <- tracker_data %>%
     dplyr::select(t, x, region_id) %>%
     dplyr::mutate(region_id = paste0("ROI_", region_id)) %>%
@@ -35,7 +34,7 @@ make_summary <- function(tracker_data, controller_data) {
   summary_data <- dplyr::full_join(
     tracker_summary,
     controller_summary,
-    on = "t"
+    by = "t"
   )
   
   summary_data <- format_summary(summary_data)
@@ -70,11 +69,10 @@ export_summary_new <- function(experiment_folder, output_csv=NULL, ...) {
   }
   
   message("Saving SUMMARY -> ", output_csv)
-  
   fwrite_(summary_data, output_csv)
   
 
-  return(summary_data)
+  return(list(data=summary_data, path=output_csv))
 }
 
 #' Export a single csv with all key data for analysis and plotting outside of R
@@ -117,6 +115,7 @@ export_pi_summary <- function(experiment_folder, pi, output_csv=NULL) {
   }
   message("Saving PI -> ", output_csv)
   
+  pi$preference_index <- round(pi$preference_index, digits = 3)
   fwrite_(pi, output_csv)
   
   return(output_csv)
@@ -133,14 +132,18 @@ export_pi_summary <- function(experiment_folder, pi, output_csv=NULL) {
 #' @seealso [export_pi_summary()]
 #' @seealso [export_summary()]
 export_dataset <- function(experiment_folder, dataset, analysis, ...) {
-  export_pi_summary(experiment_folder = experiment_folder, pi = analysis$pi)
-  summary_data <- export_summary_new(
+  pi_path <- export_pi_summary(experiment_folder = experiment_folder, pi = analysis$pi)
+  out <- export_summary_new(
     experiment_folder = experiment_folder,
     tracker_data = dataset$tracker,
     controller_data = dataset$controller,
     ...
   )
-  export_data <- list(summary=summary_data, pi = analysis$pi)
-  return(export_data)
+
+  summary_data <- out$data
+  summary_path <- out$path
+  
+  out <- list(summary=summary_data, pi = analysis$pi, paths = list(pi = pi_path, summary = summary_path))
+  return(out)
 }
   

@@ -63,7 +63,7 @@ read_roi <- function(file) {
 remove_duplicates <- function(tracker_data) {
   
   region_id <- t <- . <- NULL
-  tracker_data[
+  tracker_data <- tracker_data[
     tracker_data %>%
       dplyr::select(region_id, t) %>%
       duplicated %>%
