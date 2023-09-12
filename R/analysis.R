@@ -35,10 +35,15 @@ analyse_dataset <- function(dataset, min_exits_required=5, ...) {
   # one row per fly with count of appetitive and aversive exits
   # as well as the computed preference index
   message("Computing channel-wise preference index")
-  pi_data <- compute_preference_index(
-    annotated_data,
-    min_exits_required = min_exits_required
-  )
+  if (nrow(annotated_data) == 0) {
+    warning("No decision zone crosses detected. I will skip PI computation")
+    pi_data <- NA
+  } else {
+    pi_data <- compute_preference_index(
+      annotated_data,
+      min_exits_required = min_exits_required
+    )
+  }
   
   return(list(
     annotation = annotated_data,

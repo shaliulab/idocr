@@ -4,10 +4,10 @@
 \alias{generate_toy_dataset}
 \title{Generate a toy dataset}
 \usage{
-generate_toy_dataset(dest = NULL, paradigm = NULL, ...)
+generate_toy_dataset(result_folder = NULL, paradigm = NULL, ...)
 }
 \arguments{
-\item{dest}{Path to the destination folder where toy dataset should be stored
+\item{result_folder}{Path to the destination folder where toy dataset should be stored
 It is created if not available}
 
 \item{paradigm}{data.table containing a paradigm i.e. a list of controller events}

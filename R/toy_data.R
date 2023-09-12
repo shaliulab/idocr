@@ -51,7 +51,7 @@ walk <- function(start_pos, quiescent=FALSE, sd_y=0.5) {
       stats::rnorm(n = 1, mean = 0, sd = sd_y)
     )
   }
-
+  
   next_pos <- round(start_pos + movement)
   # make sure no negative
   next_pos <- c(rebound(next_pos[1], 0, 200), rebound(next_pos[2], 0, 30))
@@ -115,7 +115,7 @@ toy_roi_all <- function(channels=20, ...) {
   names(rois) <- paste0("ROI_", 1:20)
   return(rois)
 }
-  
+
 
 #' Generate a toy controller dataset based on a paradigm
 #' 
@@ -147,7 +147,7 @@ toy_controller <- function(paradigm=NULL) {
   }
   
   if (!is.null(paradigm)) {
-      controller_data <- lapply(seq(from = 0, to = 360, by = 0.5), function(t) {
+    controller_data <- lapply(seq(from = 0, to = 360, by = 0.5), function(t) {
       get_status(paradigm, t)
     }) %>% do.call(rbind, .) %>%
       apply(., 2, as.numeric) %>%
@@ -200,9 +200,13 @@ get_roi_map <- function(channels=20) {
   tly <- rep(79 + (0:9) * 30, times=2)
   roi_map <- data.table(x=tlx, y=tly, w=182, h=40, value=1:20, idx=1:20)
   return(roi_map)
-
+  
 }
 
+get_toy_roi_center <- function() {
+  x <- data.table(region_id=1:20, center=c(rep(337+91, 10), rep(537+91,10)))
+  x
+}
 
 #' Save a dataset to a .csv database
 #' A .csv database is a collection of .csv files under the same folder
@@ -210,42 +214,50 @@ get_roi_map <- function(channels=20) {
 #' that distinguishes it from other files and hints at its contents
 #' @param dataset A list with entries metadata, roi_data,
 #' controller_data, var_map and roi_map
-#' @param dest A folder where to generate a .csv database.
+#' @param result_folder A folder where to generate a .csv database.
 #' Created on the spot if it doesn't exist
 #' @importFrom data.table fwrite
 #' @importFrom purrr imap
 #' @return NULL
-write_dataset <- function(dataset, dest) {
+write_dataset <- function(dataset, result_folder) {
   
-  dir.create(dest, recursive = TRUE, showWarnings = F)
+  
+  
+  dir.create(result_folder, recursive = TRUE, showWarnings = F)
   
   purrr::imap(
     dataset$roi_data,
     ~data.table::fwrite(
       x = .x,
-      file = file.path(dest, build_filename(dataset$metadata, .y)),
+      file = build_filename(result_folder, dataset$metadata, .y),
       row.names = T, quote = F
     )
   )
   
   data.table::fwrite(
     x = dataset$metadata,
-    file = file.path(dest, build_filename(dataset$metadata, "METADATA")),
+    file = build_filename(result_folder, dataset$metadata, "METADATA"),
     row.names = T, quote = F
   )
   data.table::fwrite(
     x = dataset$roi_map,
-    file = file.path(dest,  build_filename(dataset$metadata, "ROI_MAP")),
+    file = build_filename(result_folder, dataset$metadata, "ROI_MAP"),
     row.names = T, quote = F
   )
   data.table::fwrite(
     x = dataset$var_map,
-    file = file.path(dest, build_filename(dataset$metadata, "VAR_MAP")),
+    file = build_filename(result_folder, dataset$metadata, "VAR_MAP"),
     row.names = T, quote = F
   )
   data.table::fwrite(
     x = dataset$controller_data,
-    file = file.path(dest,  build_filename(dataset$metadata, "CONTROLLER_EVENTS")),
+    file = build_filename(result_folder, dataset$metadata, "CONTROLLER_EVENTS"),
+    row.names = T, quote = F
+  )
+  
+  data.table::fwrite(
+    x = dataset$roi_center,
+    file =  build_filename(result_folder, dataset$metadata, "ROI_CENTER"),
     row.names = T, quote = F
   )
 }
@@ -253,20 +265,20 @@ write_dataset <- function(dataset, dest) {
 
 #' Generate a toy dataset
 #' 
-#' @param dest Path to the destination folder where toy dataset should be stored
+#' @param result_folder Path to the destination folder where toy dataset should be stored
 #' It is created if not available
 #' @param paradigm data.table containing a paradigm i.e. a list of controller events 
 #' @param ...  Additional arguments for toy_roi_all
 #' @export
 #' @seealso toy_roi_all
 #' @seealso toy_controller
-generate_toy_dataset <- function(dest=NULL, paradigm=NULL, ...) {
+generate_toy_dataset <- function(result_folder=NULL, paradigm=NULL, ...) {
   
   roi_data <- toy_roi_all(channels=20, ...)
   controller_data <- toy_controller(paradigm)
   
   roi_map <- get_roi_map(channels=20)
-
+  
   var_map <- data.table(
     var_name = c("x", "y", "w", "h", "phi",
                  "xy_dist_log10x1000", "is_inferred", "has_interacted",
@@ -278,18 +290,21 @@ generate_toy_dataset <- function(dest=NULL, paradigm=NULL, ...) {
                         "bool", "interaction", "count")
   )
   
+  roi_center <- get_toy_roi_center()
+  
   metadata <- get_metadata()
   dataset <- list(
     roi_data = roi_data, roi_map = roi_map, var_map = var_map,
-    metadata = metadata, controller_data = controller_data
+    metadata = metadata, controller_data = controller_data,
+    roi_center = roi_center
   )
   
-  if (!is.null(dest)) write_dataset(dataset, dest)
+  if (!is.null(result_folder)) write_dataset(dataset, result_folder)
   
   dataset$tracker <- do.call(rbind, 
-          lapply(1:length(dataset$roi_data), function(i) {
-            cbind(dataset$roi_data[[i]], region_id=i)
-          })
+                             lapply(1:length(dataset$roi_data), function(i) {
+                               cbind(dataset$roi_data[[i]], region_id=i)
+                             })
   )
   
   dataset$controller <- as.data.table(dataset$controller_data)

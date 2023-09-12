@@ -14,6 +14,7 @@ idocr(
   src_file = NULL,
   mask_duration = 0.5,
   analysis_mask = NULL,
+  n = 20,
   ...
 )
 }
@@ -43,15 +44,19 @@ If NULL, take current file (works on RStudio)}
 so the same cross is not counted more than once due to noise in
 the border cross}
 
-\item{analysis_mask}{Numeric vector of length 2
-containing start and end timepoint of mask
-in seconds since the start of the experiment
-Every behavior outside of the mask is ignored}
+\item{analysis_mask}{Named list of numeric vectors specifying
+the start and end time in seconds of a period of the experiment that should
+be analyzed separately}
+
+\item{n}{Number of channels desired.
+If less than this amount of animals is found, idocr
+will make up animals until this amount is hit
+It (should match nrow x ncol of layout passed in the idocr function)}
 
 \item{...}{Extra arguments to plot_dataset}
 }
 \value{
-tracker_data
+tibble
 }
 \description{
 Load data from the experiment folder, possibly with some specific settings

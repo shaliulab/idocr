@@ -4,7 +4,13 @@
 \alias{export_pi_summary}
 \title{Export the preference index to a csv file}
 \usage{
-export_pi_summary(experiment_folder, pi, output_csv = NULL)
+export_pi_summary(
+  experiment_folder,
+  pi,
+  result_folder = NULL,
+  output_csv = NULL,
+  suffix = ""
+)
 }
 \arguments{
 \item{experiment_folder}{Path to folder containing IDOC results .csv files}
@@ -12,8 +18,15 @@ export_pi_summary(experiment_folder, pi, output_csv = NULL)
 \item{pi}{Dataframe to be exported.
 Should contain a column named preference_index}
 
+\item{result_folder}{Path to a folder where to save results. If not passaed, it is set to experiment_folder}
+
 \item{output_csv}{Path of csv output. If not provided,
 a new file in the experiment folder with key SUMMARY is produced}
+
+\item{suffix}{A character (word) that will differentiate resulting output
+from other output produced on the same experiment folder.
+Useful for segmenting the experiment into different periods of interest
+and analyzing these periods separately.}
 }
 \description{
 Export the preference index to a csv file

@@ -8,6 +8,7 @@ plot_dataset(
   experiment_folder,
   dataset,
   analysis,
+  result_folder = NULL,
   plot_preference_index = TRUE,
   plot_decision_zone = TRUE,
   plot_crosses = TRUE,
@@ -17,6 +18,11 @@ plot_dataset(
   analysis_mask = NULL,
   plot_mask = NULL,
   downward = TRUE,
+  nrow = 1,
+  ncol = 20,
+  suffix = "",
+  cross_size = 2,
+  line_alpha = 1,
   ...
 )
 }
@@ -37,6 +43,8 @@ plot_dataset(
 value
 \item pi: preference index scored by each animal
 }}
+
+\item{result_folder}{Path to a folder where to save results. If not passaed, it is set to experiment_folder}
 
 \item{plot_preference_index}{Whether to show the scored preference index
 with the region id on the facet label (TRUE), or just the region id (FALSE)}
@@ -63,6 +71,19 @@ the interval's start and end (s)}
 
 \item{downward}{Whether the 0 should be at the top (TRUE)
 or the bottom (FALSE) of the plot}
+
+\item{nrow}{Number of rows used for facetting data}
+
+\item{ncol}{Number of cols used for facetting data}
+
+\item{suffix}{A character (word) that will differentiate resulting output
+from other output produced on the same experiment folder.
+Useful for segmenting the experiment into different periods of interest
+and analyzing these periods separately.}
+
+\item{cross_size}{Size of dots used to represent decision zone exits (crosses)}
+
+\item{line_alpha}{Alpha of position trace}
 
 \item{...}{Extra arguments for save_plot}
 }

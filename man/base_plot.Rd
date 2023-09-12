@@ -5,7 +5,7 @@
 \title{Generate base IDOC plot upon which
 more annotation layers can be added}
 \usage{
-base_plot(data, limits, downward = TRUE)
+base_plot(data, limits, line_alpha = 1, downward = TRUE, nrow = 1, ncol = 20)
 }
 \arguments{
 \item{data}{List with entries roi, controller, border, limits.
@@ -15,8 +15,14 @@ the boundaries of the x axis}
 
 \item{limits}{Position of ticks in space axis}
 
+\item{line_alpha}{Alpha of position trace}
+
 \item{downward}{Whether the 0 should be at the top (TRUE)
 or the bottom (FALSE) of the plot}
+
+\item{nrow}{Number of rows used for facetting data}
+
+\item{ncol}{Number of cols used for facetting data}
 }
 \value{
 gg ggplot2 object

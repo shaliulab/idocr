@@ -1,7 +1,7 @@
 Package: idocr2
 Title: Analyze traces created in the Individual Drosophila Optogenetics Conditioner (IDOC)
 Date: 2021-04-05
-Version: 1.1.0
+Version: 1.1.2
 Authors@R: c(
     person("Antonio", "Ortega", role = c("aut", "cre"), email = "antonio.ortega@kuleuven.vib.be")
     )
@@ -22,7 +22,9 @@ Imports:
     zoo (>= 1.8-9),
     scales (>= 1.1.1),
     parallel,
-    ggprism
+    ggprism,
+    yaml (>= 2.3.5),
+    glue
 Suggests:
     testthat (>= 3.0.2),
     covr (>= 3.5.1),

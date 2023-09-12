@@ -4,10 +4,18 @@
 \alias{load_dataset}
 \title{Load an IDOC .csv dataset}
 \usage{
-load_dataset(experiment_folder)
+load_dataset(experiment_folder, n = 20)
 }
 \arguments{
 \item{experiment_folder}{Path to folder containing IDOC results .csv files}
+
+\item{n}{Number of channels desired.
+If less than this amount of animals is found, idocr
+will make up animals until this amount is hit
+It (should match nrow x ncol of layout passed in the idocr function)}
+}
+\value{
+tibble
 }
 \description{
 Load the .csv database available at the passed directory

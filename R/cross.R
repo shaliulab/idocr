@@ -15,19 +15,21 @@ annotate_cross <- function(cross_data, event_data, treatment, type=c("appetitive
   event_data <- event_data[event_data$treatment == treatment,]
 
   overlaps <- cross_data[NULL,]
+  overlaps$type <- character()
 
-  for (i in 1:nrow(cross_data)) {
-    row <- cross_data[i,]
-    t_ms <- row[["t"]] * 1000
-    event_hits <- t_ms > event_data$t_start & t_ms < event_data$t_end & row[["side"]] == event_data$side
-    if (sum(event_hits) == 1) {
-      row$idx <- event_data[event_hits,]$idx
-      overlaps <- rbind(overlaps, row)
+  if (nrow(cross_data) != 0) {
+    for (i in 1:nrow(cross_data)) {
+      row <- cross_data[i,]
+      t_ms <- row[["t"]] * 1000
+      event_hits <- t_ms > event_data$t_start & t_ms < event_data$t_end & row[["side"]] == event_data$side
+      if (sum(event_hits) == 1) {
+        row$idx <- event_data[event_hits,]$idx
+        overlaps <- rbind(overlaps, row)
+      }
     }
+    
+    overlaps$type <- type
   }
-  
-  overlaps$type <- type
-  
   return(overlaps)
 }
 
@@ -83,7 +85,6 @@ seconds_mask <- function(cross_data, min_time = 0) {
 cross_detector <- function(tracker_data, border, side=c(-1, 1)) {
   
   length_encoding <- rle((tracker_data$x * side) > border)
-  
   cross_data <- tibble::tibble(
     lengths = length_encoding$lengths,
     out_of_zone = length_encoding$values,
@@ -95,6 +96,10 @@ cross_detector <- function(tracker_data, border, side=c(-1, 1)) {
   cross_data$border <- border
   cross_data$side <- side
   cross_data$in_zone <- !cross_data$out_of_zone
+  # define a cross as events where the fly is at some timepoint t in the decision zone
+  # and at t+1 is out of the decision zone
+  if (nrow(cross_data) == 1) cross_data$cross <- FALSE
+  else  cross_data$cross <- cross_data[1:nrow(cross_data),]$in_zone & c(cross_data[2:nrow(cross_data),]$out_of_zone, F)
   return(cross_data)
 }
 
@@ -111,7 +116,7 @@ cross_detector <- function(tracker_data, border, side=c(-1, 1)) {
 #' @param ... Extra arguments to mask_FUN
 #' @importFrom purrr map
 #' @importFrom tibble as_tibble
-#' @importFrom dplyr filter
+#' @importFrom dplyr filter select
 #' @importFrom magrittr `%>%`
 #' @seealso seconds_mask
 #' @seealso cross_detector
@@ -123,17 +128,16 @@ find_exits <- function(tracker_data, border, side=c(-1, 1),
                        analysis_mask=NULL,
                        ...) {
   
-  . <- id <- out_of_zone <- NULL
-  
+  . <- id <- out_of_zone <- cross <- NULL
   if (!is.null(analysis_mask))
     tracker_data <- tracker_data %>%
-      dplyr::filter(t >= analysis_mask[1]) %>%
-      dplyr::filter(t <= analysis_mask[2])
+      dplyr::filter(t >= unlist(analysis_mask)[1]) %>%
+      dplyr::filter(t <= unlist(analysis_mask)[2])
   
   cross_data <- tracker_data %>%
     # get a clean of populated ids
-    remove_empty_roi(.) %>%
-    select(id) %>%
+    # remove_empty_roi(.) %>%
+    dplyr::select(id) %>%
     unique %>%
     unlist %>%
     # .[1:2] %>%
@@ -147,7 +151,7 @@ find_exits <- function(tracker_data, border, side=c(-1, 1),
     ) %>%
     lapply(., function(x) mask_FUN(x, ...)) %>%
     do.call(rbind, .) %>%
-    dplyr::filter(out_of_zone) %>%
+    dplyr::filter(cross) %>%
     tibble::as_tibble(.)
   
   cross_data$x <- cross_data$border * cross_data$side

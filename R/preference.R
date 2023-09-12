@@ -22,12 +22,10 @@ compute_preference_index <- function(annotated_data, min_exits_required = 5) {
   na <- FALSE
   if(! "appetitive" %in% colnames(pi_data)) {pi_data$appetitive <- 0; na <- TRUE}
   if(! "aversive" %in% colnames(pi_data)) {pi_data$aversive <- 0; na <- TRUE}
-    
+
   pi_data[is.na(pi_data$appetitive), "appetitive"] <- 0
   pi_data[is.na(pi_data$aversive), "aversive"] <- 0
-  
-  # pi_data[, c('appetitive', 'aversive')][is.na(pi_data[, c('appetitive', 'aversive')])] <- 0
-  
+
   pi_data_summ <- pi_data %>%
     dplyr::ungroup() %>%
     dplyr::nest_by(region_id) %>%
@@ -39,6 +37,15 @@ compute_preference_index <- function(annotated_data, min_exits_required = 5) {
   
   # sort the columns so the order is fixed
   pi_data <- pi_data[, c("region_id", "appetitive", "aversive", "preference_index")]
+  
+  missing_rois <- setdiff(1:20, pi_data$region_id)
+  for (roi in missing_rois) {
+    pi_data <- rbind(
+      pi_data,
+      data.frame(region_id = roi, appetitive = NA, aversive =NA, preference_index=NA)
+    )
+  }
+  pi_data <- pi_data[order(pi_data$region_id, decreasing=FALSE), ]
   
   if(na) pi_data$preference_index <- "NA"
   

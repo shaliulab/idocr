@@ -10,32 +10,88 @@ find_rois <- function(experiment_folder) {
   return(roi_files)
 }
 
-#' Set the median x position to 0
+#' Center the trace of movement along x axis so x=0 is set
+#' at the center of the chamber
+#' Estimating the center via Computer Vision is very costly because the center
+#' does not look similar across chambers (some chambers are wider than others, etc)
+#' For that reason, if you as user wish maximum accuracy,
+#' you should run the midline-detector/main.py script, available here
+#' https://github.com/shaliulab/midline-detector
+#' like so:
+#' python main <--experiment-folder EXPERIMENT_FOLDER> 
 #' @eval document_tracker_data()
-center_around_median <- function(tracker_data) {
+#' @eval document_experiment_folder()
+#' @param infer If false, read coords of roi centers from ROI_CENTER file
+#' otherwise estimate based on fly behavior
+#' @importFrom dplyr left_join select
+center_dataset <- function(experiment_folder, tracker_data, infer=FALSE) {
   # TODO Should we infer the min/max from the data
   # or rather hardcode them?
-  min_x <- min(tracker_data$x)
-  max_x <- max(tracker_data$x)
   
-  x <- tracker_data$x - min_x
-  x <- x - max_x / 2
-  tracker_data$x <- x
+  center <- NULL
+  
+  if (infer) {
+    x <- tracker_data$x
+    x <- x - min(x)
+    x <- x - max(x) / 2
+    tracker_data$x <- x
+  } else {
+    roi_center <- get_roi_center(experiment_folder)
+    tracker_data <- dplyr::left_join(tracker_data, roi_center, by="region_id")
+    tracker_data$x <- tracker_data$x - tracker_data$center
+    tracker_data <- tracker_data %>% dplyr::select(-center)
+  }
   return(tracker_data)
 }
 
+#' Read the x coordinate of the center of the rois
+#' This is useful for precise delineation of the decision zone
+#' The function expects the ROI_CENTER and ROI_MAP files to exist
+#' @eval document_experiment_folder()
+#' @importFrom dplyr left_join select
+#' @importFrom data.table fread
+get_roi_center <- function(experiment_folder) {
+  
+  x <- region_id <- NULL
+  
+  roi_center_file <- grep(x = list.files(experiment_folder, full.names = TRUE), pattern = "ROI_CENTER", value = T)
+  roi_map_file <- grep(x = list.files(experiment_folder, full.names = TRUE), pattern = "ROI_MAP", value = T)
+  
+  if (length(roi_center_file) == 0) {
+    warning("Please execute mindline-detector and save a ROI_CENTER.csv file in the folder")
+    roi_center <- data.table(region_id=1:20, center=0)
+  } else {
+    roi_center <- data.table::fread(roi_center_file)
+    if (any(roi_center$center == 0)) {
+      warning("I found a ROI_CENTER file but it is not correct.
+              Please check again a non-zero center is available for all ROIs"
+      )
+    }
+    roi_map <- data.table::fread(roi_map_file)
+    roi_map$region_id <- roi_map$value
+    roi_center <- dplyr::left_join(roi_center, dplyr::select(roi_map, x, region_id), by="region_id")
+    roi_center$center <- roi_center$center - roi_center$x
+    roi_center <- dplyr::select(roi_center, -x)
+  }
+  return(roi_center)
+}
 
+
+#' Give each animal a unique id based on the run id of the experiment/machine
+#' and its position on the machine#' 
 #' @importFrom stringr str_pad
-construct_animal_id <- function(experiment_folder, tracker_data) {
- 
+#' @eval document_experiment_folder()
+#' @param region_id Position of the animal in the machine
+construct_animal_id <- function(experiment_folder, region_id) {
+  
   field <- value <- NULL
   metadata <- load_metadata(experiment_folder)
   run_id <- metadata[field == "run_id", value]
-  tracker_data$id <- paste0(run_id, "|", stringr::str_pad(
-    string = tracker_data$region_id, width = 2, side = "left", pad = "0"
-    )
+  id <- paste0(run_id, "|", stringr::str_pad(
+    string = region_id, width = 2, side = "left", pad = "0"
   )
-  return(tracker_data)
+  )
+  return(id)
 }
 
 #' Read a single ROI csv file
@@ -57,7 +113,9 @@ read_roi <- function(file) {
   }
 }
 
-
+#' Remove duplicate entries in a data table
+#' Duplicates have same region_id and t
+#' @eval document_tracker_data()
 #' @importFrom dplyr select
 #' @importFrom magrittr `%>%`
 remove_duplicates <- function(tracker_data) {
@@ -88,11 +146,11 @@ keep_needed_columns_only <- function(experiment_folder, tracker_data) {
 #' @return tracker_data
 preprocess_tracker <- function(experiment_folder, tracker_data) {
   # construct the id of the flies
-  tracker_data <- construct_animal_id(experiment_folder, tracker_data)
+  tracker_data$id <- construct_animal_id(experiment_folder, tracker_data$region_id)
   
   # center the data around the median
   # i.e. estimate the center of the chamber using the median (central) x
-  tracker_data <- center_around_median(tracker_data)
+  tracker_data <- center_dataset(experiment_folder, tracker_data, infer=FALSE)
   
   # keep only needed columns
   tracker_data <- keep_needed_columns_only(experiment_folder, tracker_data)
@@ -114,7 +172,7 @@ load_rois <- function(experiment_folder) {
   
   # link .csv files
   roi_files <- find_rois(experiment_folder)
-
+  
   # read them into a single tibble
   tracker_data <- roi_files %>%
     # read the data into R
@@ -123,7 +181,7 @@ load_rois <- function(experiment_folder) {
     do.call(what = rbind, .) %>%
     # cast the one data.table into a tibble
     tibble::as_tibble(.)
-
+  
   if (nrow(tracker_data) < 10) {
     return(NULL)
   }
@@ -148,7 +206,7 @@ load_rois <- function(experiment_folder) {
 add_empty_roi <- function(experiment_folder, tracker_data, n=20) {
   
   . <- sql_type <- NULL
-
+  
   var_map <- load_varmap(experiment_folder)
   R_types <- list("SMALLINT" = integer, "BOOLEAN" = logical, "INT" = integer)
   tracker_data_template <- var_map[, map(sql_type, ~R_types[[.]](length=1))]
@@ -185,7 +243,10 @@ add_empty_roi <- function(experiment_folder, tracker_data, n=20) {
 #' Load data from n channels
 #' and expose missing data if needed 
 #' @param ... Arguments to load_rois
-#' @param n Number of channels desired
+#' @param n Number of channels desired.
+#' If less than this amount of animals is found, idocr
+#' will make up animals until this amount is hit
+#' It (should match nrow x ncol of layout passed in the idocr function)
 #' @return tibble
 #' @export
 #' 
@@ -209,7 +270,7 @@ load_systematic_rois <- function(..., n=20) {
 #' @param minimum Minimum number of datapoints in a row to be considered
 #' not sparse (not noise) and thus valid
 remove_empty_roi <- function(tracker_data, minimum=100) {
-
+  
   id <- . <- NULL
   
   # check whether this is running in a testing environment

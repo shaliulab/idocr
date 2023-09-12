@@ -86,7 +86,7 @@ main <- function(experiment_folder, Test, experimenter, experiment_type, CS_plus
   # Moreover, you get SUMMARY and PI .csv files
   
   
-  parallel::mclapply(X=c(5), mc.cores = mc.cores, FUN = function(border_mm) {
+  parallel::mclapply(X=5:9, mc.cores = mc.cores, FUN = function(border_mm) {
 
     names(analysis_mask) <- c(
       paste0(Test, "_GLOBAL_", border_mm, "mm"),
@@ -103,7 +103,6 @@ main <- function(experiment_folder, Test, experimenter, experiment_type, CS_plus
     )
     
     src_file <- rstudioapi::getActiveDocumentContext()$path
-    lapply(names(analysis_mask), function(mask_name) {
       outputs <- idocr(
         experiment_folder = experiment_folder,
         treatments = treatments,
@@ -113,36 +112,12 @@ main <- function(experiment_folder, Test, experimenter, experiment_type, CS_plus
         subtitle = paste0(experimenter,"_",experiment_type, ", ", CS_plus, ", ", concentration, " & ", US_Volt_pulses, ", ", Genotype , ", ",Food, ", ", Incubator_Light),
         delay = delay, CSplus_idx = CSplus_idx,
         mask_duration = mask_duration,
-        analysis_mask = analysis_mask[[mask_name]],
+        analysis_mask = analysis_mask,
         labels = labels,
         nrow=nrow, ncol=ncol,
         height=plot_height, width=plot_width
       )
-      out_folder <- mask_name
-      # if (file.exists(out_folder)) {
-      #   unlink(out_folder, recursive = TRUE)
-      # }
-      
-      dir.create(file.path(experiment_folder, out_folder), showWarnings = F)
-      lapply(outputs$paths, function(path) {
-        parts <- strsplit(basename(path), "\\.(?=[^.]+$)", perl = TRUE)
-        
-        # Extract the base name and extension
-        base_name <- parts[[1]][1]
-        extension <- parts[[1]][2]
-        
-        dest <- file.path(
-          experiment_folder, out_folder, paste0(base_name, "_", mask_name, ".", extension)
-        )
-        message(paste0("Copying ", path, " -> ", dest))
-        file.copy(path, dest)
-        
-      })
-
-      return(NULL)
-      
-    })
-
+      invisible(NULL)
   })
 }
 

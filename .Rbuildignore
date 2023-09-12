@@ -7,4 +7,8 @@ data-raw/
 ^data-raw$
 .covrignore
 .*.avi
-
+inst/extdata/toy/FIRST_TWO_MINS/
+inst/extdata/toy/SECOND_BLOCK/
+inst/extdata/2021-04-11_17-59-00
+inst/extdata/real/GLOBAL
+inst/extdata/single_fly

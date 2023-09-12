@@ -4,12 +4,14 @@
 \alias{mark_decision_zone}
 \title{Draw a dashed line to signal the decision zone}
 \usage{
-mark_decision_zone(gg, border)
+mark_decision_zone(gg, border, center_alpha = 0.2)
 }
 \arguments{
 \item{gg}{ggplot2 object}
 
 \item{border}{Pixels between center and decision zone}
+
+\item{center_alpha}{Transparency of line marking the center of the chamber}
 }
 \value{
 gg ggplot2 object

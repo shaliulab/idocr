@@ -88,7 +88,7 @@ mark_time <- function(data, gg, freq=60, downward=TRUE) {
 #' @eval document_gg("return")
 mark_space <- function(limits, gg, extra=c(0)) {
   breaks <- c(limits[1], extra, limits[2])
-  gg <- gg + scale_x_continuous(limits = limits, breaks = breaks)
+  gg <- gg + scale_x_continuous(limits = limits, breaks = breaks, labels = round(breaks, digits = 0))
   return(gg)
 }
 
@@ -99,20 +99,30 @@ mark_space <- function(limits, gg, extra=c(0)) {
 #' The base plot contains all individual panels,
 #' dots to mark the fly positions
 #' @eval document_data()
+#' @param line_alpha Alpha of position trace
+#' @param nrow Number of rows in facet layout
+#' @param ncol Number of columns in facet layout
 #' @inherit mark_space
 #' @inherit mark_time
 #' @import ggplot2
 #' @eval document_gg("return")
 #' @seealso [mark_space()]
 #' @seealso [mark_time()]
+#' @param nrow Number of rows used for facetting data
+#' @param ncol Number of cols used for facetting data
 #' @export
-base_plot <- function(data, limits, downward=TRUE, ...) {
+base_plot <- function(data, limits, line_alpha=1, downward=TRUE, nrow=1, ncol=20) {
 
   x <- id <- NULL
 
-  theme_set(theme_bw() + theme(
-    panel.spacing = unit(1, "lines"),
-    text = element_text(size = 20))
+  theme_set(theme_bw() +
+    theme(
+      panel.spacing = unit(1, "lines"),
+      text = element_text(size = 20)
+    ) + theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()
+    )
   )
   
   # initialize canvas
@@ -122,18 +132,27 @@ base_plot <- function(data, limits, downward=TRUE, ...) {
   gg <- gg +
     geom_line(
       data = data, mapping = aes(x = x, y = t, group = id),
-      orientation="y"
+      # absolutely needed if we want to make a line plot with time on the y axis
+      orientation="y",
+      # intensity of line
+      alpha=line_alpha
     )
   
   # add custom time marks (we want every 60 seconds)
   gg <- mark_time(data, gg, freq=60, downward=downward)
   gg <- mark_space(limits, gg, extra=c(0))
   
+  if(length(unique(data$facet)) != (nrow * ncol)) {
+    # browser()
+    stop("The passed layout does not match the number of animals.
+       Make sure nrow * ncol evaluates to the number of animals in the dataset ")
+  }
+  
   # segregate the animals, one plot for each
   gg <- gg + facet_wrap(
     . ~ facet,
     drop = F,
-    ...
+    nrow=nrow, ncol=ncol
   )
   
   return(gg)
@@ -247,11 +266,15 @@ combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE, plot_m
 #' @param colors Named vector of colors. Values should be colors
 #' and names need to map to controller events
 #' @param plot_crosses Whether to display the decision zone crosses (TRUE) or not.
+#' @eval document_suffix()
+#' @eval document_result_folder()
 #' @inherit mark_analysis_mask
 #' @inherit mark_stimuli
 #' @inherit annotate_facet
 #' @inherit mark_time
 #' @inherit combine_inputs
+#' @inherit base_plot
+#' @param cross_size Size of dots used to represent decision zone exits (crosses)
 #' @param ... Extra arguments for save_plot
 #' @seealso [mark_stimuli()]
 #' @seealso [mark_decision_zone()]
@@ -260,6 +283,7 @@ combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE, plot_m
 #' @export
 plot_dataset <- function(experiment_folder,
                          dataset, analysis,
+                         result_folder = NULL,
                          plot_preference_index = TRUE,
                          plot_decision_zone = TRUE,
                          plot_crosses = TRUE,
@@ -276,8 +300,14 @@ plot_dataset <- function(experiment_folder,
                          plot_mask = NULL,
                          downward=TRUE,
                          nrow=1, ncol=20,
+                         suffix = "",
+                         cross_size = 2,
+                         line_alpha = 1,
                          ...
 ) {
+  
+  
+  if (is.null(result_folder)) result_folder <- experiment_folder
   
   message("Validating passed data")
   validate_inputs(dataset, analysis)
@@ -298,7 +328,11 @@ plot_dataset <- function(experiment_folder,
   # initialize the plot by creating a tracker trace
   # for each animal separately
   message("Generating base plot")
-  gg <- base_plot(tracker_data, limits, downward=downward, nrow=nrow, ncol=ncol)
+  
+  gg <- base_plot(
+    tracker_data, limits, downward=downward,
+    line_alpha=line_alpha, nrow=nrow, ncol=ncol
+  )
   
   # add rectangular marks to sign the controller events
   message("Marking controller events")
@@ -315,7 +349,7 @@ plot_dataset <- function(experiment_folder,
   
   # add points whenever an exit (decision zone cross) happens
   message("Marking decision zone crosses")
-  if (plot_crosses) gg <- mark_crosses(gg, crossing_data)
+  if (plot_crosses) gg <- mark_crosses(gg, crossing_data, size=cross_size)
   
   # add text on axis, title, ...
   message("Documenting plot")
@@ -323,7 +357,7 @@ plot_dataset <- function(experiment_folder,
   
   # save the plot to the experiment's folder
   message("Saving plot to ->", experiment_folder)
-  paths <- save_plot(gg, experiment_folder, ...)
+  paths <- save_plot(gg, experiment_folder=experiment_folder, result_folder=result_folder, suffix=suffix, ...)
   
   return(list(paths=paths, plot=gg))
 }
@@ -343,7 +377,7 @@ mark_analysis_mask <- function(gg, analysis_mask) {
   
   mask_coords <- data.frame(
     x = rep(limits, times=2),
-    y = rep(analysis_mask, each=2)
+    y = rep(unlist(analysis_mask), each=2)
   )
   mask_coords <- mask_coords[c(1,2,4,3),]
   
@@ -372,9 +406,9 @@ document_plot <- function(gg, experiment_folder=NULL, ...) {
   
   if (!is.null(experiment_folder)) {
     metadata <- load_metadata(experiment_folder)
-    run_id <- metadata[field == "run_id", value]
+    title <- metadata[field == "date_time", value]
   } else {
-    run_id <- ""
+    title <- ""
   }
   
   # TODO Make the call smarter by passing title and caption
@@ -383,7 +417,7 @@ document_plot <- function(gg, experiment_folder=NULL, ...) {
   gg <- gg +
     labs(
       x = "Chamber (mm)", y = "t (s)",
-      title = run_id,
+      title = title,
       caption = paste0("Produced on ", idocr_time()),
       ...
     )
@@ -423,7 +457,7 @@ mark_stimuli <- function(gg, rectangles, colors, labels) {
       x = x, y=t,
       group=group,
       fill=treatment),
-    color = "black", alpha=0.4
+    color = NA, alpha=0.4
   ) +
     scale_fill_manual(
       name = 'Treatment',
@@ -439,9 +473,11 @@ mark_stimuli <- function(gg, rectangles, colors, labels) {
 #'
 #' @eval document_gg()
 #' @eval document_cross_data()
+#' @param size Size of markers representing crosses 
+#' @param color Color of the points, black by default
 #' @importFrom dplyr select left_join
 #' @import ggplot2
-mark_crosses <- function(gg, cross_data) {
+mark_crosses <- function(gg, cross_data, size=2, color="black") {
   
   x <- t <- NULL
   
@@ -451,11 +487,11 @@ mark_crosses <- function(gg, cross_data) {
   gg <- gg +
     geom_point(
       data = appetitive, aes(x = x, y = t),
-      color = "black", size = 2
+      color = color, size = size
     ) +
     geom_point(
       data = aversive, aes(x = x, y = t),
-      color = "black", size = 2, shape = 4
+      color = color, size = size, shape = 4
     )
   
   return(gg)
@@ -465,11 +501,13 @@ mark_crosses <- function(gg, cross_data) {
 #'
 #' @eval document_gg()
 #' @param border Pixels between center and decision zone
+#' @param center_alpha Transparency of line marking the center of the chamber
 #' @eval document_gg("return")
 #' @import ggplot2
-mark_decision_zone <- function(gg, border) {
+mark_decision_zone <- function(gg, border, center_alpha=0.2) {
   gg <- gg + geom_vline(xintercept = -border, linetype = "dashed")
   gg <- gg + geom_vline(xintercept = border, linetype = "dashed") 
+  gg <- gg + geom_vline(xintercept = 0, linetype="dashed", alpha=center_alpha)
   return(gg)
 }
 
@@ -477,12 +515,15 @@ mark_decision_zone <- function(gg, border) {
 #' 
 #' @param gg ggplot2 plot
 #' @eval document_experiment_folder()
+#' @eval document_result_folder()
+#' @eval document_suffix()
 #' @param ... Extra arguments for ggsave
 #' @seealso [ggplot2::ggsave()]
 #' @import ggplot2
-save_plot <- function(gg, experiment_folder, ...) {
+save_plot <- function(gg, experiment_folder, result_folder=NULL, suffix="", ...) {
   
   field <- value <- NULL
+  if (is.null(result_folder)) result_folder <- experiment_folder
   
   if (any(grep(x = list.files(experiment_folder), pattern = "METADATA"))) {
     metadata <- load_metadata(experiment_folder)
@@ -495,11 +536,24 @@ save_plot <- function(gg, experiment_folder, ...) {
     plot_basename <- "DUMMY"
   }
   
+  plot_basename <- ifelse(suffix=="",
+                          plot_basename,
+                          paste0(plot_basename, "_", suffix)
+  )
+  
+  
   # specify default width, height and dpi of plots
   ggsave_kwargs <- list(...)
-  width = ifelse(is.null(ggsave_kwargs$width), 16, ggsave_kwargs$width)
-  height = ifelse(is.null(ggsave_kwargs$height), 16, ggsave_kwargs$height)
-  dpi = ifelse(is.null(ggsave_kwargs$dpi), "print", ggsave_kwargs$dpi)
+  if (testthat_is_testing()) {
+    width = ifelse(is.null(ggsave_kwargs$width), 16, ggsave_kwargs$width)
+    height = ifelse(is.null(ggsave_kwargs$height), 16, ggsave_kwargs$height)
+    dpi = ifelse(is.null(ggsave_kwargs$dpi), 16, ggsave_kwargs$dpi)
+  } else {
+    width = ifelse(is.null(ggsave_kwargs$width), 25, ggsave_kwargs$width)
+    height = ifelse(is.null(ggsave_kwargs$height), 12, ggsave_kwargs$height)
+    dpi = ifelse(is.null(ggsave_kwargs$dpi), "print", ggsave_kwargs$dpi)
+  }
+  
   paths <- list()
   
   for (extension in c('pdf', 'png')) {
@@ -509,7 +563,7 @@ save_plot <- function(gg, experiment_folder, ...) {
       plot_basename,
       extension
     )
-    path <- file.path(experiment_folder, plot_filename)
+    path <- file.path(result_folder, plot_filename)
     paths[[extension]] <- path
     
     # save!

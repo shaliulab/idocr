@@ -71,12 +71,18 @@ preprocess_dataset <- function(
   dataset$tracker <- preprocess_tracker(experiment_folder, dataset$tracker)
   dataset$controller <- preprocess_controller(dataset$controller, delay=delay)
   
-  dataset$limits <- c(
-    min(dataset$tracker$x),
-    max(dataset$tracker$x)
-  )
-
-  pixel_to_mm_ratio <- 2.3
+  # dataset$limits <- c(
+  #   min(dataset$tracker$x),
+  #   max(dataset$tracker$x)
+  # )
+  # dataset$limits <- c(
+  #   -max(abs(dataset$tracker$x)),
+  #   +max(abs(dataset$tracker$x))
+  # )
+  config <- read_config()
+  pixel_to_mm_ratio <- config$pixel_to_mm_ratio
+  dataset$limits <- config$limits
+  stopifnot(!is.null(pixel_to_mm_ratio))
   border <- border_mm * pixel_to_mm_ratio
   
   if (check_api_version(treatments) == 1) {
@@ -97,10 +103,11 @@ preprocess_dataset <- function(
 #' 
 #' Load the .csv database available at the passed directory
 #' @eval document_experiment_folder()
+#' @inherit load_systematic_rois
 #' @export
-load_dataset <- function(experiment_folder) {
+load_dataset <- function(experiment_folder, n=20) {
   # Load tracker data (ROI - Region of Interest)
-  tracker_data <- load_systematic_rois(experiment_folder)
+  tracker_data <- load_systematic_rois(experiment_folder, n=n)
   
   # Load controller data
   ## Wide format table where every piece of stimulus has a column and the values are 1 or 0

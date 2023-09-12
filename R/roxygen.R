@@ -2,6 +2,12 @@ document_experiment_folder <- function() {
     "@param experiment_folder Path to folder containing IDOC results .csv files"
 }
 
+document_result_folder <- function(required=FALSE) {
+  
+  docs <- "@param result_folder Path to a folder where to save results."
+  if (!required) {docs <- paste0(docs, " If not passaed, it is set to experiment_folder")}
+}
+
 document_gg <- function(x="param") {
     paste0("@", x, " gg ggplot2 object")
 }
@@ -85,3 +91,11 @@ document_stimulus <- function() {
   a column in the passed `controller_data`
   " 
 }
+
+document_suffix <- function() {
+  "@param suffix A character (word) that will differentiate resulting output
+  from other output produced on the same experiment folder.
+  Useful for segmenting the experiment into different periods of interest
+  and analyzing these periods separately."
+}
+

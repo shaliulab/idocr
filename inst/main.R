@@ -66,8 +66,7 @@ p1 <- idocr(experiment_folder = experiment_folder,
             src_file = src_file,
             subtitle = description,
             delay = delay,
-            mask_duration = mask_duration,
-            analysis_mask = c(60, 120)
+            mask_duration = mask_duration
             )
 
 export_summary(experiment_folder = experiment_folder)

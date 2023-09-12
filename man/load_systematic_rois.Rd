@@ -10,7 +10,10 @@ load_systematic_rois(..., n = 20)
 \arguments{
 \item{...}{Arguments to load_rois}
 
-\item{n}{Number of channels desired}
+\item{n}{Number of channels desired.
+If less than this amount of animals is found, idocr
+will make up animals until this amount is hit
+It (should match nrow x ncol of layout passed in the idocr function)}
 }
 \value{
 tibble

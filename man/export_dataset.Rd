@@ -24,7 +24,16 @@ value
 \item pi: preference index scored by each animal
 }}
 
-\item{...}{Extra argumetns to export_summary}
+\item{...}{Extra arguments to export_summary}
+
+\item{result_folder}{Path to a folder where to save results. If not passaed, it is set to experiment_folder}
+
+\item{suffix}{A character (word) that will differentiate resulting output
+from other output produced on the same experiment folder.
+Useful for segmenting the experiment into different periods of interest
+and analyzing these periods separately.}
+
+\item{summary}{Whether to export a summary or not}
 }
 \description{
 Generate the preference index table

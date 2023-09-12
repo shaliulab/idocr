@@ -6,19 +6,25 @@
 Build a filename based on the metadata and a key}
 \usage{
 build_filename(
-  experiment_folder = NULL,
-  metadata = NULL,
+  result_folder,
+  metadata,
   key = NULL,
+  suffix = "",
   extension = ".csv"
 )
 }
 \arguments{
-\item{experiment_folder}{Path to folder containing IDOC results .csv files}
+\item{result_folder}{Path to a folder where to save results. If not passaed, it is set to experiment_folder}
 
 \item{metadata}{data.table with all information about the experiment
 i.e. when it was done, etc}
 
 \item{key}{Name of a table in the resulting database}
+
+\item{suffix}{A character (word) that will differentiate resulting output
+from other output produced on the same experiment folder.
+Useful for segmenting the experiment into different periods of interest
+and analyzing these periods separately.}
 
 \item{extension}{Extension of file (.csv, ...)}
 }

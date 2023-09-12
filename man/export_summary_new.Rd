@@ -4,12 +4,25 @@
 \alias{export_summary_new}
 \title{Export a single csv with all key data for analysis and plotting outside of R}
 \usage{
-export_summary_new(experiment_folder, output_csv = NULL, ...)
+export_summary_new(
+  experiment_folder,
+  result_folder = NULL,
+  output_csv = NULL,
+  suffix = "",
+  ...
+)
 }
 \arguments{
 \item{experiment_folder}{Path to folder containing IDOC results .csv files}
 
+\item{result_folder}{Path to a folder where to save results. If not passaed, it is set to experiment_folder}
+
 \item{output_csv}{Path of csv output. If not provided,}
+
+\item{suffix}{A character (word) that will differentiate resulting output
+from other output produced on the same experiment folder.
+Useful for segmenting the experiment into different periods of interest
+and analyzing these periods separately.}
 
 \item{...}{Extra arguments to make_summary}
 }
