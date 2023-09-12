@@ -14,6 +14,12 @@ setwd(Destination)
 #################################Folders#############################
 experiment_folder = "2023-08-09_13-56-17"
 Test <- "PRE"
+analysis_mask <- list(
+  global = c(0, Inf),
+  trial1 = c(58, 122) + delay,
+  trial2 = c(178, 242) + delay
+)
+
 #################################experimenter#############################
 experimenter = "ET"
 experiment_type = "Aversive_Memory_PRE_paired"
@@ -77,12 +83,7 @@ mask_duration <- 1
 
 lapply(1:9, function(border_mm) {
   
-  analysis_mask <- list(
-    global = c(0, Inf),
-    trial1 = c(58, 122) + delay,
-    trial2 = c(178, 242) + delay
-  )
-  
+
   names(analysis_mask) <- c(
     paste0(Test, "_GLOBAL_", border_mm, "mm"),
     paste0(Test, "_1_", border_mm, "mm"),
