@@ -37,6 +37,9 @@ compute_preference_index <- function(annotated_data, min_exits_required = 5) {
   # na should be 0 in this case
   pi_data <- dplyr::full_join(pi_data, pi_data_summ)
   
+  # sort the columns so the order is fixed
+  pi_data <- pi_data[, c("region_id", "appetitive", "aversive", "preference_index")]
+  
   if(na) pi_data$preference_index <- "NA"
   
   return(pi_data)
