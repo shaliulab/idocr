@@ -58,15 +58,22 @@ get_roi_center <- function(experiment_folder) {
   roi_map_file <- grep(x = list.files(experiment_folder, full.names = TRUE), pattern = "ROI_MAP", value = T)
   
   if (length(roi_center_file) == 0) {
-    warning("Please execute mindline-detector and save a ROI_CENTER.csv file in the folder")
-    roi_center <- data.table(region_id=1:20, center=0)
-  } else {
+    warning("Please execute midline-detector and save a ROI_CENTER.csv file in the folder")
+    roi_center_file <- system.file(file.path(Sys.getenv("IDOC_NAME"), "ROI_CENTER.csv"), package = "idocr2")
+    if (roi_center_file == "") {
+      roi_center <-  data.table::data.table(region_id=1:20, center=0)
+    } else {
+      roi_center <- data.table::fread(roi_center_file)
+    }
+  }  else {
     roi_center <- data.table::fread(roi_center_file)
+    
+  }
+  
     if (any(roi_center$center == 0)) {
       warning("I found a ROI_CENTER file but it is not correct.
-              Please check again a non-zero center is available for all ROIs"
-      )
-    }
+                Please check again a non-zero center is available for all ROIs"
+    )
     roi_map <- data.table::fread(roi_map_file)
     roi_map$region_id <- roi_map$value
     roi_center <- dplyr::left_join(roi_center, dplyr::select(roi_map, x, region_id), by="region_id")
