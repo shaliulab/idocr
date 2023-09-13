@@ -23,6 +23,7 @@ plot_dataset(
   suffix = "",
   cross_size = 2,
   line_alpha = 1,
+  do_mark_analysis_mask = TRUE,
   ...
 )
 }

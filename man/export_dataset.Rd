@@ -4,10 +4,19 @@
 \alias{export_dataset}
 \title{Export analysis results to experiment_folder}
 \usage{
-export_dataset(experiment_folder, dataset, analysis, ...)
+export_dataset(
+  experiment_folder,
+  result_folder,
+  dataset,
+  analysis,
+  suffix,
+  ...
+)
 }
 \arguments{
 \item{experiment_folder}{Path to folder containing IDOC results .csv files}
+
+\item{result_folder}{Path to a folder where to save results. If not passaed, it is set to experiment_folder}
 
 \item{dataset}{List of raw data including:
 \itemize{
@@ -24,14 +33,12 @@ value
 \item pi: preference index scored by each animal
 }}
 
-\item{...}{Extra arguments to export_summary}
-
-\item{result_folder}{Path to a folder where to save results. If not passaed, it is set to experiment_folder}
-
 \item{suffix}{A character (word) that will differentiate resulting output
 from other output produced on the same experiment folder.
 Useful for segmenting the experiment into different periods of interest
 and analyzing these periods separately.}
+
+\item{...}{Extra arguments to export_summary}
 
 \item{summary}{Whether to export a summary or not}
 }
