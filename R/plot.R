@@ -383,9 +383,8 @@ mark_analysis_mask <- function(gg, analysis_mask) {
   
   gg <- gg + geom_polygon(data = mask_coords,
                           mapping = aes(x=x,y=y),
-                          color="yellow", alpha=0.5,
-                          fill=NA, size=1,
-                          linetype="dashed")
+                          color="black", alpha=0.5,
+                          fill=NA, size=2)
   return(gg)
   
 }
