@@ -83,7 +83,7 @@ preprocess_dataset <- function(
   config <- read_config()
   pixel_to_mm_ratio <- config$pixel_to_mm_ratio
   dataset$limits <- config$limits
-  stopifnot(!is.null(pixel_to_mm_ratio))
+
   border <- border_mm * pixel_to_mm_ratio
   
   if (check_api_version(treatments) == 1) {

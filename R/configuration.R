@@ -1,5 +1,5 @@
 CONFIG_FILE <- "analysis_params.yaml"
-DEFAULT_CONFIG <- list(pixel_to_mm_ratio = 2.3, limits=c(-70, 70))
+DEFAULT_CONFIG <- list(pixel_to_mm_ratio = NULL, limits=c(NULL, NULL))
 #' @importFrom yaml read_yaml
 #' @import glue
 #' @export
@@ -12,5 +12,9 @@ read_config <- function() {
      config <- DEFAULT_CONFIG
      yaml::write_yaml(x = config, file=CONFIG_FILE)
   }
+  stopifnot(!is.null(config$pixel_to_mm_ratio))
+  stopifnot(!is.null(config$limits[1]))
+  stopifnot(!is.null(config$limits[2]))
+  
   return(config)
 }
