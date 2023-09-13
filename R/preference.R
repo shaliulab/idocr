@@ -11,10 +11,10 @@ compute_preference_index <- function(annotated_data, min_exits_required = 5) {
   region_id <- type <- data <- NULL
 
   pi_data <- annotated_data %>%
-    dplyr::group_by(region_id, type) %>%
+    dplyr::group_by(id, region_id, type) %>%
     dplyr::summarise(count = dplyr::n()) %>%
     tidyr::pivot_wider(
-      id_cols = "region_id",
+      id_cols = c("id", "region_id"),
       names_from = "type",
       values_from = "count"
     )
@@ -28,7 +28,7 @@ compute_preference_index <- function(annotated_data, min_exits_required = 5) {
 
   pi_data_summ <- pi_data %>%
     dplyr::ungroup() %>%
-    dplyr::nest_by(region_id) %>%
+    dplyr::nest_by(id, region_id) %>%
     dplyr::summarise(preference_index = preference_index(data$appetitive, data$aversive, min_exits_required = min_exits_required)) %>%
     dplyr::ungroup()
   
@@ -36,16 +36,16 @@ compute_preference_index <- function(annotated_data, min_exits_required = 5) {
   pi_data <- dplyr::full_join(pi_data, pi_data_summ)
   
   # sort the columns so the order is fixed
-  pi_data <- pi_data[, c("region_id", "appetitive", "aversive", "preference_index")]
+  pi_data <- pi_data[, c("id", "region_id", "appetitive", "aversive", "preference_index")]
   
   missing_rois <- setdiff(1:20, pi_data$region_id)
   for (roi in missing_rois) {
     pi_data <- rbind(
       pi_data,
-      data.frame(region_id = roi, appetitive = NA, aversive =NA, preference_index=NA)
+      data.frame(id=NA, region_id = roi, appetitive = NA, aversive =NA, preference_index=NA)
     )
   }
-  pi_data <- pi_data[order(pi_data$region_id, decreasing=FALSE), ]
+  pi_data <- pi_data[order(pi_data$id, decreasing=FALSE), ]
   
   if(na) pi_data$preference_index <- "NA"
   
