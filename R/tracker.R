@@ -29,7 +29,7 @@ center_dataset <- function(experiment_folder, tracker_data, infer=FALSE) {
   # or rather hardcode them?
   
   center <- NULL
-  
+
   if (infer) {
     x <- tracker_data$x
     x <- x - min(x)
@@ -63,23 +63,28 @@ get_roi_center <- function(experiment_folder) {
     if (roi_center_file == "") {
       roi_center <-  data.table::data.table(region_id=1:20, center=0)
     } else {
+      message(paste0("Reading ", roi_center_file))
       roi_center <- data.table::fread(roi_center_file)
-    }
-  }  else {
-    roi_center <- data.table::fread(roi_center_file)
     
+    }
+  } else {
+    message(paste0("Reading ", roi_center_file))
+    roi_center <- data.table::fread(roi_center_file)    
   }
   
-    if (any(roi_center$center == 0)) {
-      warning("I found a ROI_CENTER file but it is not correct.
-                Please check again a non-zero center is available for all ROIs"
-    )
-    roi_map <- data.table::fread(roi_map_file)
-    roi_map$region_id <- roi_map$value
-    roi_center <- dplyr::left_join(roi_center, dplyr::select(roi_map, x, region_id), by="region_id")
-    roi_center$center <- roi_center$center - roi_center$x
-    roi_center <- dplyr::select(roi_center, -x)
+  if (any(roi_center$center == 0)) {
+      warning(
+      "I found a ROI_CENTER file but it is not correct.
+      Please check again a non-zero center is available for all ROIs"
+      )
   }
+      
+  roi_map <- data.table::fread(roi_map_file)
+  roi_map$region_id <- roi_map$value
+  roi_center <- dplyr::left_join(roi_center, dplyr::select(roi_map, x, region_id), by="region_id")
+  roi_center$center <- roi_center$center - roi_center$x
+  roi_center <- dplyr::select(roi_center, -x)
+
   return(roi_center)
 }
 

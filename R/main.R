@@ -20,7 +20,7 @@ args <- list(
 
 #' @export
 #' @importFrom parallel mclapply
-main <- function(experiment_folder, Test, experimenter, experiment_type, CS_plus, concentration, US_Volt_pulses, Food, Incubator_Light, Genotype,mc.cores=1, partition="IDOC_RESULTS_TEMP") {
+main <- function(experiment_folder, Test, experimenter, experiment_type, CS_plus, concentration, US_Volt_pulses, Food, Incubator_Light, Genotype,mc.cores=1, partition="IDOC_RESULTS_TEMP", decision_zones=5:10) {
 
     if (substr(experiment_folder, 1, 1) != "/") {
       experiment_folder <- file.path(Sys.getenv(partition), experiment_folder)
@@ -86,7 +86,7 @@ main <- function(experiment_folder, Test, experimenter, experiment_type, CS_plus
   # Moreover, you get SUMMARY and PI .csv files
   
   
-  parallel::mclapply(X=5:9, mc.cores = mc.cores, FUN = function(border_mm) {
+  parallel::mclapply(X=decision_zones, mc.cores = mc.cores, FUN = function(border_mm) {
     
     names(analysis_mask) <- c(
       paste0(Test, "_GLOBAL_", border_mm, "mm"),

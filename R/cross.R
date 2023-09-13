@@ -83,7 +83,6 @@ seconds_mask <- function(cross_data, min_time = 0) {
 #' @importFrom tibble tibble
 #' @export
 cross_detector <- function(tracker_data, border, side=c(-1, 1)) {
-  
   length_encoding <- rle((tracker_data$x * side) > border)
   cross_data <- tibble::tibble(
     lengths = length_encoding$lengths,
@@ -129,6 +128,7 @@ find_exits <- function(tracker_data, border, side=c(-1, 1),
                        ...) {
   
   . <- id <- out_of_zone <- cross <- NULL
+
   if (!is.null(analysis_mask))
     tracker_data <- tracker_data %>%
       dplyr::filter(t >= unlist(analysis_mask)[1]) %>%

@@ -24,7 +24,8 @@ analyse_dataset <- function(dataset, min_exits_required=5, ...) {
     border = dataset$border,
     ...
   )
-
+  stopifnot(nrow(cross_data) > 0)
+  
   # one row per exit
   message("Assigning sign to exits (appetitive or aversive)")
   annotated_data <- annotate_cross_all(
