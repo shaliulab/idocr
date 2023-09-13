@@ -1,36 +1,15 @@
-##############################################
-# CHANGE CODE BELOW THIS LINE
-##############################################
-args <- list(
-  experiment_folder = "IDOC_002/test/2023-09-08_18-34-52",
-  Test = "POST",
-  analysis_mask <- list(
-    global = c(0, Inf),
-    trial1 = c(58, 122),
-    trial2 = c(178, 242)
-  ),
-  experimenter = "ET",
-  experiment_type = "Aversive_Memory_PRE_paired",
-  CS_plus = "OCT",
-  concentration = "1:500",          
-  #US_Volt_pulses = "US = ES_75V 12 pulses 1/4sec_1X"
-  US_Volt_pulses = "US = ES_75V 12 pulses 1/4sec_6X",        
-  #Food = "ATR+"
-  Food = "SA-ATR-",
-  Incubator_Light = "Blue",
-  Genotype = "Iso31",
-  mc.cores=1,
-  partition = "IDOC_RESULTS_TEMP"
-)
-
 #' @export
 #' @importFrom parallel mclapply
-#' @params delay Apply a time offset to the treatment time series
+#' @param delay Apply a time offset to the treatment time series
 #' to account for the time it takes for odour to arrive to the chamber. Units in seconds
 main <- function(experiment_folder, Test, analysis_mask, experimenter, experiment_type, CS_plus, concentration, US_Volt_pulses, Food, Incubator_Light, Genotype,mc.cores=1, partition="IDOC_RESULTS_TEMP", decision_zones=5:10, delay=2) {
-
-    if (substr(experiment_folder, 1, 1) != "/") {
-      experiment_folder <- file.path(Sys.getenv(partition), experiment_folder)
+    
+  if (substr(experiment_folder, 1, 1) != "/") {
+      root <- Sys.getenv(partition)
+      if (root == "") {
+        warning(paste0(partition, " not found"))
+      }
+      experiment_folder <- file.path(root, experiment_folder)
     }
   
     for (mask_name in names(analysis_mask)) {
