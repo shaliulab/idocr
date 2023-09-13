@@ -65,9 +65,9 @@ format_summary <- function(x) {
 #' @seealso [make_summary()]
 #' a new file in the experiment folder with key SUMMARY is produced
 export_summary_new <- function(experiment_folder, result_folder=NULL, output_csv=NULL, suffix= "", ...) {
-
+  
   if (is.null(result_folder)) result_folder <- experiment_folder
-
+  
   summary_data <- make_summary(...)
   
   if(is.null(output_csv)) {
@@ -82,7 +82,7 @@ export_summary_new <- function(experiment_folder, result_folder=NULL, output_csv
   message("Saving SUMMARY -> ", output_csv)
   fwrite_(summary_data, output_csv)
   
-
+  
   return(list(data=summary_data, path=output_csv))
 }
 
@@ -161,7 +161,7 @@ export_dataset <- function(experiment_folder, result_folder, dataset, analysis, 
     suffix=suffix,
     ...
   )
-
+  
   summary_data <- out$data
   summary_path <- out$path
   

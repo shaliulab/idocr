@@ -68,7 +68,7 @@ idocr <- function(experiment_folder,
     }
     names(result) <- names(analysis_mask)
   }
-
+  
   return(result)
 }
 
@@ -83,15 +83,15 @@ idocr <- function(experiment_folder,
 pipeline <- function(experiment_folder, dataset, min_exits_required, mask_duration, analysis_mask=NULL, ...) {
   
   
-   if(is.null(analysis_mask)) {
-     result_folder <- experiment_folder
-     suffix <- ""
-   } else {
-     if(length(names(analysis_mask)) < 1) stop("Please provide a name to every analysis mask")
-     result_folder <- file.path(experiment_folder, names(analysis_mask))
-     suffix <- names(analysis_mask)
-     if (! dir.exists(result_folder)) dir.create(result_folder)
-   }
+  if(is.null(analysis_mask)) {
+    result_folder <- experiment_folder
+    suffix <- ""
+  } else {
+    if(length(names(analysis_mask)) < 1) stop("Please provide a name to every analysis mask")
+    result_folder <- file.path(experiment_folder, names(analysis_mask))
+    suffix <- names(analysis_mask)
+    if (! dir.exists(result_folder)) dir.create(result_folder)
+  }
   
   message("Analysing dataset - ", experiment_folder, " ", suffix)
   
@@ -101,7 +101,7 @@ pipeline <- function(experiment_folder, dataset, min_exits_required, mask_durati
     min_time=mask_duration,
     analysis_mask=analysis_mask
   )
-
+  
   message("Plotting dataset -> ", experiment_folder)
   out <- plot_dataset(experiment_folder, dataset, analysis, result_folder=result_folder, analysis_mask=analysis_mask, suffix=suffix, ...)
   plot_paths <- out$paths
@@ -109,10 +109,10 @@ pipeline <- function(experiment_folder, dataset, min_exits_required, mask_durati
   
   message("Exporting results -> ", experiment_folder)
   out <- export_dataset(experiment_folder = experiment_folder,
-                 dataset = dataset, analysis = analysis,
-                 result_folder=result_folder,
-                 suffix=suffix
-                 )
+                        dataset = dataset, analysis = analysis,
+                        result_folder=result_folder,
+                        suffix=suffix
+  )
   csv_paths <- out$paths
   return(list(gg = gg, pi = analysis$pi, paths = c(plot_paths, csv_paths)))
 }

@@ -87,7 +87,7 @@ main <- function(experiment_folder, Test, experimenter, experiment_type, CS_plus
   
   
   parallel::mclapply(X=5:9, mc.cores = mc.cores, FUN = function(border_mm) {
-
+    
     names(analysis_mask) <- c(
       paste0(Test, "_GLOBAL_", border_mm, "mm"),
       paste0(Test, "_1_", border_mm, "mm"),
@@ -103,21 +103,21 @@ main <- function(experiment_folder, Test, experimenter, experiment_type, CS_plus
     )
     
     src_file <- rstudioapi::getActiveDocumentContext()$path
-      outputs <- idocr(
-        experiment_folder = experiment_folder,
-        treatments = treatments,
-        border_mm = border_mm,
-        min_exits_required = min_exits_required,
-        src_file = src_file,
-        subtitle = paste0(experimenter,"_",experiment_type, ", ", CS_plus, ", ", concentration, " & ", US_Volt_pulses, ", ", Genotype , ", ",Food, ", ", Incubator_Light),
-        delay = delay, CSplus_idx = CSplus_idx,
-        mask_duration = mask_duration,
-        analysis_mask = analysis_mask,
-        labels = labels,
-        nrow=nrow, ncol=ncol,
-        height=plot_height, width=plot_width
-      )
-      invisible(NULL)
+    outputs <- idocr(
+      experiment_folder = experiment_folder,
+      treatments = treatments,
+      border_mm = border_mm,
+      min_exits_required = min_exits_required,
+      src_file = src_file,
+      subtitle = paste0(experimenter,"_",experiment_type, ", ", CS_plus, ", ", concentration, " & ", US_Volt_pulses, ", ", Genotype , ", ",Food, ", ", Incubator_Light),
+      delay = delay, CSplus_idx = CSplus_idx,
+      mask_duration = mask_duration,
+      analysis_mask = analysis_mask,
+      labels = labels,
+      nrow=nrow, ncol=ncol,
+      height=plot_height, width=plot_width
+    )
+    invisible(NULL)
   })
 }
 

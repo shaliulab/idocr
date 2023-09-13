@@ -65,7 +65,7 @@ preprocess_dataset <- function(
   experiment_folder, dataset,
   treatments = c("TREATMENT_A", "TREATMENT_B"),
   delay=0, border_mm=5, CSplus_idx=1
-  ) {
+) {
   
   # Preprocess
   dataset$tracker <- preprocess_tracker(experiment_folder, dataset$tracker)
@@ -89,7 +89,7 @@ preprocess_dataset <- function(
     dataset$labels <- unname(treatments)
     treatments <- names(treatments)
   }
-
+  
   dataset$border <- border
   dataset$CSplus <- treatments[CSplus_idx]
   dataset$CSminus <- treatments[treatments != dataset$CSplus]
@@ -113,7 +113,7 @@ load_dataset <- function(experiment_folder, n=20) {
   ## Wide format table where every piece of stimulus has a column and the values are 1 or 0
   ## An extra column called t tells the time in seconds
   controller_data <- load_controller(experiment_folder)
-    
+  
   dataset <- list(tracker=tracker_data, controller=controller_data)
   return(dataset)
 }
