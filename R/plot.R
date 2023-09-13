@@ -192,7 +192,7 @@ annotate_facet <- function(data, plot_preference_index=TRUE) {
 #' @inherit plot_dataset
 validate_inputs <- function(dataset, analysis) {
   expected_pi_columns <- c(
-    "region_id", "appetitive",
+    "id", "region_id", "appetitive",
     "aversive", "preference_index"
   )
   
