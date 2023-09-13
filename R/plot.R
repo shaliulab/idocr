@@ -525,7 +525,7 @@ save_plot <- function(gg, experiment_folder, result_folder=NULL, suffix="", ...)
   field <- value <- NULL
   if (is.null(result_folder)) result_folder <- experiment_folder
   
-  if (any(grep(x = list.files(experiment_folder), pattern = "METADATA"))) {
+  if (!is.null(experiment_folder) && any(grep(x = list.files(experiment_folder), pattern = "METADATA"))) {
     metadata <- load_metadata(experiment_folder)
     plot_basename <- sprintf(
       "%s_%s",
