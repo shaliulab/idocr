@@ -4,6 +4,11 @@
 args <- list(
   experiment_folder = "IDOC_002/test/2023-09-08_18-34-52",
   Test = "POST",
+  analysis_mask <- list(
+    global = c(0, Inf),
+    trial1 = c(58, 122),
+    trial2 = c(178, 242)
+  ),
   experimenter = "ET",
   experiment_type = "Aversive_Memory_PRE_paired",
   CS_plus = "OCT",
@@ -20,31 +25,26 @@ args <- list(
 
 #' @export
 #' @importFrom parallel mclapply
-main <- function(experiment_folder, Test, experimenter, experiment_type, CS_plus, concentration, US_Volt_pulses, Food, Incubator_Light, Genotype,mc.cores=1, partition="IDOC_RESULTS_TEMP", decision_zones=5:10) {
+#' @params delay Apply a time offset to the treatment time series
+#' to account for the time it takes for odour to arrive to the chamber. Units in seconds
+main <- function(experiment_folder, Test, analysis_mask, experimenter, experiment_type, CS_plus, concentration, US_Volt_pulses, Food, Incubator_Light, Genotype,mc.cores=1, partition="IDOC_RESULTS_TEMP", decision_zones=5:10, delay=2) {
 
     if (substr(experiment_folder, 1, 1) != "/") {
       experiment_folder <- file.path(Sys.getenv(partition), experiment_folder)
+    }
+  
+    for (mask_name in names(analysis_mask)) {
+      analysis_mask[[mask_name]] <- analysis_mask[[mask_name]] + delay
     }
 
     nrow <- 1
     ncol <- 20
     plot_height <- 15
     plot_width <- 25
-    # Apply a time offset to the treatment time series
-    # to account for the time it takes for odour to
-    # arrive to the chambers
-    # Units in seconds
-    delay <- 2
-    
-    
+
   #################################Folders#############################
   
-  analysis_mask <- list(
-    global = c(0, Inf),
-    trial1 = c(58, 122) + delay,
-    trial2 = c(178, 242) + delay
-  )
-  
+
   #################################experimenter#############################
   
   # Change the name of the labels as you please
