@@ -303,6 +303,7 @@ plot_dataset <- function(experiment_folder,
                          suffix = "",
                          cross_size = 2,
                          line_alpha = 1,
+                         do_mark_analysis_mask=TRUE,
                          ...
 ) {
   
@@ -339,7 +340,7 @@ plot_dataset <- function(experiment_folder,
   gg <- mark_stimuli(gg, rectangles, colors, labels)
   
   
-  if (!is.null(analysis_mask)) {
+  if (!is.null(analysis_mask) && do_mark_analysis_mask) {
     message("Marking analysis mask")
     gg <- mark_analysis_mask(gg, analysis_mask)
   }
