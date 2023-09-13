@@ -37,6 +37,7 @@ idocr <- function(experiment_folder,
                   n=20,
                   ...) {
   
+  stopifnot(dir.exists(experiment_folder))
   document_script(src_file, experiment_folder)
 
   message("Loading dataset <- ", experiment_folder)
@@ -103,6 +104,7 @@ pipeline <- function(experiment_folder, dataset, min_exits_required, mask_durati
   )
   
   message("Plotting dataset -> ", experiment_folder)
+  saveRDS(object = list(dataset=dataset, analysis=analysis, analysis_mask=analysis_mask), file = file.path(result_folder, "plotting_params.rds"))
   out <- plot_dataset(experiment_folder, dataset, analysis, result_folder=result_folder, analysis_mask=analysis_mask, suffix=suffix, ...)
   plot_paths <- out$paths
   gg <- out$gg
