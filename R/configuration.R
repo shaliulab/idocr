@@ -3,8 +3,11 @@ DEFAULT_CONFIG <- list(pixel_to_mm_ratio = NULL, limits=c(NULL, NULL))
 #' @importFrom yaml read_yaml
 #' @import glue
 #' @export
-read_config <- function() {
-  if (file.exists(CONFIG_FILE)) {
+read_config <- function(file=NULL) {
+  if (!is.null(file) && file.exists(file)) {
+    message(glue::glue("Reading configuration from {file}"))
+    config <- yaml::read_yaml(file)
+  } else if (file.exists(CONFIG_FILE)) {
       message(glue::glue("Reading configuration from {CONFIG_FILE}"))
       config <- yaml::read_yaml(CONFIG_FILE)
   } else {
