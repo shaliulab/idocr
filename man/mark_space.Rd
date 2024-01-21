@@ -5,7 +5,7 @@
 \title{Mark space
 Place the ticks on the space axis so visualization is convenient}
 \usage{
-mark_space(limits, gg, extra = c(0))
+mark_space(limits, gg, extra = c(0), orientation = "y")
 }
 \arguments{
 \item{limits}{Position of ticks in space axis}

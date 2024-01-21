@@ -24,6 +24,9 @@ plot_dataset(
   cross_size = 2,
   line_alpha = 1,
   do_mark_analysis_mask = TRUE,
+  do_document = TRUE,
+  orientation = "y",
+  style = "default",
   ...
 )
 }

@@ -4,7 +4,14 @@
 \alias{mark_crosses}
 \title{Mark decision zone exit events (crosses)}
 \usage{
-mark_crosses(gg, cross_data, size = 2, color = "black")
+mark_crosses(
+  gg,
+  cross_data,
+  size = 2,
+  color = "black",
+  orientation = "y",
+  style = "default"
+)
 }
 \arguments{
 \item{gg}{ggplot2 object}

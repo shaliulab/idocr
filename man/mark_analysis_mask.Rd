@@ -4,7 +4,7 @@
 \alias{mark_analysis_mask}
 \title{Mark the analysis mask}
 \usage{
-mark_analysis_mask(gg, analysis_mask)
+mark_analysis_mask(gg, analysis_mask, orientation = "y")
 }
 \arguments{
 \item{gg}{ggplot2 object}

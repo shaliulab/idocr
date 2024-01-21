@@ -4,7 +4,7 @@
 \alias{mark_decision_zone}
 \title{Draw a dashed line to signal the decision zone}
 \usage{
-mark_decision_zone(gg, border, center_alpha = 0.2)
+mark_decision_zone(gg, border, center_alpha = 0.2, orientation = "y")
 }
 \arguments{
 \item{gg}{ggplot2 object}

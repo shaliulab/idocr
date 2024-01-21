@@ -4,7 +4,7 @@
 \alias{mark_time}
 \title{Mark time with a custom frequency}
 \usage{
-mark_time(data, gg, freq = 60, downward = TRUE)
+mark_time(data, gg, freq = 60, downward = TRUE, orientation = "y")
 }
 \arguments{
 \item{data}{List with entries roi, controller, border, limits.

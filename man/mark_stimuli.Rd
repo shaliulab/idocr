@@ -4,7 +4,7 @@
 \alias{mark_stimuli}
 \title{Mark stimuli / treatment action over time with rectangles on the plot}
 \usage{
-mark_stimuli(gg, rectangles, colors, labels)
+mark_stimuli(gg, rectangles, colors, labels, orientation = "y")
 }
 \arguments{
 \item{gg}{ggplot2 object}
