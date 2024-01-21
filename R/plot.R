@@ -48,7 +48,7 @@ sort_facet_levels <- function(facets) {
 #' @importFrom scales reverse_trans
 #' @import ggplot2
 #' @return ggplot2 object
-mark_time <- function(data, gg, freq=60, downward=TRUE) {
+mark_time <- function(data, gg, freq=60, downward=TRUE, orientation="y") {
   
   time_limits <- c(min(data$t), max(data$t))
   time_limits <- c(
@@ -56,18 +56,29 @@ mark_time <- function(data, gg, freq=60, downward=TRUE) {
     ceiling(time_limits[2] / freq) * freq
   )
   
-  if (downward) {
-    gg <- gg + scale_y_continuous(
-      limits = rev(time_limits),
-      breaks = seq(
-        from = time_limits[2],
-        to = time_limits[1],
-        by = -freq
-      ),
-      trans = scales::reverse_trans()
-    )
-  } else {
-    gg <- gg + scale_y_continuous(
+  if (orientation == "y") {
+    if (downward) {
+      gg <- gg + scale_y_continuous(
+        limits = rev(time_limits),
+        breaks = seq(
+          from = time_limits[2],
+          to = time_limits[1],
+          by = -freq
+        ),
+        trans = scales::reverse_trans()
+      )
+    } else {
+      gg <- gg + scale_y_continuous(
+        limits = time_limits,
+        breaks = seq(
+          from = time_limits[1],
+          to = time_limits[2],
+          by = freq
+        )
+      )
+    }  
+  } else if (orientation=="x") {
+    gg <- gg + scale_x_continuous(
       limits = time_limits,
       breaks = seq(
         from = time_limits[1],
@@ -76,6 +87,7 @@ mark_time <- function(data, gg, freq=60, downward=TRUE) {
       )
     )
   }
+  
   return(gg)
 }
 
@@ -86,12 +98,29 @@ mark_time <- function(data, gg, freq=60, downward=TRUE) {
 #' @param extra Position of ticks in space besides limits
 #' @import  ggplot2
 #' @eval document_gg("return")
-mark_space <- function(limits, gg, extra=c(0)) {
+mark_space <- function(limits, gg, extra=c(0), orientation="y") {
   breaks <- c(limits[1], extra, limits[2])
-  gg <- gg + scale_x_continuous(limits = limits, breaks = breaks, labels = round(breaks, digits = 0))
+  if (orientation=="y") gg <- gg + scale_x_continuous(limits = limits, breaks = breaks, labels = round(breaks, digits = 0))
+  else if (orientation=="x") gg <- gg + scale_y_continuous(limits = limits, breaks = breaks, labels = round(breaks, digits = 0))
   return(gg)
 }
 
+
+empty_canvas <- function() {
+  theme_set(theme_bw() +
+              theme(
+                panel.spacing = unit(1, "lines"),
+                text = element_text(size = 20)
+              ) + theme(
+                panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank()
+              )
+  )
+  
+  # initialize canvas
+  gg <- ggplot()
+  return(gg)
+}
 
 #' Generate base IDOC plot upon which
 #' more annotation layers can be added
@@ -99,6 +128,8 @@ mark_space <- function(limits, gg, extra=c(0)) {
 #' The base plot contains all individual panels,
 #' dots to mark the fly positions
 #' @eval document_data()
+#' @param data 
+#' @param limits
 #' @param line_alpha Alpha of position trace
 #' @param nrow Number of rows in facet layout
 #' @param ncol Number of columns in facet layout
@@ -111,52 +142,53 @@ mark_space <- function(limits, gg, extra=c(0)) {
 #' @param nrow Number of rows used for facetting data
 #' @param ncol Number of cols used for facetting data
 #' @export
-base_plot <- function(data, limits, line_alpha=1, downward=TRUE, nrow=1, ncol=20) {
+base_plot <- function(gg, data, limits, line_alpha=1, downward=TRUE, nrow=1, ncol=20, orientation="y") {
 
   x <- id <- NULL
 
-  theme_set(theme_bw() +
-    theme(
-      panel.spacing = unit(1, "lines"),
-      text = element_text(size = 20)
-    ) + theme(
-      panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank()
-    )
-  )
-  
-  # initialize canvas
-  gg <- ggplot()
-  
-  # add line trace
-  gg <- gg +
-    geom_line(
+  if (orientation=="y") {
+    line <- geom_line(
       data = data, mapping = aes(x = x, y = t, group = id),
       # absolutely needed if we want to make a line plot with time on the y axis
-      orientation="y",
+      orientation=orientation,
       # intensity of line
       alpha=line_alpha
     )
+  } else if (orientation=="x") {
+    line <- geom_line(
+      data = data, mapping = aes(x = t, y = x, group = id),
+      # absolutely needed if we want to make a line plot with time on the y axis
+      orientation=orientation,
+      # intensity of line
+      alpha=line_alpha
+    )
+  }
+   
+  # add line trace
+  gg <- gg + line
   
   # add custom time marks (we want every 60 seconds)
-  gg <- mark_time(data, gg, freq=60, downward=downward)
-  gg <- mark_space(limits, gg, extra=c(0))
+  gg <- mark_time(data, gg, freq=60, downward=downward, orientation=orientation)
+  gg <- mark_space(limits, gg, extra=c(0), orientation=orientation)
   
   if(length(unique(data$facet)) != (nrow * ncol)) {
-
+    
     stop("The passed layout does not match the number of animals.
        Make sure nrow * ncol evaluates to the number of animals in the dataset ")
   }
-  
+
   # segregate the animals, one plot for each
   gg <- gg + facet_wrap(
-    . ~ facet,
-    drop = F,
-    nrow=nrow, ncol=ncol
-  )
+      test ~ facet,
+      drop = F,
+      nrow=nrow, ncol=ncol
+    )
+    
+  
   
   return(gg)
 }
+  
 
 
 #' Customize the facet label
@@ -165,7 +197,6 @@ base_plot <- function(data, limits, line_alpha=1, downward=TRUE, nrow=1, ncol=20
 #' @param plot_preference_index Whether to show the scored preference index
 #' with the region id on the facet label (TRUE), or just the region id (FALSE)
 annotate_facet <- function(data, plot_preference_index=TRUE) {
-  
   region_id <- paste0("ROI_", data$region_id)
   
   if (plot_preference_index) {
@@ -193,7 +224,7 @@ annotate_facet <- function(data, plot_preference_index=TRUE) {
 validate_inputs <- function(dataset, analysis) {
   expected_pi_columns <- c(
     "id", "region_id", "appetitive",
-    "aversive", "preference_index"
+    "aversive", "preference_index", "test"
   )
   
   if (is.null(dataset$tracker))
@@ -233,8 +264,8 @@ combine_inputs <- function(dataset, analysis, plot_preference_index=TRUE, plot_m
   
   . <- NULL
   
-  tracker_data <- dplyr::left_join(dataset$tracker, analysis$pi, by = "region_id")
-  crossing_data <- dplyr::left_join(analysis$annotation, analysis$pi, by = "region_id")
+  tracker_data <- dplyr::left_join(dataset$tracker, analysis$pi, by = c("id", "region_id", "test"))
+  crossing_data <- dplyr::left_join(analysis$annotation, analysis$pi, by = c("id", "region_id", "test"))
   
   message("Generating facet labels")
   tracker_data <- annotate_facet(tracker_data, plot_preference_index)
@@ -304,6 +335,9 @@ plot_dataset <- function(experiment_folder,
                          cross_size = 2,
                          line_alpha = 1,
                          do_mark_analysis_mask=TRUE,
+                         do_document=TRUE,
+                         orientation="y",
+                         style="default",
                          ...
 ) {
   
@@ -326,35 +360,43 @@ plot_dataset <- function(experiment_folder,
     labels <- dataset$labels
   }
   
+  gg <- empty_canvas()
+  
+
+  # add rectangular marks to sign the controller events
+  message("Marking controller events")
+  gg <- mark_stimuli(gg, rectangles, colors, labels, orientation=orientation)
+
+  
   # initialize the plot by creating a tracker trace
   # for each animal separately
   message("Generating base plot")
-  
   gg <- base_plot(
+    gg,
     tracker_data, limits, downward=downward,
-    line_alpha=line_alpha, nrow=nrow, ncol=ncol
+    line_alpha=line_alpha, nrow=nrow, ncol=ncol,
+    orientation=orientation
   )
-  
-  # add rectangular marks to sign the controller events
-  message("Marking controller events")
-  gg <- mark_stimuli(gg, rectangles, colors, labels)
   
   
   if (!is.null(analysis_mask) && do_mark_analysis_mask) {
     message("Marking analysis mask")
-    gg <- mark_analysis_mask(gg, analysis_mask)
+    gg <- mark_analysis_mask(gg, analysis_mask, orientation=orientation)
   }
   # delineate the decision zone
   message("Marking decision zone")
-  if (plot_decision_zone) gg <- mark_decision_zone(gg, border)
+  if (plot_decision_zone) gg <- mark_decision_zone(gg, border, orientation=orientation)
   
   # add points whenever an exit (decision zone cross) happens
   message("Marking decision zone crosses")
-  if (plot_crosses) gg <- mark_crosses(gg, crossing_data, size=cross_size)
+  if (plot_crosses) gg <- mark_crosses(gg, crossing_data, size=cross_size, orientation=orientation, style=style)
   
   # add text on axis, title, ...
   message("Documenting plot")
-  gg <- document_plot(gg, experiment_folder, subtitle=subtitle) 
+  if (do_document) {
+      gg <- document_plot(gg, experiment_folder, subtitle=subtitle)
+  }
+  invisible(gg)
   
   # save the plot to the experiment's folder
   message("Saving plot to ->", experiment_folder)
@@ -370,24 +412,36 @@ plot_dataset <- function(experiment_folder,
 #' This is shown with a yellow rectangle in the plot
 #' @eval document_gg()
 #' @inherit find_exits
-mark_analysis_mask <- function(gg, analysis_mask) {
+mark_analysis_mask <- function(gg, analysis_mask, orientation="y") {
   
   x <- y <- NULL
   
-  limits <- gg$scales$scales[[2]]$limits
-  
+  limits <- gg$scales$scales[[3]]$limits
   mask_coords <- data.frame(
     x = rep(limits, times=2),
     y = rep(unlist(analysis_mask), each=2)
   )
   mask_coords <- mask_coords[c(1,2,4,3),]
   
-  gg <- gg + geom_polygon(data = mask_coords,
-                          mapping = aes(x=x,y=y),
-                          color="black", alpha=0.5,
-                          fill=NA, size=2)
-  return(gg)
+  if (orientation=="y") {
+    polygons <- geom_polygon(
+      data = mask_coords,
+      mapping = aes(x=x,y=y),
+      color="black", alpha=0.5,
+      fill=NA, size=2
+    )
+  } else if (orientation=="x") {
+    polygons <- geom_polygon(
+      data = mask_coords,
+      mapping = aes(x=y,y=x),
+      color="black", alpha=0.5,
+      fill=NA, size=2
+    )    
+  }
   
+  gg <- gg + polygons
+  
+  return(gg)
 }
 
 #' Annotate experiment metadata on plot for documentation
@@ -439,7 +493,7 @@ document_plot <- function(gg, experiment_folder=NULL, ...) {
 #' @importFrom purrr map
 #' @import ggplot2
 #' @return ggplot2 object
-mark_stimuli <- function(gg, rectangles, colors, labels) {
+mark_stimuli <- function(gg, rectangles, colors, labels, orientation="y") {
   
   . <- x <- t <- group <- treatment <- NULL
   
@@ -451,14 +505,27 @@ mark_stimuli <- function(gg, rectangles, colors, labels) {
   }) %>%
     do.call(rbind, .)
   
-  gg <- gg + geom_polygon(
-    data = rectangles_df,
-    mapping = aes(
-      x = x, y=t,
-      group=group,
-      fill=treatment),
-    color = NA, alpha=0.4
-  ) +
+  if (orientation=="y") {
+    polygons <- geom_polygon(
+      data = rectangles_df,
+      mapping = aes(
+        x = x, y=t,
+        group=group,
+        fill=treatment),
+      color = NA, alpha=0.4
+    )
+  } else if (orientation=="x") {
+    polygons <- geom_polygon(
+      data = rectangles_df,
+      mapping = aes(
+        x = t, y=x,
+        group=group,
+        fill=treatment),
+      color = NA, alpha=0.4
+    )    
+  }
+  
+  gg <- gg + polygons +
     scale_fill_manual(
       name = 'Treatment',
       values = unname(colors),
@@ -477,22 +544,47 @@ mark_stimuli <- function(gg, rectangles, colors, labels) {
 #' @param color Color of the points, black by default
 #' @importFrom dplyr select left_join
 #' @import ggplot2
-mark_crosses <- function(gg, cross_data, size=2, color="black") {
+mark_crosses <- function(gg, cross_data, size=2, color="black", orientation="y", style="default") {
   
   x <- t <- NULL
   
   appetitive <- cross_data[cross_data$type == 'appetitive',]
   aversive <- cross_data[cross_data$type == 'aversive',]
   
-  gg <- gg +
-    geom_point(
+  if (style == "default") {
+    app_color <- color
+    ave_color <- color
+    app_shape <- 1
+    ave_shape <- 4
+  } else if (style == "poster") {
+    app_color <- "#35b347"
+    ave_color <- "#00abee"
+    app_shape <- 16
+    ave_shape <- 16
+  }
+  
+  if (orientation=="y") {
+    points_app <- geom_point(
       data = appetitive, aes(x = x, y = t),
-      color = color, size = size
-    ) +
-    geom_point(
-      data = aversive, aes(x = x, y = t),
-      color = color, size = size, shape = 4
+      color = app_color, size = size, shape=app_shape
     )
+    points_ave <- geom_point(
+        data = aversive, aes(x = x, y = t),
+        color = ave_color, size = size, shape = ave_shape
+      )
+  } else if (orientation=="x") {
+    points_app <- geom_point(
+      data = appetitive, aes(x = t, y = x),
+      color = app_color, size = size, shape=app_shape
+    )
+    points_ave <- geom_point(
+      data = aversive, aes(x = t, y = x),
+      color = ave_color, size = size, shape = ave_shape
+    )    
+  }
+  
+  gg <- gg + points_app + points_ave
+   
   
   return(gg)
 }
@@ -504,10 +596,16 @@ mark_crosses <- function(gg, cross_data, size=2, color="black") {
 #' @param center_alpha Transparency of line marking the center of the chamber
 #' @eval document_gg("return")
 #' @import ggplot2
-mark_decision_zone <- function(gg, border, center_alpha=0.2) {
-  gg <- gg + geom_vline(xintercept = -border, linetype = "dashed")
-  gg <- gg + geom_vline(xintercept = border, linetype = "dashed") 
-  gg <- gg + geom_vline(xintercept = 0, linetype="dashed", alpha=center_alpha)
+mark_decision_zone <- function(gg, border, center_alpha=0.2, orientation="y") {
+  if (orientation=="y") {
+    gg <- gg + geom_vline(xintercept = -border, linetype = "dashed")
+    gg <- gg + geom_vline(xintercept = border, linetype = "dashed") 
+    gg <- gg + geom_vline(xintercept = 0, linetype="dashed", alpha=center_alpha)
+  } else if (orientation=="x") {
+    gg <- gg + geom_hline(yintercept = -border, linetype = "dashed")
+    gg <- gg + geom_hline(yintercept = border, linetype = "dashed") 
+    gg <- gg + geom_hline(yintercept = 0, linetype="dashed", alpha=center_alpha)    
+  }
   return(gg)
 }
 
