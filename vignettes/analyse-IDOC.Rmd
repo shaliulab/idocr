@@ -19,9 +19,9 @@ knitr::opts_chunk$set(
 The IDOC output dataset consists of a folder, named according to the date and time in which the experiment was ran (```YYYY-MM-DD_HH-MM-SS```). If you run multiple tests or conditioning sessions, **each session gets its own folder** by default in the root directory. It is however and encouraged to later create another folder which can host all folders of sessions connected in some meaningful way, for easy archiving and processing of data.
 
 The data for each animal in the experiment is captured in separate .csv files with the naming convention ```YYYY-MM-DD_HH-MM-SS_machine-id_ROI_X.csv```. There are 20 files, one for each ROI.
-```YYYY-MM-DD_HH-MM-SS_machine-id``` is a prefix which all output files produced by IDOC and idocr contain in their name, so it's easy to trace back which experiment they belong to
+```YYYY-MM-DD_HH-MM-SS_machine-id``` is a prefix which all output files produced by IDOC and idocr contain in their name, so it's easy to trace back which experiment they belong to.
 
-This is a comprehensive description of all the output files produced by IDOC. All of them are required for analysis
+This is a comprehensive description of all the output files produced by IDOC. All of them are required for analysis.
 
 ```
 2020-11-01_10-11-31/
@@ -56,21 +56,21 @@ This is a comprehensive description of all the output files produced by IDOC. Al
 
 * ```YYYY-MM-DD_HH-MM-SS_machine-id_ROI_X.csv```: Contains columns `id,x,y,w,h,phi,xy_dist_log10x1000,is_inferred,has_interacted,frame_count,t`
 
-   * id: set always to 0 (can be ignored)
-   * x: Number of pixels from the left (West) most end of the chamber until the estimated centroid of the fly in the IDOC chamber
-   * y: Number of pixels from the top (North) most end of the chamber until the estimated centroid of the fly in the IDOC chamber
-   * w: Width of the segmented fly (not used in analysis)
-   * h: Height of the segmented fly (not used in analysis)
-   * phi: Angle of the segmented fly (not used in analysis)
-   * xy_dist_log10x1000: Distance traveled (in pixels) between the previous frame and the current frame, and then transformed using the formula $$log_{10}(d) * 1000$$
-   * is_inferred: Whether the fly could not be found in that frame and it's position is inferred from the last observed position
-   * has_interacted: Always set to 0 (can be ignored)
-   * frame_count: It's not 0 or 1 indexed, but it contains an integer that increases by one with every new frame
-   * t: Time in seconds since the beginning of the experiment until the corresponding observation
+   * id: set always to 0 (can be ignored).
+   * x: Number of pixels from the left (West) most end of the chamber until the estimated centroid of the fly in the IDOC chamber.
+   * y: Number of pixels from the top (North) most end of the chamber until the estimated centroid of the fly in the IDOC chamber.
+   * w: Width of the segmented fly (not used in analysis).
+   * h: Height of the segmented fly (not used in analysis).
+   * phi: Angle of the segmented fly (not used in analysis).
+   * xy_dist_log10x1000: Distance traveled (in pixels) between the previous frame and the current frame, and then transformed using the formula $log_{10}(d) * 1000$.
+   * is_inferred: Whether the fly could not be found in that frame and it's position is inferred from the last observed position.
+   * has_interacted: Always set to 0 (can be ignored).
+   * frame_count: It's not 0 or 1 indexed, but it contains an integer that increases by one with every new frame.
+   * t: Time in seconds since the beginning of the experiment until the corresponding observation.
 
 Our tracking system is heavily based on the ethoscope system, which offers a lightweight but accurate Python based system to track multiple isolated flies live.
 
-* ```YYYY-MM-DD_HH-MM-SS_machine-id_VAR_MAP.csv```: Summarizes the `_ROI.csv` information listeed above in a computer friendly format
+* ```YYYY-MM-DD_HH-MM-SS_machine-id_VAR_MAP.csv```: Summarizes the `_ROI.csv` information listeed above in a computer friendly format.
 
 * ```YYYY-MM-DD_HH-MM-SS_machine-id_ROI_MAP.csv```: Contains the top left corner coordinate, as well as width and height of each of the 20 ROIs in the original raw frame, relative to the top left corner of the frame. For example:
 
@@ -88,14 +88,16 @@ indicates that ROI 1 has it's left corner 332 pixels from the left of the frame 
 
 
 Once your experiment is finished, please generate the ```YYYY-MM-DD_HH-MM-SS_machine-id_ROI_CENTER.csv```:
+
 TODO
+
 It contains one row for every ROI 20, and two fields, `region_id` and `center`. `region_id` identifies one ROI, and `center` contains the x coordinate of the center of the chamber. It is required for analysis, because it is used to generate the treatment decision zone.
 
 
 ## Analysis
 
 ### Load the package
-Start by loading the package
+Start by loading the package.
 ```{r setup}
 library(idocr2)
 ```
@@ -114,20 +116,20 @@ treatment_B <- "MCH+ES"
 
 ```
 
-Optionally provide a description that briefly documents or describes the session
+Optionally provide a description that briefly documents or describes the session.
 
 ```{r}
 description <- "Enter a description here"
 ```
 
 
-Minimal number of exits required to consider the data of one animal significant and so, compute a preference index based on the behavior
+Minimal number of exits required to consider the data of one animal significant and so, compute a preference index based on the behavior.
 ```{r}
 min_exits_required <- 3
 ```
 
 
-Optionally, apply a time offset to the treatment time series to account for the time it takes for odour to arrive to the chambers. In seconds
+Optionally, apply a time offset to the treatment time series to account for the time it takes for odour to arrive to the chambers. In seconds.
 ```{r}
 delay <- 0
 ```
@@ -141,7 +143,7 @@ border_mm <- 5
 We found that to be 5 mm either side based on tests with smoke.
 
 
-Ignore exits happening this amount of seconds after the previous exit to avoid counting the same exit as two exits happening within ridiculously little time  
+Ignore exits happening this amount of seconds after the previous exit to avoid counting the same exit as two exits happening within ridiculously little time.
 ```{r}
 mask_duration <- 0.5
 ```
@@ -149,6 +151,7 @@ mask_duration <- 0.5
 ### Generate analysis_params.yaml by providing 3 numbers:
 
 `pixel_to_mm_ratio`: Number of pixels that make up 1 mm in your setup. Simply place a ruler and count how many pixels cover 1 mm, or 1 cm and divide by 10.
+
 `limits`: mm away from the center to the left (negative) or right (positive) to be included in the plot. For example:
 
 **analysis_params.yaml**
@@ -179,7 +182,7 @@ p1 <- idocr(
 )
 ```
 
-This function will generate a plot and a .csv dataset. The plot is saved as .png and .pdf
+This function will generate a plot and a .csv dataset. The plot is saved as .png and .pdf.
 
 ```{r, out.width = "800px", echo=FALSE}
 knitr::include_graphics("2020-11-01_10-11-31_7eb8e224bdb944a68825986bc70de6b1.png")
@@ -191,13 +194,17 @@ At the top of each panel, the software collects the preference index (**PI**) fo
 $$
 \frac{exits_{A} - exits{B}}{exits_{A}+exits{B}}
 $$
-This information is also saved to the mentioned .csv dataset, called ```YYYY-MM-DD_HH-MM-SS_machine-id_PI.csv```. It contains one row per ROI, summarising the decisions of the corresponding animal.
+This information is also saved to the mentioned .csv dataset, called ```YYYY-MM-DD_HH-MM-SS_machine-id_PI.csv```. It contains one row per ROI, summarizing the decisions of the corresponding animal.
 
-`region_id`: indicates the ROI
-`appetitive`: number of exists towards the side of the chamber exposed to treatment A
-`aversive`: number of exists towards the side of the chamber exposed to treatment B
-`preference_index`: statistic computed using the formula above
-`test`: 
+`region_id`: indicates the ROI.
+
+`appetitive`: number of exits towards the side of the chamber exposed to treatment A.
+
+`aversive`: number of exits towards the side of the chamber exposed to treatment B.
+
+`preference_index`: statistic computed using the formula above.
+
+`test`: the first 5 characters that make up the result folder. See analysis mask section on how to modify it from R.
 
 
 ```
@@ -205,8 +212,10 @@ id,region_id,appetitive,aversive,preference_index,test
 2020-11-01_10-11-31_7eb8e|02,2,2,2,0,
 ```
 
+### Analysis mask
+
 If you wish to compute multiple PI for the same fly within the same session, you can provide a named list called `analysis_mask` to partition the session.
-Each entry in the `analysis_mask` must be a vector of length 2 with the start and end time of the selected mask, in seconds. If you indeed provide an `analysis_mask` then a subfolder will be created in the experiment folder for every provided mask.
+Each entry in the `analysis_mask` must be a vector of length 2 with the start and end time of the selected mask, in seconds. If you indeed provide an `analysis_mask` then a sub folder will be created in the experiment folder for every provided mask.
 The name of the folder will follow the name you give in the list, and it will contain the plots and a PI computation using only the exits within the mask.
 
 For example, if we wish to count only exits in the first half of the exposure to treatments A and B:
