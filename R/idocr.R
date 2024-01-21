@@ -82,8 +82,7 @@ idocr <- function(experiment_folder,
 #' @param mask_duration Exits happening this amount of seconds after the last one are ignored
 #' @param ... Extra arguments to plot_dataset
 pipeline <- function(experiment_folder, dataset, min_exits_required, mask_duration, analysis_mask=NULL, ...) {
-  
-  
+
   if(is.null(analysis_mask)) {
     result_folder <- experiment_folder
     suffix <- ""
@@ -95,6 +94,14 @@ pipeline <- function(experiment_folder, dataset, min_exits_required, mask_durati
   }
   
   message("Analysing dataset - ", experiment_folder, " ", suffix)
+
+    if (length(grep(pattern = "PRE", x = result_folder)) > 0) {
+    test <- "PRE"
+  } else if (length(grep(pattern = "POST", x = result_folder)) > 0) {
+    test <- "POST"
+  } else {
+    test <- "COND"
+  }
   
   analysis <- analyse_dataset(
     dataset,
@@ -102,6 +109,10 @@ pipeline <- function(experiment_folder, dataset, min_exits_required, mask_durati
     min_time=mask_duration,
     analysis_mask=analysis_mask
   )
+  analysis$annotation$test <- test
+  analysis$pi$test <- test
+  dataset$tracker$test <- test
+  
   
   message("Plotting dataset -> ", experiment_folder)
   saveRDS(object = list(dataset=dataset, analysis=analysis, analysis_mask=analysis_mask), file = file.path(result_folder, "plotting_params.rds"))
