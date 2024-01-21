@@ -24,7 +24,8 @@ Imports:
     parallel,
     ggprism,
     yaml (>= 2.3.5),
-    glue
+    glue,
+    ggetho
 Suggests:
     testthat (>= 3.0.2),
     covr (>= 3.5.1),
