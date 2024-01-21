@@ -95,13 +95,7 @@ pipeline <- function(experiment_folder, dataset, min_exits_required, mask_durati
   
   message("Analysing dataset - ", experiment_folder, " ", suffix)
 
-    if (length(grep(pattern = "PRE", x = result_folder)) > 0) {
-    test <- "PRE"
-  } else if (length(grep(pattern = "POST", x = result_folder)) > 0) {
-    test <- "POST"
-  } else {
-    test <- "COND"
-  }
+  test <- substr(x=result_folder, start=1, stop=5)
   
   analysis <- analyse_dataset(
     dataset,
