@@ -12,6 +12,7 @@ document_script <- function(src_file=NULL, dst_folder) {
     dst_folder,
     "script_idocr2.R"
   )
+  rstudioapi::documentSave()
 
   message("Backing up script ->", dst_file)
   file.copy(from = src_file, to = dst_file, overwrite = TRUE)
