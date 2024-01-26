@@ -340,8 +340,7 @@ plot_dataset <- function(experiment_folder,
                          style="default",
                          ...
 ) {
-  
-  
+
   if (is.null(result_folder)) result_folder <- experiment_folder
   
   message("Validating passed data")
@@ -399,7 +398,7 @@ plot_dataset <- function(experiment_folder,
   invisible(gg)
   
   # save the plot to the experiment's folder
-  message("Saving plot to ->", experiment_folder)
+  message("Saving plot to ->", result_folder)
   paths <- save_plot(gg, experiment_folder=experiment_folder, result_folder=result_folder, suffix=suffix, ...)
   
   return(list(paths=paths, plot=gg))

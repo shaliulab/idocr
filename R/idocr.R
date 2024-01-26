@@ -86,17 +86,17 @@ pipeline <- function(experiment_folder, dataset, min_exits_required, mask_durati
   if(is.null(analysis_mask)) {
     result_folder <- experiment_folder
     suffix <- ""
+    test <- ""
   } else {
     if(length(names(analysis_mask)) < 1) stop("Please provide a name to every analysis mask")
     result_folder <- file.path(experiment_folder, names(analysis_mask))
     suffix <- names(analysis_mask)
+    test <- substr(x=suffix, start=1, stop=5)
     if (! dir.exists(result_folder)) dir.create(result_folder)
   }
   
   message("Analysing dataset - ", experiment_folder, " ", suffix)
 
-  test <- substr(x=result_folder, start=1, stop=5)
-  
   analysis <- analyse_dataset(
     dataset,
     min_exits_required=min_exits_required,

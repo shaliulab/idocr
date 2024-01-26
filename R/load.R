@@ -30,7 +30,6 @@ load_metadata <- function(experiment_folder) {
 #' 
 #' @eval document_treatments()
 check_api_version <- function(treatments) {
-  
   treatment_in_name <- length(grep(pattern = "TREATMENT", x = names(treatments))) != 0
   # treatment_not_in_value <- length(grep(pattern = "TREATMENT", x = names(treatments))) != 0
   
@@ -77,11 +76,13 @@ preprocess_dataset <- function(
   dataset$limits <- config$limits
 
   border <- border_mm * pixel_to_mm_ratio
+  treatments <- names(treatments)
+  dataset$labels <- unname(treatments)
   
-  if (check_api_version(treatments) == 1) {
-    dataset$labels <- unname(treatments)
-    treatments <- names(treatments)
-  }
+  # if (check_api_version(treatments) == 1) {
+  #   dataset$labels <- unname(treatments)
+  #   treatments <- names(treatments)
+  # }
   
   dataset$border <- border
   dataset$CSplus <- treatments[CSplus_idx]
