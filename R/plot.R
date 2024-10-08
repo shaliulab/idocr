@@ -179,12 +179,10 @@ base_plot <- function(gg, data, limits, line_alpha=1, downward=TRUE, nrow=1, nco
 
   # segregate the animals, one plot for each
   gg <- gg + facet_wrap(
-      test ~ facet,
+      . ~ facet,
       drop = F,
       nrow=nrow, ncol=ncol
     )
-    
-  
   
   return(gg)
 }
@@ -415,6 +413,9 @@ plot_dataset <- function(experiment_folder,
 mark_analysis_mask <- function(gg, analysis_mask, orientation="y") {
   
   x <- y <- NULL
+  box_size <- 1
+  alpha <- 0.2
+  color <- "yellow"
   
   limits <- gg$scales$scales[[3]]$limits
   mask_coords <- data.frame(
@@ -427,15 +428,15 @@ mark_analysis_mask <- function(gg, analysis_mask, orientation="y") {
     polygons <- geom_polygon(
       data = mask_coords,
       mapping = aes(x=x,y=y),
-      color="black", alpha=0.5,
-      fill=NA, size=2
+      color=color, alpha=alpha,
+      fill=NA, size=box_size
     )
   } else if (orientation=="x") {
     polygons <- geom_polygon(
       data = mask_coords,
       mapping = aes(x=y,y=x),
-      color="black", alpha=0.5,
-      fill=NA, size=2
+      color=color, alpha=alpha,
+      fill=NA, size=box_size
     )    
   }
   
@@ -460,7 +461,7 @@ document_plot <- function(gg, experiment_folder=NULL, ...) {
   
   if (!is.null(experiment_folder)) {
     metadata <- load_metadata(experiment_folder)
-    title <- paste0(Sys.getenv("IDOC_NAME"), "/", metadata[field == "date_time", value])
+    title <- metadata[field == "date_time", value]
   } else {
     title <- ""
   }

@@ -30,7 +30,6 @@ load_metadata <- function(experiment_folder) {
 #' 
 #' @eval document_treatments()
 check_api_version <- function(treatments) {
-  
   treatment_in_name <- length(grep(pattern = "TREATMENT", x = names(treatments))) != 0
   # treatment_not_in_value <- length(grep(pattern = "TREATMENT", x = names(treatments))) != 0
   

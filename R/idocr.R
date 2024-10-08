@@ -86,16 +86,17 @@ pipeline <- function(experiment_folder, dataset, min_exits_required, mask_durati
   if(is.null(analysis_mask)) {
     result_folder <- experiment_folder
     suffix <- ""
+    test <- ""
   } else {
     if(length(names(analysis_mask)) < 1) stop("Please provide a name to every analysis mask")
     result_folder <- file.path(experiment_folder, names(analysis_mask))
     suffix <- names(analysis_mask)
+    test <- substr(x=result_folder, start=1, stop=5)
     if (! dir.exists(result_folder)) dir.create(result_folder)
   }
   
   message("Analysing dataset - ", experiment_folder, " ", suffix)
 
-  test <- substr(x=result_folder, start=1, stop=5)
   
   analysis <- analyse_dataset(
     dataset,
@@ -109,8 +110,22 @@ pipeline <- function(experiment_folder, dataset, min_exits_required, mask_durati
   
   
   message("Plotting dataset -> ", experiment_folder)
-  saveRDS(object = list(dataset=dataset, analysis=analysis, analysis_mask=analysis_mask), file = file.path(result_folder, "plotting_params.rds"))
-  out <- plot_dataset(experiment_folder, dataset, analysis, result_folder=result_folder, analysis_mask=analysis_mask, suffix=suffix, ...)
+  saveRDS(
+    object = list(
+      dataset=dataset,
+      analysis=analysis,
+      analysis_mask = analysis_mask
+    ),
+    file = file.path(result_folder, "plotting_params.rds")
+  )
+  out <- plot_dataset(
+    experiment_folder, dataset,
+    analysis, result_folder = result_folder,
+    analysis_mask = analysis_mask,
+    suffix = suffix,
+    ...
+  )
+  
   plot_paths <- out$paths
   gg <- out$gg
   
