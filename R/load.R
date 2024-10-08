@@ -76,11 +76,13 @@ preprocess_dataset <- function(
   dataset$limits <- config$limits
 
   border <- border_mm * pixel_to_mm_ratio
+  treatments <- names(treatments)
+  dataset$labels <- unname(treatments)
   
-  if (check_api_version(treatments) == 1) {
-    dataset$labels <- unname(treatments)
-    treatments <- names(treatments)
-  }
+  # if (check_api_version(treatments) == 1) {
+  #   dataset$labels <- unname(treatments)
+  #   treatments <- names(treatments)
+  # }
   
   dataset$border <- border
   dataset$CSplus <- treatments[CSplus_idx]
