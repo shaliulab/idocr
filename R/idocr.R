@@ -111,8 +111,8 @@ pipeline <- function(experiment_folder, dataset, min_exits_required, mask_durati
   message("Plotting dataset -> ", experiment_folder)
   saveRDS(
     object = list(
-      dataset=dataset,
-      analysis=analysis,
+      dataset = dataset,
+      analysis = analysis,
       analysis_mask = analysis_mask
     ),
     file = file.path(result_folder, "plotting_params.rds")
@@ -124,15 +124,15 @@ pipeline <- function(experiment_folder, dataset, min_exits_required, mask_durati
     suffix = suffix,
     ...
   )
-  
+
   plot_paths <- out$paths
   gg <- out$gg
-  
+
   message("Exporting results -> ", experiment_folder)
   out <- export_dataset(experiment_folder = experiment_folder,
                         dataset = dataset, analysis = analysis,
-                        result_folder=result_folder,
-                        suffix=suffix
+                        result_folder = result_folder,
+                        suffix = suffix
   )
   csv_paths <- out$paths
   return(list(gg = gg, pi = analysis$pi, paths = c(plot_paths, csv_paths)))

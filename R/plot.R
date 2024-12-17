@@ -48,7 +48,7 @@ sort_facet_levels <- function(facets) {
 #' @importFrom scales reverse_trans
 #' @import ggplot2
 #' @return ggplot2 object
-mark_time <- function(data, gg, freq=60, downward=TRUE, orientation="y") {
+mark_time <- function(data, gg, freq=60, downward=TRUE, orientation= "y") {
   
   time_limits <- c(min(data$t), max(data$t))
   time_limits <- c(
@@ -77,7 +77,7 @@ mark_time <- function(data, gg, freq=60, downward=TRUE, orientation="y") {
         )
       )
     }  
-  } else if (orientation=="x") {
+  } else if (orientation== "x") {
     gg <- gg + scale_x_continuous(
       limits = time_limits,
       breaks = seq(
@@ -98,10 +98,10 @@ mark_time <- function(data, gg, freq=60, downward=TRUE, orientation="y") {
 #' @param extra Position of ticks in space besides limits
 #' @import  ggplot2
 #' @eval document_gg("return")
-mark_space <- function(limits, gg, extra=c(0), orientation="y") {
+mark_space <- function(limits, gg, extra=c(0), orientation= "y") {
   breaks <- c(limits[1], extra, limits[2])
-  if (orientation=="y") gg <- gg + scale_x_continuous(limits = limits, breaks = breaks, labels = round(breaks, digits = 0))
-  else if (orientation=="x") gg <- gg + scale_y_continuous(limits = limits, breaks = breaks, labels = round(breaks, digits = 0))
+  if (orientation== "y") gg <- gg + scale_x_continuous(limits = limits, breaks = breaks, labels = round(breaks, digits = 0))
+  else if (orientation== "x") gg <- gg + scale_y_continuous(limits = limits, breaks = breaks, labels = round(breaks, digits = 0))
   return(gg)
 }
 
@@ -142,11 +142,11 @@ empty_canvas <- function() {
 #' @param nrow Number of rows used for facetting data
 #' @param ncol Number of cols used for facetting data
 #' @export
-base_plot <- function(gg, data, limits, line_alpha=1, downward=TRUE, nrow=1, ncol=20, orientation="y") {
+base_plot <- function(gg, data, limits, line_alpha=1, downward=TRUE, nrow=1, ncol=20, orientation= "y") {
 
   x <- id <- NULL
 
-  if (orientation=="y") {
+  if (orientation== "y") {
     line <- geom_line(
       data = data, mapping = aes(x = x, y = t, group = id),
       # absolutely needed if we want to make a line plot with time on the y axis
@@ -154,7 +154,7 @@ base_plot <- function(gg, data, limits, line_alpha=1, downward=TRUE, nrow=1, nco
       # intensity of line
       alpha=line_alpha
     )
-  } else if (orientation=="x") {
+  } else if (orientation== "x") {
     line <- geom_line(
       data = data, mapping = aes(x = t, y = x, group = id),
       # absolutely needed if we want to make a line plot with time on the y axis
@@ -235,7 +235,7 @@ validate_inputs <- function(dataset, analysis) {
     stop(sprintf(
       "Provided a non valid preference index computation.
        You should provide a dataframe with columns: %s under analysis$pi",
-      paste0(expected_pi_columns, collapse=" ")
+      paste0(expected_pi_columns, collapse= " ")
     ))
   
   if (is.null(dataset$limits) || length(dataset$limits) != 2)
@@ -332,10 +332,12 @@ plot_dataset <- function(experiment_folder,
                          suffix = "",
                          cross_size = 2,
                          line_alpha = 1,
-                         do_mark_analysis_mask=TRUE,
+                         marker_shape = 16,
+                         marker_colors = c("#35b347", "#00abee"),
+                         do_mark_analysis_mask = TRUE,
                          do_document=TRUE,
-                         orientation="y",
-                         style="default",
+                         orientation= "y",
+                         style= "default",
                          ...
 ) {
 
@@ -352,7 +354,6 @@ plot_dataset <- function(experiment_folder,
   border <- dataset$border
   limits <- dataset$limits
   rectangles <- analysis$rectangles
-  
   if (!is.null(dataset$labels) & all(labels == c("TREATMENT_A", "TREATMENT_B"))) {
     labels <- dataset$labels
   }
@@ -386,7 +387,11 @@ plot_dataset <- function(experiment_folder,
   
   # add points whenever an exit (decision zone cross) happens
   message("Marking decision zone crosses")
-  if (plot_crosses) gg <- mark_crosses(gg, crossing_data, size=cross_size, orientation=orientation, style=style)
+  if (plot_crosses) gg <- mark_crosses(
+    gg, crossing_data, size=cross_size, orientation = orientation,
+    shape = marker_shape, colors = marker_colors,
+    style=style
+  )
   
   # add text on axis, title, ...
   message("Documenting plot")
@@ -409,7 +414,7 @@ plot_dataset <- function(experiment_folder,
 #' This is shown with a yellow rectangle in the plot
 #' @eval document_gg()
 #' @inherit find_exits
-mark_analysis_mask <- function(gg, analysis_mask, orientation="y") {
+mark_analysis_mask <- function(gg, analysis_mask, orientation= "y") {
   
   x <- y <- NULL
   box_size <- 1
@@ -423,14 +428,14 @@ mark_analysis_mask <- function(gg, analysis_mask, orientation="y") {
   )
   mask_coords <- mask_coords[c(1,2,4,3),]
   
-  if (orientation=="y") {
+  if (orientation== "y") {
     polygons <- geom_polygon(
       data = mask_coords,
       mapping = aes(x=x,y=y),
       color=color, alpha=alpha,
       fill=NA, size=box_size
     )
-  } else if (orientation=="x") {
+  } else if (orientation== "x") {
     polygons <- geom_polygon(
       data = mask_coords,
       mapping = aes(x=y,y=x),
@@ -493,7 +498,7 @@ document_plot <- function(gg, experiment_folder=NULL, ...) {
 #' @importFrom purrr map
 #' @import ggplot2
 #' @return ggplot2 object
-mark_stimuli <- function(gg, rectangles, colors, labels, orientation="y") {
+mark_stimuli <- function(gg, rectangles, colors, labels, orientation= "y") {
   
   . <- x <- t <- group <- treatment <- NULL
   
@@ -505,7 +510,7 @@ mark_stimuli <- function(gg, rectangles, colors, labels, orientation="y") {
   }) %>%
     do.call(rbind, .)
   
-  if (orientation=="y") {
+  if (orientation== "y") {
     polygons <- geom_polygon(
       data = rectangles_df,
       mapping = aes(
@@ -514,7 +519,7 @@ mark_stimuli <- function(gg, rectangles, colors, labels, orientation="y") {
         fill=treatment),
       color = NA, alpha=0.4
     )
-  } else if (orientation=="x") {
+  } else if (orientation== "x") {
     polygons <- geom_polygon(
       data = rectangles_df,
       mapping = aes(
@@ -540,11 +545,11 @@ mark_stimuli <- function(gg, rectangles, colors, labels, orientation="y") {
 #'
 #' @eval document_gg()
 #' @eval document_cross_data()
-#' @param size Size of markers representing crosses 
+#' @param size Size of markers representing crosses
 #' @param color Color of the points, black by default
 #' @importFrom dplyr select left_join
 #' @import ggplot2
-mark_crosses <- function(gg, cross_data, size=2, color="black", orientation="y", style="default") {
+mark_crosses <- function(gg, cross_data, size=2, color= "black", orientation= "y", style= "default", shape = 16, colors=c("#35b347", "#00abee")) {
   
   x <- t <- NULL
   
@@ -557,35 +562,33 @@ mark_crosses <- function(gg, cross_data, size=2, color="black", orientation="y",
     app_shape <- 1
     ave_shape <- 4
   } else if (style == "poster") {
-    app_color <- "#35b347"
-    ave_color <- "#00abee"
-    app_shape <- 16
-    ave_shape <- 16
+    app_color <- colors[1]
+    ave_color <- colors[2]
+    app_shape <- shape
+    ave_shape <- shape
   }
   
-  if (orientation=="y") {
+  if (orientation == "y") {
     points_app <- geom_point(
       data = appetitive, aes(x = x, y = t),
-      color = app_color, size = size, shape=app_shape
+      color = app_color, size = size, shape = app_shape
     )
     points_ave <- geom_point(
         data = aversive, aes(x = x, y = t),
         color = ave_color, size = size, shape = ave_shape
       )
-  } else if (orientation=="x") {
+  } else if (orientation == "x") {
     points_app <- geom_point(
       data = appetitive, aes(x = t, y = x),
-      color = app_color, size = size, shape=app_shape
+      color = app_color, size = size, shape = app_shape
     )
     points_ave <- geom_point(
       data = aversive, aes(x = t, y = x),
       color = ave_color, size = size, shape = ave_shape
-    )    
+    )
   }
-  
+
   gg <- gg + points_app + points_ave
-   
-  
   return(gg)
 }
 
@@ -596,15 +599,15 @@ mark_crosses <- function(gg, cross_data, size=2, color="black", orientation="y",
 #' @param center_alpha Transparency of line marking the center of the chamber
 #' @eval document_gg("return")
 #' @import ggplot2
-mark_decision_zone <- function(gg, border, center_alpha=0.2, orientation="y") {
-  if (orientation=="y") {
+mark_decision_zone <- function(gg, border, center_alpha=0.2, orientation= "y") {
+  if (orientation== "y") {
     gg <- gg + geom_vline(xintercept = -border, linetype = "dashed")
     gg <- gg + geom_vline(xintercept = border, linetype = "dashed") 
-    gg <- gg + geom_vline(xintercept = 0, linetype="dashed", alpha=center_alpha)
-  } else if (orientation=="x") {
+    gg <- gg + geom_vline(xintercept = 0, linetype= "dashed", alpha=center_alpha)
+  } else if (orientation== "x") {
     gg <- gg + geom_hline(yintercept = -border, linetype = "dashed")
     gg <- gg + geom_hline(yintercept = border, linetype = "dashed") 
-    gg <- gg + geom_hline(yintercept = 0, linetype="dashed", alpha=center_alpha)    
+    gg <- gg + geom_hline(yintercept = 0, linetype= "dashed", alpha=center_alpha)    
   }
   return(gg)
 }
@@ -618,7 +621,7 @@ mark_decision_zone <- function(gg, border, center_alpha=0.2, orientation="y") {
 #' @param ... Extra arguments for ggsave
 #' @seealso [ggplot2::ggsave()]
 #' @import ggplot2
-save_plot <- function(gg, experiment_folder, result_folder=NULL, suffix="", ...) {
+save_plot <- function(gg, experiment_folder, result_folder=NULL, suffix= "", ...) {
   
   field <- value <- NULL
   if (is.null(result_folder)) result_folder <- experiment_folder
@@ -634,7 +637,7 @@ save_plot <- function(gg, experiment_folder, result_folder=NULL, suffix="", ...)
     plot_basename <- "DUMMY"
   }
   
-  plot_basename <- ifelse(suffix=="",
+  plot_basename <- ifelse(suffix== "",
                           plot_basename,
                           paste0(plot_basename, "_", suffix)
   )
