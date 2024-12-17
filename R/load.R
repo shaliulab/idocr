@@ -57,7 +57,7 @@ check_api_version <- function(treatments) {
 #' @eval document_treatments()
 #' @param border_mm mm from center of chamber to decision zone edge
 #' @param CSplus_idx Whether the first treatment (CSplus_idx=1) or the second
-#' (CSplus_idx=2) is associated with appetitive behavior
+#' (CSplus_idx=2) is associated with + exits
 #' @inherit preprocess_tracker
 #' @inherit preprocess_controller
 #' @export

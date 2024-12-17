@@ -60,12 +60,13 @@ args_list <- lapply(1:length(experiments), function(i) {
 
 parallel::mclapply(X = args_list[1:2], FUN = function(args) {do.call(idocr2::main, args)}, mc.cores = 1)
 
-
 lapply(1:length(experiments), function(i) {
   experiment_folder <- experiments[[i]]["experiment_folder"]
   rois <- experiments[[i]]["rois"]
   
-  plotting_params <- readRDS(file = file.path(experiment_folder, "POST_GLOBAL_7mm", "plotting_params.rds"))
+  plotting_params <- readRDS(
+    file = file.path(experiment_folder, "POST_GLOBAL_7mm", "plotting_params.rds")
+  )
   
   pi <- plotting_params$analysis$pi[plotting_params$analysis$pi$region_id %in% rois,]
   tracker <- plotting_params$dataset$tracker[plotting_params$dataset$tracker$region_id %in% rois,]
@@ -75,8 +76,15 @@ lapply(1:length(experiments), function(i) {
 
 out <- plot_dataset(
   experiment_folder = NULL,
-  dataset = plotting_params$dataset, analysis = plotting_params$analysis, analysis_mask = plotting_params$analysis_mask, result_folder=".",
-  downward = TRUE, labels=c("OCT", "AIR"), do_mark_analysis_mask=FALSE, nrow=1, ncol=5
+  dataset = plotting_params$dataset,
+  analysis = plotting_params$analysis,
+  analysis_mask = plotting_params$analysis_mask,
+  result_folder=".",
+  downward = TRUE,
+  labels=c("OCT", "AIR"),
+  do_mark_analysis_mask=FALSE,
+  nrow=1,
+  ncol=5
 )
 
 out$plot
