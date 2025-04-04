@@ -29,7 +29,7 @@ it is likely that the user is running old API code}
 to be considered for significance}
 
 \item{CSplus_idx}{Whether the first treatment (CSplus_idx=1) or the second
-(CSplus_idx=2) is associated with appetitive behavior}
+(CSplus_idx=2) is associated with + exits}
 
 \item{border_mm}{mm from center of chamber to decision zone edge}
 

@@ -23,6 +23,8 @@ plot_dataset(
   suffix = "",
   cross_size = 2,
   line_alpha = 1,
+  marker_shape = 16,
+  marker_colors = c("#35b347", "#00abee"),
   do_mark_analysis_mask = TRUE,
   do_document = TRUE,
   orientation = "y",

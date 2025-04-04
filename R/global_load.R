@@ -16,9 +16,6 @@ load_sessions_v1 <- function(idoc_folder) {
 load_sessions_v2 <- function(idoc_folder) {
   sessions_file <- file.path(idoc_folder, "sessions.yaml")
   sessions <- yaml::read_yaml(sessions_file)
-  # sessions$pre <- file.path(idoc_folder, sessions$pre)
-  # pre_entry <- grep(pattern="pre", x=names(sessions), value=TRUE)[1]
-  # sessions$pre <- file.path(idoc_folder, sessions[[pre_entry]])
   pre_entry <- tail(grep(pattern = "pre", x = names(sessions), value = TRUE), n = 1)
 
   sessions$pre <- file.path(idoc_folder, sessions[[pre_entry]])
@@ -45,7 +42,6 @@ find_pi_file <- function(folder, test, idoc_folder, region_id, trial = NULL, ver
     pi_files <- list.files(result_folder, pattern = paste0(test, "_", trial, "_", mm_decision_zone, "mm.csv"), full.names = TRUE, recursive = TRUE)
     pi_files <- grep(pattern = "SUMMARY", x = pi_files, value = TRUE, invert = TRUE)
     pi_file <- pi_files
-    # pi_file <- list.files(folder, pattern = paste0(test, "_", trial, "_7mm.csv"), full.names = TRUE, recursive=TRUE)
     if (length(pi_file) > 1) {
       stop(paste0("Multiple files found in ", folder))
     } # else if (length(pi_file) == 0) {
@@ -66,6 +62,9 @@ find_pi_file <- function(folder, test, idoc_folder, region_id, trial = NULL, ver
 #' n_exits will be NA if only aversive or appetitive exits occur, otherwise it will be their sum
 #' (even if under min_exits)
 read_pi <- function(path, roi, min_exits = 3) {
+
+  region_id <- appetitive <- apetitive <- NULL
+  
   pis <- tryCatch(
     {
       dat <- data.table::as.data.table(read.csv(path))
@@ -88,7 +87,6 @@ read_pi <- function(path, roi, min_exits = 3) {
   } else {
     n_exits <- animal_data$aversive + animal_data$appetitive
     if (is.na(n_exits)) {
-      # n_exits <- NA
       pi <- NA
     } else if (n_exits < min_exits) {
       pi <- NA
@@ -99,7 +97,7 @@ read_pi <- function(path, roi, min_exits = 3) {
   return(list(pi = pi, n_exits = n_exits, aversive = animal_data$aversive, appetitive = animal_data$appetitive))
 }
 
-
+#' @export
 average_trial <- function(results, min_exits_per_trial, use_incomplete_tests, use_global=FALSE) {
   n_na_trials <- sum(sapply(results, function(x) {
     is.na(x$pi)
@@ -119,7 +117,7 @@ average_trial <- function(results, min_exits_per_trial, use_incomplete_tests, us
     n_exits <- out$n_exits
     pi <- out$pi
   } else {
-    pi<- NA
+    pi <- NA
     n_exits <- NA
   }
 
@@ -135,10 +133,11 @@ combined_trial <- function(results) {
   }))
   n_exits <- aversive + appetitive
   pi <- (appetitive - aversive) / n_exits
-  
+
   return(list(pi=pi, n_exits=n_exits))
 }
 
+#' @export
 best_trial <- function(results, min_exits_per_trial, use_incomplete_tests) {
   n_na_trials <- sum(sapply(results, function(x) {
     is.na(x$pi)
@@ -204,8 +203,10 @@ read_pi_multitrial <- function(session_folder, test, idoc_folder, region_id, tri
   return(out)
 }
 
+#' @export 
+#' @importFrom parallel mclapply
 load_idoc_data <- function(metadata, ncores = 1, min_exits = 3, trials = 1:2, ...) {
-  data <- do.call(rbind, parallel::mclapply(1:nrow(metadata), function(i) {
+  data <- do.call(rbind, parallel::mclapply(seq_len(nrow(metadata)), function(i) {
     meta <- metadata[i, ]
     sessions <- load_sessions_v2(meta$idoc_folder)
     for (test in c("PRE", "POST")) {
@@ -227,6 +228,8 @@ load_idoc_data <- function(metadata, ncores = 1, min_exits = 3, trials = 1:2, ..
 
 
 read_idoc_metadata <- function(file, sheets, columns, backend = readxl::read_xlsx) {
+
+  Files <- NULL
   idoc_metadata <- lapply(
     sheets,
     function(sheet) {

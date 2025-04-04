@@ -31,6 +31,9 @@
 #' @export
 #' @import data.table
 link_idoc_metadata <- function(metadata, result_dir, verbose = TRUE) {
+
+  Files <- sheet <- sheet__ <- folder__ <- PRE_ROI <- fly_name_reference <- NULL
+
   if (!("sheet" %in% colnames(metadata))) {
     metadata$sheet <- ""
   }
@@ -51,6 +54,9 @@ link_idoc_metadata <- function(metadata, result_dir, verbose = TRUE) {
 
 #' @import data.table
 link_idoc_file <- function(metadata, result_dir, verbose = FALSE) {
+
+  sheet__ <- folder__ <- idoc_folder <- NULL
+
   year <- substr(metadata$folder__, 1, 4)
   month <- substr(metadata$folder__, 6, 7)
   month_folder <- paste0(year, "-", month, "-idoc_data")
