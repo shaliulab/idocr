@@ -50,7 +50,8 @@ sort_facet_levels <- function(facets) {
 #' @return ggplot2 object
 mark_time <- function(data, gg, freq=60, downward=TRUE, orientation= "y") {
   
-  time_limits <- c(min(data$t), max(data$t))
+  # we floor so that 120.3 does not mean we need to span until 180 seconds
+  time_limits <- c(floor(min(data$t)), floor(max(data$t)))
   time_limits <- c(
     floor(time_limits[1] / freq) * freq,
     ceiling(time_limits[2] / freq) * freq
@@ -145,7 +146,6 @@ empty_canvas <- function() {
 base_plot <- function(gg, data, limits, line_alpha=1, downward=TRUE, nrow=1, ncol=20, orientation= "y") {
 
   x <- id <- NULL
-
   if (orientation== "y") {
     line <- geom_line(
       data = data, mapping = aes(x = x, y = t, group = id),
@@ -346,8 +346,8 @@ plot_dataset <- function(experiment_folder,
   message("Validating passed data")
   validate_inputs(dataset, analysis)
   data <- combine_inputs(dataset, analysis,
-                         plot_preference_index=plot_preference_index,
-                         plot_mask=plot_mask
+                         plot_preference_index = plot_preference_index,
+                         plot_mask = plot_mask
   )
   tracker_data <- data$tracker
   crossing_data <- data$crossing
@@ -371,11 +371,11 @@ plot_dataset <- function(experiment_folder,
   message("Generating base plot")
   gg <- base_plot(
     gg,
-    tracker_data, limits, downward=downward,
-    line_alpha=line_alpha, nrow=nrow, ncol=ncol,
-    orientation=orientation
+    tracker_data, limits, downward = downward,
+    line_alpha = line_alpha, nrow = nrow, ncol = ncol,
+    orientation = orientation
   )
-  
+
   
   if (!is.null(analysis_mask) && do_mark_analysis_mask) {
     message("Marking analysis mask")
@@ -383,28 +383,32 @@ plot_dataset <- function(experiment_folder,
   }
   # delineate the decision zone
   message("Marking decision zone")
-  if (plot_decision_zone) gg <- mark_decision_zone(gg, border, orientation=orientation)
+  if (plot_decision_zone) gg <- mark_decision_zone(gg, border, orientation = orientation)
   
   # add points whenever an exit (decision zone cross) happens
   message("Marking decision zone crosses")
   if (plot_crosses) gg <- mark_crosses(
-    gg, crossing_data, size=cross_size, orientation = orientation,
+    gg, crossing_data, size = cross_size, orientation = orientation,
     shape = marker_shape, colors = marker_colors,
-    style=style
+    style = style
   )
   
   # add text on axis, title, ...
   message("Documenting plot")
   if (do_document) {
-      gg <- document_plot(gg, experiment_folder, subtitle=subtitle)
+      gg <- document_plot(gg, experiment_folder, subtitle = subtitle)
   }
   invisible(gg)
   
   # save the plot to the experiment's folder
   message("Saving plot to ->", result_folder)
-  paths <- save_plot(gg, experiment_folder=experiment_folder, result_folder=result_folder, suffix=suffix, ...)
-  
-  return(list(paths=paths, plot=gg))
+  paths <- save_plot(
+    gg, experiment_folder = experiment_folder,
+    result_folder = result_folder, suffix = suffix,
+    ...
+  )
+
+  return(list(paths = paths, plot = gg))
 }
 
 #' Mark the analysis mask
@@ -428,14 +432,14 @@ mark_analysis_mask <- function(gg, analysis_mask, orientation= "y") {
   )
   mask_coords <- mask_coords[c(1,2,4,3),]
   
-  if (orientation== "y") {
+  if (orientation == "y") {
     polygons <- geom_polygon(
       data = mask_coords,
       mapping = aes(x=x,y=y),
       color=color, alpha=alpha,
       fill=NA, size=box_size
     )
-  } else if (orientation== "x") {
+  } else if (orientation == "x") {
     polygons <- geom_polygon(
       data = mask_coords,
       mapping = aes(x=y,y=x),
