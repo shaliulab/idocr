@@ -227,7 +227,7 @@ keep_only_with_ethoscope_data <- function(idoc_data, sleep_data) {
 add_significance_marks <- function(
     panel, test, annotation_df, y_annotation,
     vjust, textsize, map_signif_level, family,
-    xmin = 1, xmax = 2, offset
+    xmin = 1, xmax = 2, offset, ...
 ) {
   group__ <- estimate <- p <- NULL
   
@@ -241,17 +241,23 @@ add_significance_marks <- function(
       y_position = y_annotation, test = test,
       manual = TRUE, tip_length = 0,
       family = family, vjust = vjust,
-      textsize = textsize, size = 1,
-      xmin = xmin, xmax = xmax
+      textsize = textsize,
+      xmin = xmin,
+      xmax = xmax,
+      ...
     )
   } else {
     panel <- panel + ggsignif::geom_signif(
       data = annotation_df,
       mapping = aes(annotations = paste0("< ", ceiling(p*100)/100), color=NULL, fill=NULL),
       y_position = y_annotation, test = test,
-      manual = TRUE, tip_length = 0,
-      family = family, vjust = vjust,
-      xmin = xmin, xmax = xmax
+      manual = TRUE,
+      tip_length = 0,
+      family = family,
+      vjust = vjust,
+      xmin = xmin,
+      xmax = xmax,
+      ...
     )
   }
   

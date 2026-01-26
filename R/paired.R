@@ -120,7 +120,9 @@ paired_plot <- function(
     drop = FALSE,
     alternative="greater",
     y_label=NULL,
-    n_y_ticks=NULL
+    n_y_ticks=NULL,
+    test_name = "wilcoxon",
+    ...
     ) {
 
   if (is.null(group)) {
@@ -138,7 +140,7 @@ paired_plot <- function(
       y_label<-y_var
   }
 
-  if (!is.null(test)) test <- get(paste0(test, "_wilcoxon_test"))
+  if (!is.null(test)) test <- get(paste0(test, "_", test_name, "_test"))
 
   . <- std_error <- id <- annotations <- x <- group__ <- N <- NULL
 
@@ -220,7 +222,8 @@ paired_plot <- function(
         panel, test, annotation_df, y_annotation, vjust,
         textsize = starsize,
         map_signif_level = map_signif_level,
-        family = family, offset = 0
+        family = family, offset = 0,
+        ...
       )},
       error = function(e) {
         print(e)
