@@ -16,10 +16,10 @@ load_sessions_v1 <- function(idoc_folder) {
 load_sessions_v2 <- function(idoc_folder) {
   sessions_file <- file.path(idoc_folder, "sessions.yaml")
   sessions <- yaml::read_yaml(sessions_file)
-  pre_entry <- tail(grep(pattern = "pre", x = names(sessions), value = TRUE), n = 1)
+  pre_entry <- tail(grep(pattern = "pre", x = names(sessions), ignore.case = TRUE, value = TRUE), n = 1)
 
   sessions$pre <- file.path(idoc_folder, sessions[[pre_entry]])
-  post_entry <- grep(pattern = "post", x = names(sessions), value = TRUE)[1]
+  post_entry <- grep(pattern = "post", x = names(sessions), ignore.case = TRUE, value = TRUE)[1]
   sessions$post <- file.path(idoc_folder, sessions[[post_entry]])
 
   return(sessions)
