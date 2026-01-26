@@ -35,7 +35,12 @@ multiple_testing_correction <- function(alphas, p, correction) {
 
 
 #' @import data.table
-make_annotation_df <- function(df, y_var, variable, test_F, trend_statistic, error_statistic, correction, ...) {
+#' @param alternative  one of greater, less, one.sided
+#'   one.sided = smallest empirical mean is significantly less than greatest empirical mean
+#'   less = PRE is less than POST
+#'   greater = PRE is greater than POST
+#'   two.sided = PRE and POST are different but in no particular direction
+make_annotation_df <- function(df, y_var, variable, test_F, trend_statistic, error_statistic, correction, alternative = "greater", ...) {
   test <- var__ <- std_error <- y_std <- N <- . <- NULL
   
   
@@ -47,25 +52,34 @@ make_annotation_df <- function(df, y_var, variable, test_F, trend_statistic, err
     warning("No test passed, significance will not be evaluated")
   }
   min_n_points <- 2
-  
+
   test_out <- lapply(values, function(val) {
     x <- df[df[[variable]] == val & test == "PRE", y_var]
     y <- df[df[[variable]] == val & test == "POST", y_var]
+    estim <- round(mean(y) - mean(x), 2)
+
+    if (alternative == "one.sided") {
+      alt <- ifelse(estim > 0, "less", "greater")
+    } else {
+      stopifnot(alternative %in% c("less", "greater", "two.sided"))
+      alt <- alternative
+    }
+
     if (length(x) < min_n_points | is.null(test_F)) {
       return(list(p.value = NA, estimate = NA))
     }
-    estim <- round(mean(y) - mean(x), 2)
 
 
     if (!is.null(test_F)) {
       out <- test_F(
         x = x,
         y = y,
+        alternative = alt,
         ...
       )
       out$estimate <- estim
     } else {
-      out <- list(p.value=NA, estiamte=estim)
+      out <- list(p.value = NA, estimate = estim)
     }
     out
   })

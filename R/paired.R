@@ -82,6 +82,7 @@ OUTPUT_FOLDER <- "figures/paper"
 #' * a column named according to the input argument 'group', used to separate
 #'     animals by some category e.g. genotype, treatment, etc
 #' @param group A column in the data frame data, see argument data
+#' @param alternative Argument to make_annotation_df
 #' @import data.table
 #' @import ggplot2
 #' @export
