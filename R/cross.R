@@ -8,9 +8,12 @@
 #' and aversive, if the PI should decrease in that case
 #' @return data.frame of crosses happening during some event and with annotated type
 annotate_cross <- function(cross_data, event_data, treatment, type=c("appetitive", "aversive")) {
-  
-  if(!treatment %in% event_data$treatment)
-    warning("The passed treatment is not recorded in the events dataset!")
+  treatments <- unique(event_data$treatment)
+  if (length(treatments) == 0) {
+    warning("No events detected")
+  } else if(!treatment %in% treatments) {
+    warning(paste0("The passed treatment is not recorded in the events dataset! Treatments: ", treatments))
+  }
   
   event_data <- event_data[event_data$treatment == treatment,]
 
@@ -81,15 +84,22 @@ seconds_mask <- function(cross_data, min_time = 0) {
 #' @eval document_border()
 #' @param side Either LEFT (-1) or RIGHT (1)
 #' @importFrom tibble tibble
+#' @params dataset: contains columns x, t
+#'   t: seconds since start of session
+#'   x: position of the animal along the x axis, with center at 0
+#'      so negative values are on the left side of the chamber,
+#'      and positive to the right
+#' @params border (numeric): mm away from the chamber center
+#'   where the decision zone ends
 #' @export
-cross_detector <- function(tracker_data, border, side=c(-1, 1)) {
+cross_detector <- function(tracker_data, border, side = c(-1, 1)) {
   length_encoding <- rle((tracker_data$x * side) > border)
   cross_data <- tibble::tibble(
     lengths = length_encoding$lengths,
     out_of_zone = length_encoding$values,
     index = cumsum(length_encoding$lengths)
   )
-  
+
   cross_data$t <- tracker_data[cross_data$index, ]$t
   cross_data <- cross_data[, c("t", "out_of_zone")]
   cross_data$border <- border

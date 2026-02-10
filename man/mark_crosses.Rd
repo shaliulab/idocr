@@ -10,7 +10,9 @@ mark_crosses(
   size = 2,
   color = "black",
   orientation = "y",
-  style = "default"
+  style = "default",
+  shape = 16,
+  colors = c("#35b347", "#00abee")
 )
 }
 \arguments{

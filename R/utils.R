@@ -142,3 +142,14 @@ validate_number_of_fields <- function(csv_file) {
          
   } 
 }
+
+#' Make wide IDOC data into long
+#' @export
+melt_idoc_data <- function(data) {
+  
+  test <- NULL
+
+  data_long <- melt(data, measure.vars = c("PRE", "POST"), value.name = "PI", variable.name = "test")
+  data_long[, test := factor(test, levels = c("PRE", "POST"))]
+  return(data_long)
+}

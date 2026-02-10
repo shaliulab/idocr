@@ -67,28 +67,22 @@ preprocess_dataset <- function(
   treatments = c("TREATMENT_A", "TREATMENT_B"),
   delay=0, border_mm=5, CSplus_idx=1
 ) {
-  
+
   # Preprocess
   dataset$tracker <- preprocess_tracker(experiment_folder, dataset$tracker)
   dataset$controller <- preprocess_controller(dataset$controller, delay=delay)
-  
+
   config <- read_config()
   pixel_to_mm_ratio <- config$pixel_to_mm_ratio
   dataset$limits <- config$limits
 
   border <- border_mm * pixel_to_mm_ratio
-  treatments <- names(treatments)
+  treatments_ <- names(treatments)
   dataset$labels <- unname(treatments)
-  
-  # if (check_api_version(treatments) == 1) {
-  #   dataset$labels <- unname(treatments)
-  #   treatments <- names(treatments)
-  # }
-  
   dataset$border <- border
-  dataset$CSplus <- treatments[CSplus_idx]
-  dataset$CSminus <- treatments[treatments != dataset$CSplus]
-  dataset$treatments <- treatments
+  dataset$CSplus <- treatments_[CSplus_idx]
+  dataset$CSminus <- treatments_[treatments_ != dataset$CSplus]
+  dataset$treatments <- treatments_
   dataset$stimuli <- paste0(rep(treatments, each=2), c("_LEFT", "_RIGHT"))
   
   return(dataset)
