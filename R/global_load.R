@@ -1,8 +1,3 @@
-library(data.table)
-library(parallel)
-library(readODS)
-library(readxl)
-
 load_sessions_v1 <- function(idoc_folder) {
   sessions <- sort(list.files(idoc_folder, full.names = TRUE))
   return(

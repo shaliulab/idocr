@@ -5,7 +5,6 @@ LEGEND_TEXT_SIZE <- 15
 
 #' @import ggplot2
 #' @import ggprism
-#' @import ggtext
 #' @export
 get_sleep_plot_theme <- function() {
   ggprism::theme_prism() + ggplot2::theme(
