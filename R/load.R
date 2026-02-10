@@ -1,7 +1,7 @@
 #' Confirm VAR_MAP csv table is not corrupted
 #' @param var_map_path Path to a VAR_MAP table .csv file
 validate_varmap_file <- function(var_map_path) {
-  return(0)
+  file.exists(var_map_path)
 }
 
 #' Load the VAR_MAP table into R
@@ -12,6 +12,7 @@ load_varmap <- function(experiment_folder) {
   var_map_path <- find_file(experiment_folder, "VAR_MAP")
   validate_varmap_file(var_map_path)
   var_map <- data.table::fread(var_map_path, header = T)[, -1]
+  stopifnot(nrow(var_map)>0)
   return(var_map)
 }
 
@@ -22,6 +23,7 @@ load_varmap <- function(experiment_folder) {
 load_metadata <- function(experiment_folder) {
   metadata_path <- find_file(experiment_folder, "METADATA")
   metadata <- data.table::fread(metadata_path, header = T)[,-1]
+  stopifnot(nrow(metadata)>0)
   return(metadata)
 }
 

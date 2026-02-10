@@ -95,7 +95,7 @@ pipeline <- function(experiment_folder, dataset, min_exits_required, mask_durati
   
   
   message("Analysing dataset - ", experiment_folder, " ", suffix)
-  
+
   analysis <- analyse_dataset(
     dataset,
     min_exits_required=min_exits_required,

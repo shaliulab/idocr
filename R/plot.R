@@ -143,7 +143,6 @@ base_plot <- function(data, limits, line_alpha=1, nrow=1, ncol=20, downward=TRUE
   gg <- mark_space(limits, gg, extra=c(0))
   
   if(length(unique(data$facet)) != (nrow * ncol)) {
-    # browser()
     stop("The passed layout does not match the number of animals.
        Make sure nrow * ncol evaluates to the number of animals in the dataset ")
   }

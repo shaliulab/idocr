@@ -178,8 +178,12 @@ find_exits_all <- function(...) {
 #' @param CSminus Name of treatment associated to aversive behavior
 #' (decreases PI)
 annotate_cross_all <- function(cross_data, event_data, CSplus, CSminus) {
-  rbind(
+  out <- rbind(
     annotate_cross(cross_data, event_data, CSplus, "appetitive"),
     annotate_cross(cross_data, event_data, CSminus, "aversive")
   )
+  if (nrow(out)==0) {
+    warning("No exits detected in this trial")
+  }
+  return(out)
 }
