@@ -44,6 +44,14 @@ center_dataset <- function(experiment_folder, tracker_data, infer=FALSE) {
   return(tracker_data)
 }
 
+load_roimap <- function(experiment_folder) {
+  roi_map_file <- grep(x = list.files(experiment_folder, full.names = TRUE), pattern = "ROI_MAP", value = T)
+  roi_map <- data.table::fread(roi_map_file)
+  stopifnot(nrow(roi_map)>0 && !all(is.na(roi_map)))
+  roi_map$region_id <- roi_map$value
+  return(roi_map)
+}
+
 #' Read the x coordinate of the center of the rois
 #' This is useful for precise delineation of the decision zone
 #' The function expects the ROI_CENTER and ROI_MAP files to exist
@@ -55,7 +63,6 @@ get_roi_center <- function(experiment_folder) {
   x <- region_id <- NULL
   
   roi_center_file <- grep(x = list.files(experiment_folder, full.names = TRUE), pattern = "ROI_CENTER", value = T)
-  roi_map_file <- grep(x = list.files(experiment_folder, full.names = TRUE), pattern = "ROI_MAP", value = T)
   
   if (length(roi_center_file) == 0) {
     warning("Please execute midline-detector and save a ROI_CENTER.csv file in the folder")
@@ -78,13 +85,11 @@ get_roi_center <- function(experiment_folder) {
       Please check again a non-zero center is available for all ROIs"
       )
   }
-      
-  roi_map <- data.table::fread(roi_map_file)
-  roi_map$region_id <- roi_map$value
+  roi_map <- load_roimap(experiment_folder)
+
   roi_center <- dplyr::left_join(roi_center, dplyr::select(roi_map, x, region_id), by="region_id")
   roi_center$center <- roi_center$center - roi_center$x
   roi_center <- dplyr::select(roi_center, -x)
-
   return(roi_center)
 }
 
