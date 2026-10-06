@@ -10,7 +10,9 @@ validate_varmap_file <- function(var_map_path) {
 #' @eval document_experiment_folder()
 load_varmap <- function(experiment_folder) {
   var_map_path <- find_file(experiment_folder, "VAR_MAP")
-  stopifnot(length(var_map_path) > 0)
+  if (length(var_map_path) == 0) {
+    stop(paste0("No VAR_MAP found in folder ", experiment_folder))
+  }
   validate_varmap_file(var_map_path)
   var_map <- data.table::fread(var_map_path, header = T)[, -1]
   return(var_map)
