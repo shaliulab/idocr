@@ -172,7 +172,6 @@ base_plot <- function(gg, data, limits, line_alpha=1, downward=TRUE, nrow=1, nco
   gg <- mark_space(limits, gg, extra=c(0), orientation=orientation)
   
   if(length(unique(data$facet)) != (nrow * ncol)) {
-    
     stop("The passed layout does not match the number of animals.
        Make sure nrow * ncol evaluates to the number of animals in the dataset ")
   }

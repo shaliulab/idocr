@@ -223,7 +223,6 @@ keep_only_with_ethoscope_data <- function(idoc_data, sleep_data) {
 #' the annotation
 #' @param offset (numeric): how many units to trim the line
 #' connecting the compared datasets
-#' @import ggsignif
 add_significance_marks <- function(
     panel, test, annotation_df, y_annotation,
     vjust, textsize, map_signif_level, family,
