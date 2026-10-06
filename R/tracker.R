@@ -74,6 +74,8 @@ get_roi_center <- function(experiment_folder) {
       roi_center <- data.table::fread(roi_center_file)
     
     }
+  } else if (length(roi_center_file) > 1) {
+      stop(paste0(length(roi_center_file), " ROI_CENTER files found in ", experiment_folder))
   } else {
     message(paste0("Reading ", roi_center_file))
     roi_center <- data.table::fread(roi_center_file)    
